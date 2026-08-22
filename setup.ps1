@@ -22,7 +22,7 @@ if (!(Test-Path ".venv")) {
 
 # 3. Install Dependencies
 Write-Host "[3/4] Installing dependencies..." -ForegroundColor Yellow
-uv pip install --python .venv\Scripts\python.exe pdfplumber pypdf jinja2 pandas openpyxl pyyaml beautifulsoup4 requests reportlab
+uv pip install --python .venv\Scripts\python.exe fastapi uvicorn httpx python-multipart pdfplumber pypdf jinja2 pandas openpyxl pyyaml beautifulsoup4 requests reportlab
 
 # 4. Check MiKTeX / LaTeX
 Write-Host "[4/4] Verifying LaTeX installation..." -ForegroundColor Yellow
@@ -35,7 +35,9 @@ if (Get-Command xelatex -ErrorAction SilentlyContinue) {
     Write-Host "      Download from: https://miktex.org/download" -ForegroundColor DarkYellow
 }
 
+Write-Host "`nRunning system diagnostic check..." -ForegroundColor Cyan
+.venv\Scripts\python.exe test_system.py
+
 Write-Host "`nSetup complete! You can now run:" -ForegroundColor Green
-Write-Host "  .venv\Scripts\python.exe pipeline.py status" -ForegroundColor White
-Write-Host "  .venv\Scripts\python.exe pipeline.py analyze" -ForegroundColor White
+Write-Host "  start_web.bat  (or .venv\Scripts\python.exe app.py)" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Cyan

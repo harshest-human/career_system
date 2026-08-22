@@ -2,7 +2,20 @@
 
 A self-contained, local **AI Career Studio and Application Pipeline** designed for **Harsh Sahu**, **Neha Sahu**, and **Ayush Sahu**. 
 
-Anyone can download this repository and launch a rich, local web application on their PC with **one click** (`start_web.bat` or `python app.py`) to manage their profile, scrape and catalog job postings, analyze fit scores, interactively build LaTeX CVs & Cover Letters, and generate hiring team outreach.
+Anyone can clone this repository and launch a rich, local web application on their PC with **one click** (`start_web.bat` or `python app.py`) to manage their profile, scrape and catalog job postings, analyze fit scores, interactively build LaTeX CVs & Cover Letters, and generate hiring team outreach.
+
+---
+
+## ⚡ Quick Start for Collaborators (2 Easy Steps)
+
+### Step 1: Run the Self-Testing & Diagnostic Tool
+Double-click [`test_system.bat`](file:///d:/Job%20Application/test_system.bat) (or run `./test_system.sh` on macOS/Linux).
+- It automatically checks Python, installs `uv`, creates `.venv`, installs dependencies, verifies LaTeX, and tests database/API health.
+- If anything is missing, it **repairs and installs it automatically** on the spot!
+
+### Step 2: Launch the Web App
+Double-click [`start_web.bat`](file:///d:/Job%20Application/start_web.bat) (or run `./start_web.sh` on macOS/Linux).
+- Opens **`http://localhost:8000`** in your browser automatically!
 
 ---
 
@@ -37,19 +50,16 @@ flowchart LR
 
 ---
 
-## 🚀 How to Run on Any Laptop
+## 🛠️ Diagnostics & Diagnostic Reports
 
-### Option A: One-Click Desktop Launchers (Easiest)
-- **Windows**: Double-click [`start_web.bat`](file:///d:/Job%20Application/start_web.bat)
-- **macOS / Linux**: Run `./start_web.sh` in Terminal
-
-*The launcher automatically initializes the environment and opens `http://localhost:8000` in your web browser!*
-
-### Option B: Terminal Command
+To run the automated diagnostic doctor anytime:
 ```powershell
-.venv\Scripts\python.exe app.py
+# Windows
+.\test_system.bat
+
+# macOS / Linux
+./test_system.sh
 ```
-Open **`http://localhost:8000`** in your browser.
 
 ---
 
@@ -69,6 +79,9 @@ You can also run all pipeline actions directly from the command line:
 ```powershell
 # Check status
 .venv\Scripts\python.exe pipeline.py status
+
+# Run diagnostic suite
+.venv\Scripts\python.exe test_system.py
 
 # Scrape a job posting from a URL
 .venv\Scripts\python.exe pipeline.py scrape --url "https://..." --name "Company_Role"

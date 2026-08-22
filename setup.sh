@@ -22,7 +22,7 @@ fi
 
 # 3. Install Dependencies
 echo "[3/4] Installing dependencies..."
-uv pip install --python .venv/bin/python pdfplumber pypdf jinja2 pandas openpyxl pyyaml beautifulsoup4 requests reportlab
+uv pip install --python .venv/bin/python fastapi uvicorn httpx python-multipart pdfplumber pypdf jinja2 pandas openpyxl pyyaml beautifulsoup4 requests reportlab
 
 # 4. Check LaTeX
 echo "[4/4] Checking LaTeX compiler..."
@@ -33,7 +33,10 @@ else
 fi
 
 echo ""
+echo "Running system diagnostic test..."
+.venv/bin/python test_system.py
+
+echo ""
 echo "Setup complete! Run:"
-echo "  source .venv/bin/activate"
-echo "  python pipeline.py status"
+echo "  ./start_web.sh  (or .venv/bin/python app.py)"
 echo "=========================================================="
