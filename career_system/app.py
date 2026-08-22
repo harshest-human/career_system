@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import uvicorn
-from fastapi import Body, FastAPI, File, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -49,7 +49,7 @@ tracker = NetworkTracker()
 ai_assistant = CareerAIAssistant()
 google_sync = GoogleWorkspaceSync()
 
-app = FastAPI(title="Career System AI Studio", version="3.1.0")
+app = FastAPI(title="Career System AI Studio", version="3.2.0")
 
 # CORS middleware
 app.add_middleware(
@@ -71,15 +71,111 @@ app.mount("/job_ads_manual", StaticFiles(directory=str(ROOT_DIR / "job_ads_manua
 app.mount("/job_ads_auto", StaticFiles(directory=str(ROOT_DIR / "job_ads_auto")), name="job_ads_auto")
 
 
+def generate_and_save_application_package(
+    job_id: int,
+    breakdown: Dict[str, Any],
+    candidate_id: str = "default",
+    gemini_key: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Automatically tailor Master CV, generate bilingual HTML CVs/Letters/Outreach, and save to the dedicated job folder."""
+    prof = db.get_profile(candidate_id) or db.get_profile("default")
+    if not prof:
+        return {}
+
+    tailored_res = ai_assistant.tailor_application(
+        master_profile=prof["data"],
+        job_data=breakdown,
+        user_notes="",
+        lang="en",
+        custom_api_key=gemini_key,
+    )
+
+    job_info = db.get_job(job_id)
+    if job_info and job_info.get("folder_path"):
+        job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+        job_folder.mkdir(parents=True, exist_ok=True)
+        prefix = get_job_prefix(breakdown, job_id)
+
+        tailored_profile = tailored_res.get("tailored_profile", prof["data"])
+        paragraphs = tailored_res.get("cover_letter_paragraphs", {})
+        outreach = tailored_res.get("outreach", {})
+
+        # 1. Render & save English (UK) CV
+        cv_en = render_html_cv(profile=tailored_profile, job_data=breakdown, lang="en")
+        with open(job_folder / f"{prefix}_cv_en.html", "w", encoding="utf-8") as f:
+            f.write(cv_en)
+
+        # 2. Render & save German (DE) CV
+        cv_de = render_html_cv(profile=tailored_profile, job_data=breakdown, lang="de")
+        with open(job_folder / f"{prefix}_cv_de.html", "w", encoding="utf-8") as f:
+            f.write(cv_de)
+
+        # 3. Render & save English Cover Letter
+        cl_en = render_html_cover_letter(
+            profile=tailored_profile,
+            job_data=breakdown,
+            lang="en",
+            custom_paragraphs=paragraphs.get("en"),
+        )
+        with open(job_folder / f"{prefix}_coverletter_en.html", "w", encoding="utf-8") as f:
+            f.write(cl_en)
+
+        # 4. Render & save German Cover Letter
+        cl_de = render_html_cover_letter(
+            profile=tailored_profile,
+            job_data=breakdown,
+            lang="de",
+            custom_paragraphs=paragraphs.get("de"),
+        )
+        with open(job_folder / f"{prefix}_coverletter_de.html", "w", encoding="utf-8") as f:
+            f.write(cl_de)
+
+        # 5. Save outreach pitches
+        outreach_text = f"""=======================================================
+CAREER SYSTEM — TAILORED OUTREACH PITCHES
+Target: {breakdown.get('role_title', '')} at {breakdown.get('company', '')}
+Generated with: {tailored_res.get('ai_model_used', 'Gemini AI')}
+=======================================================
+
+1. LINKEDIN CONNECTION NOTE (<300 characters):
+-------------------------------------------------------
+{outreach.get('linkedin_connection', '')}
+
+2. LINKEDIN INMAIL PITCH:
+-------------------------------------------------------
+{outreach.get('linkedin_inmail', '')}
+
+3. COLD EMAIL:
+-------------------------------------------------------
+Subject: {outreach.get('cold_email_subject', '')}
+
+{outreach.get('cold_email_body', '')}
+"""
+        with open(job_folder / f"{prefix}_outreach.txt", "w", encoding="utf-8") as f:
+            f.write(outreach_text)
+
+    return tailored_res
+
+
 # --- Pydantic Request Models ---
 class ScrapeRequest(BaseModel):
     url: str
     custom_name: Optional[str] = None
+    candidate_id: Optional[str] = "default"
     gemini_api_key: Optional[str] = None
 
 
 class ParseTextRequest(BaseModel):
     raw_text: str
+    candidate_id: Optional[str] = "default"
+    gemini_api_key: Optional[str] = None
+
+
+class TailorRequest(BaseModel):
+    candidate_id: str = "default"
+    job_data: Dict[str, Any]
+    user_notes: Optional[str] = ""
+    lang: Optional[str] = "en"
     gemini_api_key: Optional[str] = None
 
 
@@ -227,7 +323,15 @@ async def scrape_job(req: ScrapeRequest):
                 except Exception as err:
                     print(f"[Scrape] Warning copying PDF: {err}")
 
-        return {"status": "success", "job_id": job_id, "data": breakdown}
+        # Automatically tailor Master CV & generate A4 assets
+        tailored = generate_and_save_application_package(
+            job_id=job_id,
+            breakdown=breakdown,
+            candidate_id=req.candidate_id or "default",
+            gemini_key=gemini_key,
+        )
+
+        return {"status": "success", "job_id": job_id, "data": breakdown, "tailored": tailored}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -235,7 +339,8 @@ async def scrape_job(req: ScrapeRequest):
 @app.post("/api/jobs/upload")
 async def upload_job(
     file: UploadFile = File(...),
-    gemini_api_key: Optional[str] = None,
+    gemini_api_key: Optional[str] = Form(None),
+    candidate_id: Optional[str] = Form("default"),
 ):
     dest_path = ROOT_DIR / "job_ads_manual" / file.filename
     with open(dest_path, "wb") as f:
@@ -243,7 +348,8 @@ async def upload_job(
         f.write(content)
 
     raw_text = extractor.extract_text_from_pdf(dest_path)
-    breakdown = ai_assistant.extract_job_breakdown(raw_text, custom_api_key=gemini_api_key)
+    gemini_key = gemini_api_key or os.getenv("GEMINI_API_KEY")
+    breakdown = ai_assistant.extract_job_breakdown(raw_text, custom_api_key=gemini_key)
     breakdown["source_file"] = file.filename
     breakdown["pdf_path"] = f"/job_ads_manual/{file.filename}"
     breakdown["full_text"] = raw_text
@@ -263,7 +369,15 @@ async def upload_job(
             except Exception as err:
                 print(f"[Upload] Warning copying PDF: {err}")
 
-    return {"status": "success", "job_id": job_id, "data": breakdown}
+    # Automatically tailor Master CV & generate A4 assets
+    tailored = generate_and_save_application_package(
+        job_id=job_id,
+        breakdown=breakdown,
+        candidate_id=candidate_id or "default",
+        gemini_key=gemini_key,
+    )
+
+    return {"status": "success", "job_id": job_id, "data": breakdown, "tailored": tailored}
 
 
 @app.post("/api/jobs/parse-text")
@@ -289,7 +403,15 @@ async def parse_job_text_endpoint(req: ParseTextRequest):
             except Exception as err:
                 print(f"[ParseText] Warning writing description: {err}")
 
-    return {"status": "success", "job_id": job_id, "data": breakdown}
+    # Automatically tailor Master CV & generate A4 assets
+    tailored = generate_and_save_application_package(
+        job_id=job_id,
+        breakdown=breakdown,
+        candidate_id=req.candidate_id or "default",
+        gemini_key=gemini_key,
+    )
+
+    return {"status": "success", "job_id": job_id, "data": breakdown, "tailored": tailored}
 
 
 @app.put("/api/jobs/{job_id}")
@@ -463,6 +585,92 @@ async def analyze_match(req: AnalyzeRequest):
         "match_result": match_result,
         "candidate": prof["data"]["personal"]["full_name"],
     }
+
+
+@app.post("/api/ai/test-key")
+async def test_key_endpoint(payload: Dict[str, Any] = Body(default={})):
+    key = payload.get("api_key")
+    return ai_assistant.test_api_key(key)
+
+
+@app.post("/api/ai/tailor")
+async def tailor_endpoint(req: TailorRequest):
+    prof = db.get_profile(req.candidate_id)
+    if not prof:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    gemini_key = req.gemini_api_key or os.getenv("GEMINI_API_KEY")
+    res = ai_assistant.tailor_application(
+        master_profile=prof["data"],
+        job_data=req.job_data,
+        user_notes=req.user_notes or "",
+        lang=req.lang or "en",
+        custom_api_key=gemini_key,
+    )
+
+    # Save updated tailored files into the job folder if job has an id
+    job_id = req.job_data.get("id")
+    if job_id:
+        job_info = db.get_job(job_id)
+        if job_info and job_info.get("folder_path"):
+            job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+            job_folder.mkdir(parents=True, exist_ok=True)
+            prefix = get_job_prefix(req.job_data, job_id)
+
+            tailored_profile = res.get("tailored_profile", prof["data"])
+            paragraphs = res.get("cover_letter_paragraphs", {})
+            outreach = res.get("outreach", {})
+
+            cv_en = render_html_cv(profile=tailored_profile, job_data=req.job_data, lang="en")
+            with open(job_folder / f"{prefix}_cv_en.html", "w", encoding="utf-8") as f:
+                f.write(cv_en)
+
+            cv_de = render_html_cv(profile=tailored_profile, job_data=req.job_data, lang="de")
+            with open(job_folder / f"{prefix}_cv_de.html", "w", encoding="utf-8") as f:
+                f.write(cv_de)
+
+            cl_en = render_html_cover_letter(
+                profile=tailored_profile,
+                job_data=req.job_data,
+                lang="en",
+                custom_paragraphs=paragraphs.get("en"),
+            )
+            with open(job_folder / f"{prefix}_coverletter_en.html", "w", encoding="utf-8") as f:
+                f.write(cl_en)
+
+            cl_de = render_html_cover_letter(
+                profile=tailored_profile,
+                job_data=req.job_data,
+                lang="de",
+                custom_paragraphs=paragraphs.get("de"),
+            )
+            with open(job_folder / f"{prefix}_coverletter_de.html", "w", encoding="utf-8") as f:
+                f.write(cl_de)
+
+            outreach_text = f"""=======================================================
+CAREER SYSTEM — TAILORED OUTREACH PITCHES
+Target: {req.job_data.get('role_title', '')} at {req.job_data.get('company', '')}
+Generated with: {res.get('ai_model_used', 'Gemini AI')}
+=======================================================
+
+1. LINKEDIN CONNECTION NOTE (<300 characters):
+-------------------------------------------------------
+{outreach.get('linkedin_connection', '')}
+
+2. LINKEDIN INMAIL PITCH:
+-------------------------------------------------------
+{outreach.get('linkedin_inmail', '')}
+
+3. COLD EMAIL:
+-------------------------------------------------------
+Subject: {outreach.get('cold_email_subject', '')}
+
+{outreach.get('cold_email_body', '')}
+"""
+            with open(job_folder / f"{prefix}_outreach.txt", "w", encoding="utf-8") as f:
+                f.write(outreach_text)
+
+    return res
 
 
 @app.post("/api/ai/suggest")

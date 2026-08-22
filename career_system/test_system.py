@@ -213,10 +213,20 @@ class SystemDoctor:
                     "lang": "en",
                 },
             )
-            if all(r.status_code == 200 for r in [r1, r2, r3, r4, r5, r6]):
-                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "PASS", "HTTP 200 OK across all routes including AI suggest")
+            r7 = client.post("/api/ai/test-key", json={"api_key": ""})
+            r8 = client.post(
+                "/api/ai/tailor",
+                json={
+                    "candidate_id": "default",
+                    "job_data": {"company": "Test Co", "role_title": "Engineer", "extracted_skills": ["Python"]},
+                    "user_notes": "Expert in Python.",
+                    "lang": "en",
+                },
+            )
+            if all(r.status_code == 200 for r in [r1, r2, r3, r4, r5, r6, r7, r8]):
+                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "PASS", "HTTP 200 OK across all routes (test-key, tailor, AI suggest)")
             else:
-                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "FAIL", f"Status: {r1.status_code}, {r2.status_code}, {r3.status_code}, r6: {r6.status_code}")
+                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "FAIL", f"Status: {r1.status_code}, {r2.status_code}, {r3.status_code}, r6: {r6.status_code}, r7: {r7.status_code}, r8: {r8.status_code}")
         except Exception as e:
             self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "FAIL", str(e))
 

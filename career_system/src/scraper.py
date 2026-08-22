@@ -47,39 +47,72 @@ class JobScraper:
         return response.text
 
     def extract_job_content(self, html: str, url: str) -> Dict[str, Any]:
-        """Parse and sanitize job posting HTML into structured text."""
+        """Parse and sanitize job posting HTML into structured text with JSON-LD schema support."""
         soup = BeautifulSoup(html, "html.parser")
 
-        # Strip scripts, styles, forms, navigation, footers
-        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript", "svg"]):
+        title = ""
+        company = ""
+        json_ld_text = ""
+
+        # 1. Attempt to extract structured JobPosting schema from JSON-LD
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                if script.string:
+                    data = json.loads(script.string)
+                    if isinstance(data, list):
+                        data = next((item for item in data if isinstance(item, dict) and item.get("@type") == "JobPosting"), {})
+                    if isinstance(data, dict) and data.get("@type") == "JobPosting":
+                        title = data.get("title") or title
+                        hiring_org = data.get("hiringOrganization")
+                        if isinstance(hiring_org, dict):
+                            company = hiring_org.get("name") or company
+                        elif isinstance(hiring_org, str):
+                            company = hiring_org
+                        raw_desc = data.get("description", "")
+                        if raw_desc:
+                            desc_soup = BeautifulSoup(raw_desc, "html.parser")
+                            json_ld_text = desc_soup.get_text(separator="\n", strip=True)
+            except Exception:
+                pass
+
+        # 2. Extract OpenGraph & meta tags for title/company fallback
+        if not title:
+            meta_title = soup.find("meta", property="og:title")
+            if meta_title and meta_title.get("content"):
+                title = str(meta_title["content"]).strip()
+            else:
+                title_tag = soup.find("h1") or soup.find("title")
+                if title_tag:
+                    title = title_tag.get_text(strip=True)
+
+        if not company:
+            meta_site = soup.find("meta", property="og:site_name")
+            if meta_site and meta_site.get("content"):
+                company = str(meta_site["content"]).strip()
+            else:
+                domain = urlparse(url).netloc.replace("www.", "")
+                company = domain.split(".")[0].capitalize()
+
+        # 3. Strip boilerplate tags
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript", "svg", "button", "input"]):
             tag.decompose()
 
-        # Extract title
-        title = ""
-        title_tag = soup.find("h1") or soup.find("title")
-        if title_tag:
-            title = title_tag.get_text(strip=True)
-
-        # Attempt to determine company name from title or meta tags
-        company = ""
-        meta_site = soup.find("meta", property="og:site_name")
-        if meta_site and meta_site.get("content"):
-            company = str(meta_site["content"])
-        else:
-            domain = urlparse(url).netloc.replace("www.", "")
-            company = domain.split(".")[0].capitalize()
-
-        # Extract main text
+        # 4. Extract body text
         body_text = soup.get_text(separator="\n", strip=True)
         lines = [line.strip() for line in body_text.splitlines() if len(line.strip()) > 1]
         cleaned_text = "\n".join(lines)
 
+        full_text = f"Title: {title}\nCompany: {company}\n\n"
+        if json_ld_text and len(json_ld_text) > 100:
+            full_text += f"Structured Job Details:\n{json_ld_text}\n\n"
+        full_text += f"Job Posting Text:\n{cleaned_text}"
+
         return {
             "url": url,
             "title": title or "Job Posting",
-            "company": company,
+            "company": company or "Target Company",
             "scraped_at": datetime.now().isoformat(),
-            "full_text": cleaned_text,
+            "full_text": full_text.strip(),
         }
 
     def generate_pdf(self, job_data: Dict[str, Any], output_pdf_path: Path) -> None:
