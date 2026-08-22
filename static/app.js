@@ -1,6 +1,16 @@
+function getApiBase() {
+  if (window.location.protocol === 'file:') {
+    return 'http://localhost:8000';
+  }
+  return '';
+}
+
+const API_BASE = getApiBase();
+
 function careerApp() {
   return {
     activeTab: 'jobs',
+    serverConnected: false,
     profiles: [],
     activeProfileId: 'harsh',
     profileData: { personal: {}, executive_summary: {}, experience: [], education: [], skills: {} },
@@ -25,63 +35,100 @@ function careerApp() {
     geminiApiKey: localStorage.getItem('gemini_api_key') || '',
 
     async init() {
+      await this.checkServer();
       await this.loadProfiles();
       await this.loadJobs();
       this.$watch('geminiApiKey', (val) => localStorage.setItem('gemini_api_key', val));
+
+      // Periodic health check
+      setInterval(() => this.checkServer(), 8000);
+    },
+
+    async checkServer() {
+      try {
+        const res = await fetch(`${API_BASE}/api/health`);
+        if (res.ok) {
+          this.serverConnected = true;
+        } else {
+          this.serverConnected = false;
+        }
+      } catch (err) {
+        this.serverConnected = false;
+      }
     },
 
     async loadProfiles() {
       try {
-        const res = await fetch('/api/profiles');
+        const res = await fetch(`${API_BASE}/api/profiles`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         this.profiles = await res.json();
         if (this.profiles.length > 0) {
-          this.activeProfileId = this.profiles[0].id;
+          if (!this.profiles.some(p => p.id === this.activeProfileId)) {
+            this.activeProfileId = this.profiles[0].id;
+          }
           await this.loadActiveProfile();
         }
+        this.serverConnected = true;
       } catch (err) {
-        console.error('Error loading profiles:', err);
+        console.warn('Error loading profiles:', err);
+        this.serverConnected = false;
       }
     },
 
     async loadActiveProfile() {
       try {
-        const res = await fetch(`/api/profiles/${this.activeProfileId}`);
+        const res = await fetch(`${API_BASE}/api/profiles/${this.activeProfileId}`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         this.profileData = data.data || {};
         this.studioSummary = this.profileData.executive_summary?.[this.studioLang] || '';
       } catch (err) {
-        console.error('Error loading active profile:', err);
+        console.warn('Error loading active profile:', err);
       }
     },
 
     async saveProfile() {
+      if (!this.serverConnected) {
+        alert('Server is offline. Please launch "start_web.bat" on your PC to connect to http://localhost:8000.');
+        return;
+      }
       try {
-        const res = await fetch(`/api/profiles/${this.activeProfileId}`, {
+        const res = await fetch(`${API_BASE}/api/profiles/${this.activeProfileId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(this.profileData),
         });
         if (res.ok) {
           alert('Profile saved and synced successfully!');
+          await this.loadProfiles();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert('Error saving profile: ' + (errData.detail || res.statusText));
         }
       } catch (err) {
-        alert('Error saving profile: ' + err);
+        alert('Connection error: Cannot reach the local server at http://localhost:8000.\n\nPlease make sure start_web.bat is running.');
       }
     },
 
     async loadJobs() {
       try {
-        const res = await fetch('/api/jobs');
+        const res = await fetch(`${API_BASE}/api/jobs`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         this.jobsList = await res.json();
+        this.serverConnected = true;
       } catch (err) {
-        console.error('Error loading jobs:', err);
+        console.warn('Error loading jobs:', err);
       }
     },
 
     async scrapeJobUrl() {
       if (!this.scrapeUrlInput) return;
+      if (!this.serverConnected) {
+        alert('Server is offline. Please launch start_web.bat.');
+        return;
+      }
       try {
-        const res = await fetch('/api/jobs/scrape', {
+        const res = await fetch(`${API_BASE}/api/jobs/scrape`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: this.scrapeUrlInput }),
@@ -92,10 +139,10 @@ function careerApp() {
           await this.loadJobs();
           alert('Job posting scraped and archived successfully!');
         } else {
-          alert('Scraping error: ' + data.detail);
+          alert('Scraping error: ' + (data.detail || 'Failed to scrape URL'));
         }
       } catch (err) {
-        alert('Error: ' + err);
+        alert('Connection error: Make sure start_web.bat is running.');
       }
     },
 
@@ -105,42 +152,48 @@ function careerApp() {
       const formData = new FormData();
       formData.append('file', file);
       try {
-        const res = await fetch('/api/jobs/upload', {
+        const res = await fetch(`${API_BASE}/api/jobs/upload`, {
           method: 'POST',
           body: formData,
         });
         if (res.ok) {
           await this.loadJobs();
           alert('Job PDF uploaded and parsed successfully!');
+        } else {
+          alert('Upload failed: ' + res.statusText);
         }
       } catch (err) {
-        alert('Error uploading PDF: ' + err);
+        alert('Connection error: Make sure start_web.bat is running.');
       }
     },
 
     async updateJobStatus(jobId, status) {
       try {
-        await fetch(`/api/jobs/${jobId}/status`, {
+        await fetch(`${API_BASE}/api/jobs/${jobId}/status`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status }),
         });
       } catch (err) {
-        console.error('Error updating status:', err);
+        console.warn('Error updating status:', err);
       }
     },
 
     async selectJobForAnalysis(job) {
       try {
-        const res = await fetch('/api/analyze', {
+        const res = await fetch(`${API_BASE}/api/analyze`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ candidate_id: this.activeProfileId, job_id: job.id }),
         });
-        this.analysisResult = await res.json();
-        this.activeTab = 'analyzer';
+        if (res.ok) {
+          this.analysisResult = await res.json();
+          this.activeTab = 'analyzer';
+        } else {
+          alert('Analysis error: ' + res.statusText);
+        }
       } catch (err) {
-        alert('Error analyzing job: ' + err);
+        alert('Connection error: Make sure start_web.bat is running.');
       }
     },
 
@@ -151,7 +204,6 @@ function careerApp() {
       this.outreachForm.role_title = job.role_title || '';
       this.outreachForm.contact_name = 'Hiring Team';
 
-      // Default paragraphs
       if (this.studioLang === 'en') {
         this.studioLetterParagraphs = [
           `I am writing to express my strong interest in the ${job.role_title} position at ${job.company}. My technical background and applied research directly align with your team's mission.`,
@@ -171,7 +223,7 @@ function careerApp() {
 
     async requestAiSuggestions() {
       try {
-        const res = await fetch('/api/ai/suggest', {
+        const res = await fetch(`${API_BASE}/api/ai/suggest`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -194,7 +246,7 @@ function careerApp() {
 
     async compileDocuments() {
       try {
-        const res = await fetch('/api/compile', {
+        const res = await fetch(`${API_BASE}/api/compile`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -207,8 +259,8 @@ function careerApp() {
         });
         const data = await res.json();
         if (data.cv_pdf) {
-          this.generatedPdfs.cv = data.cv_pdf + '?t=' + Date.now();
-          this.generatedPdfs.letter = data.letter_pdf ? data.letter_pdf + '?t=' + Date.now() : null;
+          this.generatedPdfs.cv = (API_BASE ? API_BASE : '') + data.cv_pdf + '?t=' + Date.now();
+          this.generatedPdfs.letter = data.letter_pdf ? (API_BASE ? API_BASE : '') + data.letter_pdf + '?t=' + Date.now() : null;
         } else {
           alert('LaTeX Compilation finished. Check outputs directory.');
         }
@@ -219,7 +271,7 @@ function careerApp() {
 
     async generatePitchMessage() {
       try {
-        const res = await fetch('/api/outreach/generate', {
+        const res = await fetch(`${API_BASE}/api/outreach/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

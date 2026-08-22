@@ -29,6 +29,13 @@
 
       <!-- Candidate Profile Switcher & Settings -->
       <div class="flex items-center space-x-4">
+        <!-- Server Connection Badge -->
+        <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium border"
+             :class="serverConnected ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'">
+          <span class="w-2 h-2 rounded-full" :class="serverConnected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'"></span>
+          <span x-text="serverConnected ? 'Server Online' : 'Server Offline'"></span>
+        </div>
+
         <div class="flex items-center space-x-2 bg-slate-700/60 px-3 py-1.5 rounded-lg border border-slate-600">
           <i class="fa-solid fa-user-circle text-sky-400"></i>
           <span class="text-xs text-slate-400 font-medium">Active Candidate:</span>
@@ -44,6 +51,14 @@
         </button>
       </div>
     </div>
+
+    <!-- Offline Warning Alert -->
+    <template x-if="!serverConnected">
+      <div class="bg-rose-500/20 border-y border-rose-500/40 px-4 py-2 text-center text-xs text-rose-300 font-medium flex items-center justify-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+        <span>Local Backend Server is not running. Please double-click <b>start_web.bat</b> (or run <code>python app.py</code> in terminal) to connect.</span>
+      </div>
+    </template>
 
     <!-- Navigation Tabs -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-2 border-t border-slate-700/50 pt-1">

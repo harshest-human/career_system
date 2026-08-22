@@ -116,6 +116,12 @@ async def serve_index():
         return f.read()
 
 
+# --- Health Endpoint ---
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "message": "Career System Server is running"}
+
+
 # --- Profile Endpoints ---
 @app.get("/api/profiles")
 async def get_profiles():
@@ -131,6 +137,7 @@ async def get_profile_details(profile_id: str):
 
 
 @app.post("/api/profiles/{profile_id}")
+@app.put("/api/profiles/{profile_id}")
 async def save_profile(profile_id: str, payload: Dict[str, Any] = Body(...)):
     db.save_profile(profile_id, payload)
     return {"status": "success", "profile_id": profile_id}
