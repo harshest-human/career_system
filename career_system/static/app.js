@@ -31,11 +31,12 @@ function careerApp() {
     rawJobTextInput: '',
     isLoadingBreakdown: false,
     analysisResult: null,
+    jobFilesList: [],
 
-    // PDF Viewer Modal
+    // PDF / File Viewer Modal
     showPdfViewerModal: false,
     activePdfViewerUrl: '',
-    activePdfViewerTitle: 'Job Advertisement PDF',
+    activePdfViewerTitle: 'Document Viewer',
 
     // Google Sync
     googleWebhookUrl: localStorage.getItem('google_webhook_url') || '',
@@ -249,7 +250,7 @@ function careerApp() {
           this.scrapeUrlInput = '';
           await this.loadJobs();
           await this.selectJobForAnalysis(data.data);
-          alert('Job analyzed with Gemini & pointwise breakdown ready below!');
+          alert('Job analyzed with Gemini & local job folder created!');
         } else {
           alert('Scraping error: ' + (data.detail || 'Failed'));
         }
@@ -278,7 +279,7 @@ function careerApp() {
         if (res.ok && data.data) {
           await this.loadJobs();
           await this.selectJobForAnalysis(data.data);
-          alert('Job PDF parsed & pointwise breakdown ready below!');
+          alert('Job PDF parsed & local job folder created!');
         } else {
           alert('Upload error: ' + (data.detail || res.statusText));
         }
@@ -317,6 +318,99 @@ function careerApp() {
       }
     },
 
+    async importJobPackage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      this.isLoadingBreakdown = true;
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch(`${API_BASE}/api/jobs/import-zip`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (res.ok) {
+          await this.loadJobs();
+          const job = this.jobsList.find(j => j.id === data.job_id);
+          if (job) {
+            await this.selectJobForAnalysis(job);
+          }
+          alert('Job Package (.zip) imported and restored successfully!');
+        } else {
+          alert('Import error: ' + (data.detail || 'Failed to extract package'));
+        }
+      } catch (err) {
+        alert('Import error: ' + err.message);
+      } finally {
+        this.isLoadingBreakdown = false;
+      }
+    },
+
+    async saveJobChanges() {
+      if (!this.analysisResult || !this.analysisResult.job) return;
+      const job = this.analysisResult.job;
+      try {
+        const res = await fetch(`${API_BASE}/api/jobs/${job.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(job),
+        });
+        if (res.ok) {
+          await this.loadJobs();
+          await this.loadJobFiles(job.id);
+          alert('Job details and metadata saved successfully!');
+        } else {
+          alert('Error saving job details.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    },
+
+    async deleteJob(jobId) {
+      if (!confirm('Are you sure you want to delete this job and its local folder?')) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/jobs/${jobId}`, {
+          method: 'DELETE',
+        });
+        if (res.ok) {
+          if (this.analysisResult?.job?.id === jobId) {
+            this.analysisResult = null;
+            this.jobFilesList = [];
+          }
+          await this.loadJobs();
+          alert('Job and its files deleted successfully.');
+        } else {
+          alert('Error deleting job.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    },
+
+    downloadJobZip(jobId) {
+      window.location.href = `${API_BASE}/api/jobs/${jobId}/export-zip`;
+    },
+
+    async loadJobFiles(jobId) {
+      try {
+        const res = await fetch(`${API_BASE}/api/jobs/${jobId}/files`);
+        if (res.ok) {
+          const data = await res.json();
+          this.jobFilesList = data.files || [];
+        }
+      } catch (err) {
+        console.warn('Could not load job files:', err);
+      }
+    },
+
+    openFileViewer(filePath, title) {
+      this.activePdfViewerUrl = (API_BASE ? API_BASE : '') + filePath;
+      this.activePdfViewerTitle = title || 'Document Viewer';
+      this.showPdfViewerModal = true;
+    },
+
     openPdfViewer(pdfPath, roleTitle) {
       this.activePdfViewerUrl = (API_BASE ? API_BASE : '') + pdfPath;
       this.activePdfViewerTitle = roleTitle || 'Job Advertisement PDF';
@@ -348,6 +442,7 @@ function careerApp() {
         });
         if (res.ok) {
           this.analysisResult = await res.json();
+          await this.loadJobFiles(job.id);
         }
       } catch (err) {
         alert('Analysis error: ' + err.message);
@@ -407,6 +502,9 @@ function careerApp() {
             doc.write(data.html);
             doc.close();
           }
+          if (this.studioJob.id) {
+            await this.loadJobFiles(this.studioJob.id);
+          }
         }
       } catch (err) {
         console.error('Error rendering HTML preview:', err);
@@ -431,7 +529,7 @@ function careerApp() {
           this.studioLetterParagraphs = data.cover_letter_paragraphs;
           this.studioDocType = 'letter';
           await this.renderHtmlPreview();
-          alert('AI suggestions applied to cover letter and rendered in preview!');
+          alert('AI suggestions applied to cover letter and saved in your job folder!');
         }
       } catch (err) {
         alert('Error requesting AI suggestions: ' + err.message);
@@ -446,30 +544,9 @@ function careerApp() {
       }
     },
 
-    async copyFormattedForGoogleDocs() {
-      try {
-        const res = await fetch(`${API_BASE}/api/export/google-docs`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            candidate_id: this.activeProfileId,
-            company: this.studioJob.company,
-            lang: this.studioLang,
-          }),
-        });
-        const data = await res.json();
-        if (data.text) {
-          navigator.clipboard.writeText(data.text);
-          alert('Formatted document copied to clipboard! You can now paste directly into Google Docs or Microsoft Word (Ctrl+V).');
-        }
-      } catch (err) {
-        alert('Error copying for Google Docs: ' + err.message);
-      }
-    },
-
     async exportToGoogleDriveDoc() {
       if (!this.googleWebhookUrl) {
-        alert('Google Webhook URL not configured. Please paste your Webhook URL in Step 1 (Account & Connectors).');
+        alert('Google Webhook URL not configured. Please paste your Webhook URL in Step 1 (Account & Connectors) or use Download .zip to backup locally.');
         this.currentStep = 1;
         return;
       }
@@ -497,7 +574,7 @@ function careerApp() {
 
     async syncActiveJobToGoogleSheet() {
       if (!this.googleWebhookUrl) {
-        alert('Google Webhook URL not configured. Please paste your Webhook URL in Step 1 (Account & Connectors).');
+        alert('Google Webhook URL not configured. Please paste your Webhook URL in Step 1 (Account & Connectors) or download .zip to save data locally.');
         this.currentStep = 1;
         return;
       }
@@ -561,6 +638,9 @@ function careerApp() {
         });
         const data = await res.json();
         this.generatedPitchText = data.pitch;
+        if (this.studioJob.id) {
+          await this.loadJobFiles(this.studioJob.id);
+        }
       } catch (err) {
         alert('Error generating outreach: ' + err.message);
       }

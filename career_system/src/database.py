@@ -1,12 +1,13 @@
 """
 SQLite Database Layer for Career System Local Web App
 Manages structured data for Profiles, Jobs, Portal Credentials, Contacts, and Outreach Logs,
-with bidirectional synchronization to YAML profile files.
+with bidirectional synchronization to YAML profile files and dedicated Job Folders.
 """
 
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -60,6 +61,7 @@ class Database:
                     source_file TEXT,
                     source_url TEXT,
                     pdf_path TEXT,
+                    folder_path TEXT,
                     status TEXT DEFAULT 'New',
                     extracted_skills_json TEXT,
                     metadata_json TEXT,
@@ -68,15 +70,17 @@ class Database:
                     updated_at TEXT NOT NULL
                 )
             """)
-            # Schema migration helper for existing DBs
+            # Schema migration helper
             columns = [c[1] for c in cursor.execute("PRAGMA table_info(jobs)").fetchall()]
             extra_cols = [
                 ("employment_type", "TEXT"),
+                ("contract_type", "TEXT"),
                 ("seniority_level", "TEXT"),
                 ("job_id_ref", "TEXT"),
                 ("salary_range", "TEXT"),
                 ("industry_sector", "TEXT"),
                 ("pdf_path", "TEXT"),
+                ("folder_path", "TEXT"),
                 ("metadata_json", "TEXT"),
             ]
             for col_name, col_type in extra_cols:
@@ -86,7 +90,7 @@ class Database:
                     except Exception:
                         pass
 
-            # Portal Credentials table (for automated scraper logins)
+            # Portal Credentials table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS portal_credentials (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -277,16 +281,16 @@ class Database:
                 """
                 INSERT INTO jobs (company, role_title, location, employment_type, contract_type,
                                   seniority_level, job_id_ref, salary_range, industry_sector,
-                                  deadline, start_date, source_file, source_url, pdf_path,
+                                  deadline, start_date, source_file, source_url, pdf_path, folder_path,
                                   status, extracted_skills_json, metadata_json, full_text, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     job_data.get("company", "Target Company"),
                     job_data.get("role_title", "Position"),
                     job_data.get("location", "Location"),
                     job_data.get("employment_type", "Full-time"),
-                    job_data.get("contract_type", "Permanent / Unlimited"),
+                    job_data.get("contract_type", "Permanent / Unbefristet"),
                     job_data.get("seniority_level", "Mid-Level"),
                     job_data.get("job_id", job_data.get("job_id_ref", "")),
                     job_data.get("salary_range", "Not disclosed"),
@@ -296,6 +300,7 @@ class Database:
                     job_data.get("source_file", ""),
                     job_data.get("source_url", ""),
                     job_data.get("pdf_path", ""),
+                    job_data.get("folder_path", ""),
                     job_data.get("status", "New"),
                     skills_json,
                     metadata_json,
@@ -305,7 +310,87 @@ class Database:
                 ),
             )
             conn.commit()
-            return cursor.lastrowid
+            job_id = cursor.lastrowid
+
+            # Create dedicated job folder
+            safe_comp = re.sub(r"[^\w\-]", "_", job_data.get("company", "Company"))
+            safe_role = re.sub(r"[^\w\-]", "_", job_data.get("role_title", "Role"))
+            folder_name = f"{job_id}_{safe_comp}_{safe_role}"
+            job_folder = self.db_path.parent / "jobs" / folder_name
+            job_folder.mkdir(parents=True, exist_ok=True)
+
+            # Save initial job_metadata.json
+            with open(job_folder / "job_metadata.json", "w", encoding="utf-8") as f:
+                json.dump({**job_data, "id": job_id}, f, indent=2, ensure_ascii=False)
+
+            cursor.execute("UPDATE jobs SET folder_path = ? WHERE id = ?", (f"/jobs/{folder_name}", job_id))
+            conn.commit()
+            return job_id
+
+    def update_job(self, job_id: int, job_data: Dict[str, Any]) -> None:
+        now = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            skills_json = json.dumps(job_data.get("extracted_skills", []))
+            
+            meta = job_data.get("metadata", {})
+            if not meta:
+                meta = {
+                    "key_responsibilities": job_data.get("key_responsibilities", []),
+                    "required_qualifications": job_data.get("required_qualifications", []),
+                    "preferred_qualifications": job_data.get("preferred_qualifications", []),
+                    "tech_stack_tools": job_data.get("tech_stack_tools", []),
+                    "language_requirements": job_data.get("language_requirements", []),
+                    "benefits_perks": job_data.get("benefits_perks", []),
+                    "hiring_manager_contact": job_data.get("hiring_manager_contact", ""),
+                }
+            metadata_json = json.dumps(meta)
+
+            cursor.execute(
+                """
+                UPDATE jobs SET
+                    company = ?, role_title = ?, location = ?, employment_type = ?,
+                    contract_type = ?, seniority_level = ?, job_id_ref = ?, salary_range = ?,
+                    industry_sector = ?, deadline = ?, status = ?, extracted_skills_json = ?,
+                    metadata_json = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    job_data.get("company", "Target Company"),
+                    job_data.get("role_title", "Position"),
+                    job_data.get("location", "Location"),
+                    job_data.get("employment_type", "Full-time"),
+                    job_data.get("contract_type", "Permanent / Unbefristet"),
+                    job_data.get("seniority_level", "Mid-Level"),
+                    job_data.get("job_id_ref", job_data.get("job_id", "")),
+                    job_data.get("salary_range", "Not disclosed"),
+                    job_data.get("industry_sector", "Technology / Engineering"),
+                    job_data.get("deadline", job_data.get("application_deadline", "")),
+                    job_data.get("status", "New"),
+                    skills_json,
+                    metadata_json,
+                    now,
+                    job_id,
+                ),
+            )
+            conn.commit()
+
+            # Update job_metadata.json in folder if exists
+            row = conn.execute("SELECT folder_path FROM jobs WHERE id = ?", (job_id,)).fetchone()
+            if row and row["folder_path"]:
+                folder_path = self.db_path.parent / row["folder_path"].lstrip("/")
+                if folder_path.exists():
+                    with open(folder_path / "job_metadata.json", "w", encoding="utf-8") as f:
+                        json.dump({**job_data, "id": job_id}, f, indent=2, ensure_ascii=False)
+
+    def delete_job(self, job_id: int) -> Optional[Dict[str, Any]]:
+        job = self.get_job(job_id)
+        if not job:
+            return None
+        with self.get_connection() as conn:
+            conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+            conn.commit()
+        return job
 
     def get_all_jobs(self) -> List[Dict[str, Any]]:
         with self.get_connection() as conn:

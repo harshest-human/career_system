@@ -14,7 +14,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/style.css">
   <style>
-    /* Dark / Blackish Minimal Palette with Subtle Baby Blue & Gray Accents */
     :root {
       --baby-blue: #89CFF0;
       --azure: #F0FFFF;
@@ -258,7 +257,7 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- STEP 2: JOB INGESTION & POINTWISE BREAKDOWN MATRIX -->
+    <!-- STEP 2: JOB INGESTION, BREAKDOWN & DEDICATED FILE DRAWER -->
     <!-- ========================================================================= -->
     <div x-show="currentStep === 2" x-cloak class="space-y-6">
       
@@ -273,7 +272,10 @@
               Upload PDF
             </button>
             <button @click="ingestMode = 'text'" :class="ingestMode === 'text' ? 'bg-white text-zinc-950 font-bold' : 'bg-zinc-900 text-zinc-400 hover:text-white'" class="px-3.5 py-1.5 rounded-lg text-xs transition">
-              Paste Job Text
+              Paste Text
+            </button>
+            <button @click="ingestMode = 'zip'" :class="ingestMode === 'zip' ? 'bg-white text-zinc-950 font-bold' : 'bg-zinc-900 text-zinc-400 hover:text-white'" class="px-3.5 py-1.5 rounded-lg text-xs transition">
+              Import Package (.zip)
             </button>
           </div>
           <span class="text-xs text-zinc-400 font-medium">
@@ -310,67 +312,144 @@
             </button>
           </div>
         </div>
+
+        <!-- Mode 4: Import Zip Package -->
+        <div x-show="ingestMode === 'zip'" class="space-y-2">
+          <p class="text-xs text-zinc-400">Upload an archived Job Package (.zip) to restore its data, files, and breakdown:</p>
+          <input type="file" @change="importJobPackage($event)" accept=".zip" class="block w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-900 file:text-white hover:file:bg-zinc-800 cursor-pointer">
+        </div>
       </div>
 
-      <!-- POINTWISE BREAKDOWN MATRIX -->
+      <!-- POINTWISE BREAKDOWN & EDITABLE MATRIX -->
       <template x-if="analysisResult">
-        <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-5 shadow-xl">
+        <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-6 shadow-xl">
           
           <!-- Top Header: Role, Fit Score, Actions -->
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-800/80 pb-4">
-            <div>
+            <div class="flex-1 space-y-1">
               <div class="flex items-center gap-2">
-                <span class="text-[11px] font-bold text-[#89CFF0] uppercase tracking-wider">Pointwise Breakdown</span>
-                <span x-show="analysisResult.job.job_id || analysisResult.job.job_id_ref" class="bg-zinc-900 text-zinc-300 text-[10px] px-2 py-0.5 rounded border border-zinc-800" x-text="'Ref: ' + (analysisResult.job.job_id || analysisResult.job.job_id_ref)"></span>
+                <span class="text-[11px] font-bold text-[#89CFF0] uppercase tracking-wider">Pointwise Breakdown & Job Folder</span>
+                <span x-show="analysisResult.job.job_id_ref || analysisResult.job.job_id" class="bg-zinc-900 text-zinc-300 text-[10px] px-2 py-0.5 rounded border border-zinc-800" x-text="'Ref: ' + (analysisResult.job.job_id_ref || analysisResult.job.job_id)"></span>
               </div>
-              <h3 class="text-xl font-bold text-white mt-1" x-text="analysisResult.job.company + ' — ' + analysisResult.job.role_title"></h3>
-              <p class="text-xs text-zinc-400 mt-0.5">
-                <span x-text="analysisResult.job.location"></span> | 
-                Evaluated for: <b class="text-white" x-text="analysisResult.candidate"></b>
-              </p>
+              <!-- Editable Company & Role Title -->
+              <div class="flex flex-col sm:flex-row gap-2 mt-1">
+                <input type="text" x-model="analysisResult.job.company" placeholder="Company Name" class="font-bold text-lg text-white bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1 focus:border-zinc-500 focus:outline-none">
+                <input type="text" x-model="analysisResult.job.role_title" placeholder="Position Title" class="font-bold text-lg text-white bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1 flex-1 focus:border-zinc-500 focus:outline-none">
+              </div>
+              <input type="text" x-model="analysisResult.job.location" placeholder="Location / Hybrid" class="text-xs text-zinc-400 bg-zinc-950 border border-zinc-800 rounded px-2 py-0.5 mt-1 focus:outline-none">
             </div>
 
-            <div class="flex items-center gap-3">
-              <!-- Built-in PDF Reader Button -->
-              <template x-if="analysisResult.job.pdf_path">
-                <button @click="openPdfViewer(analysisResult.job.pdf_path, analysisResult.job.role_title)" class="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold rounded-lg text-xs border border-zinc-700 flex items-center gap-1.5 transition">
-                  <i class="fa-solid fa-file-pdf text-zinc-400"></i> Read PDF
-                </button>
-              </template>
+            <!-- Header Quick Actions -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Save Changes Button -->
+              <button @click="saveJobChanges()" class="px-3.5 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center gap-1.5">
+                <i class="fa-solid fa-floppy-disk"></i> Save Details
+              </button>
 
-              <!-- Fit Score Badge -->
-              <div class="bg-zinc-950 px-3.5 py-1.5 rounded-lg border border-zinc-800 text-center">
-                <div class="text-xl font-black text-white" x-text="analysisResult.match_result.match_score + '%'"></div>
-                <span class="text-[9px] text-zinc-500 uppercase font-semibold">Match</span>
-              </div>
+              <!-- Download Job Package Zip -->
+              <button @click="downloadJobZip(analysisResult.job.id)" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-medium rounded-lg text-xs border border-zinc-700 flex items-center gap-1.5 transition" title="Download all files as .zip to backup in Google Drive or PC">
+                <i class="fa-solid fa-file-zipper text-[#89CFF0]"></i> Download .zip
+              </button>
+
+              <!-- Delete Job Button -->
+              <button @click="deleteJob(analysisResult.job.id)" class="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 font-semibold rounded-lg text-xs border border-rose-800/60 flex items-center gap-1 transition" title="Delete job and remove local folder">
+                <i class="fa-solid fa-trash text-xs"></i> Delete
+              </button>
             </div>
           </div>
 
-          <!-- Structured Metadata Badges Grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
-              <span class="text-[10px] text-zinc-500 uppercase font-semibold block">Employment</span>
-              <span class="font-semibold text-white" x-text="analysisResult.job.employment_type || 'Full-time'"></span>
+          <!-- Structured Metadata Editable Dropdowns Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-xs">
+            
+            <!-- 1. Employment Type Dropdown -->
+            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
+              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Employment</label>
+              <select x-model="analysisResult.job.employment_type" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Ausbildung / Duales Studium">Ausbildung / Dual</option>
+                <option value="Internship / Praktikum">Internship / Praktikum</option>
+                <option value="Working Student / Werkstudent">Werkstudent</option>
+                <option value="Freelance / Contract">Freelance / Contract</option>
+              </select>
             </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
-              <span class="text-[10px] text-zinc-500 uppercase font-semibold block">Contract</span>
-              <span class="font-semibold text-white" x-text="analysisResult.job.contract_type || 'Permanent'"></span>
+
+            <!-- 2. Contract Type Dropdown -->
+            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
+              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Contract</label>
+              <select x-model="analysisResult.job.contract_type" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
+                <option value="Permanent / Unbefristet">Permanent / Unbefristet</option>
+                <option value="Temporary / Befristet">Temporary / Befristet</option>
+                <option value="Project-based">Project-based</option>
+              </select>
             </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
-              <span class="text-[10px] text-zinc-500 uppercase font-semibold block">Seniority</span>
-              <span class="font-semibold text-white" x-text="analysisResult.job.seniority_level || 'Mid-Level'"></span>
+
+            <!-- 3. Seniority Level Dropdown -->
+            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
+              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Seniority</label>
+              <select x-model="analysisResult.job.seniority_level" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
+                <option value="Entry-Level / Junior">Junior / Entry</option>
+                <option value="Mid-Level">Mid-Level</option>
+                <option value="Senior">Senior</option>
+                <option value="Lead / Principal">Lead / Principal</option>
+                <option value="Postdoc / Researcher">Postdoc / Researcher</option>
+                <option value="Executive">Executive</option>
+              </select>
             </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
-              <span class="text-[10px] text-zinc-500 uppercase font-semibold block">Salary / Comp</span>
-              <span class="font-semibold text-white" x-text="analysisResult.job.salary_range || 'Not disclosed'"></span>
+
+            <!-- 4. Salary / Compensation -->
+            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
+              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Salary / Comp</label>
+              <input type="text" x-model="analysisResult.job.salary_range" placeholder="Not disclosed" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
             </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
-              <span class="text-[10px] text-zinc-500 uppercase font-semibold block">Deadline / Start</span>
-              <span class="font-semibold text-white" x-text="analysisResult.job.deadline || analysisResult.job.application_deadline || 'Open'"></span>
+
+            <!-- 5. Deadline / Start Date -->
+            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
+              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Deadline / Start</label>
+              <input type="text" x-model="analysisResult.job.deadline" placeholder="Open / Date" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
             </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
-              <span class="text-[10px] text-zinc-500 uppercase font-semibold block">Domain / Sector</span>
-              <span class="font-semibold text-white truncate block" x-text="analysisResult.job.industry_sector || 'Technology / Engineering'"></span>
+
+            <!-- 6. Domain / Industry Sector -->
+            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
+              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Industry Sector</label>
+              <input type="text" x-model="analysisResult.job.industry_sector" placeholder="Sector" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
+            </div>
+
+          </div>
+
+          <!-- =============================================================== -->
+          <!-- DEDICATED JOB FILE DRAWER (Stored Assets for this specific Job) -->
+          <!-- =============================================================== -->
+          <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80 space-y-3">
+            <div class="flex justify-between items-center border-b border-zinc-900 pb-2">
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-folder-tree text-[#89CFF0]"></i> Job Folder Assets & Created Files
+              </h4>
+              <span class="text-[11px] text-zinc-400 font-mono" x-text="jobFilesList.length + ' files in /jobs/' + (analysisResult.job.folder_path ? analysisResult.job.folder_path.replace('/jobs/', '') : '')"></span>
+            </div>
+
+            <!-- File Grid / List -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
+              <template x-for="file in jobFilesList" :key="file.name">
+                <div class="bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 flex flex-col justify-between hover:border-zinc-700 transition">
+                  <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-2 truncate">
+                      <i class="fa-solid text-sm" :class="file.name.endsWith('.pdf') ? 'fa-file-pdf text-rose-400' : (file.name.endsWith('.html') ? 'fa-file-code text-[#89CFF0]' : 'fa-file-lines text-zinc-400')"></i>
+                      <span class="font-medium text-xs text-white truncate" x-text="file.name"></span>
+                    </div>
+                  </div>
+                  <div class="flex justify-between items-center pt-2 mt-2 border-t border-zinc-800 text-[11px]">
+                    <span class="text-zinc-500" x-text="file.size_kb + ' KB'"></span>
+                    <div class="space-x-2">
+                      <button @click="openFileViewer(file.path, file.name)" class="text-[#89CFF0] hover:underline font-semibold">View</button>
+                      <a :href="file.path" :download="file.name" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-download"></i></a>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <div x-show="jobFilesList.length === 0" class="col-span-4 p-3 text-center text-xs text-zinc-500 italic">
+                No extra files generated yet. Head to Step 3 (CV Builder) to create A4 CV & Cover Letter for this role.
+              </div>
             </div>
           </div>
 
@@ -488,7 +567,7 @@
       <div class="bg-[#121215] rounded-xl border border-zinc-800 overflow-hidden shadow-md">
         <div class="p-4 border-b border-zinc-800/80 flex justify-between items-center">
           <h3 class="font-bold text-white text-xs">
-            Stored Jobs & Applications Database
+            Stored Opportunities Database
           </h3>
           <span class="text-xs text-zinc-500" x-text="jobsList.length + ' stored opportunities'"></span>
         </div>
@@ -501,14 +580,14 @@
                 <th class="p-3">Location</th>
                 <th class="p-3">Status</th>
                 <th class="p-3">PDF</th>
-                <th class="p-3">Action</th>
+                <th class="p-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-zinc-800/80">
               <template x-for="j in jobsList" :key="j.id">
                 <tr class="hover:bg-zinc-900/40 transition">
-                  <td class="p-3">
-                    <div class="font-semibold text-white" x-text="j.company"></div>
+                  <td class="p-3 cursor-pointer" @click="selectJobForAnalysis(j)">
+                    <div class="font-semibold text-white hover:text-[#89CFF0] transition" x-text="j.company"></div>
                     <div class="text-zinc-400 text-[11px]" x-text="j.role_title"></div>
                   </td>
                   <td class="p-3">
@@ -536,14 +615,21 @@
                       <span class="text-zinc-600 text-[11px]">-</span>
                     </template>
                   </td>
-                  <td class="p-3 space-x-2">
-                    <button @click="selectJobForAnalysis(j)" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded border border-zinc-700 text-xs font-semibold">Analyze</button>
-                    <button @click="selectJobForStudio(j); currentStep = 3;" class="px-2.5 py-1 bg-white hover:bg-zinc-200 text-zinc-950 rounded text-xs font-bold shadow-sm">Build CV</button>
+                  <td class="p-3 text-right space-x-1.5">
+                    <button @click="selectJobForAnalysis(j)" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded border border-zinc-700 text-xs font-semibold" title="View Breakdown & Files">
+                      Folder
+                    </button>
+                    <button @click="downloadJobZip(j.id)" class="p-1.5 text-[#89CFF0] hover:text-white" title="Download .zip package">
+                      <i class="fa-solid fa-file-zipper"></i>
+                    </button>
+                    <button @click="deleteJob(j.id)" class="p-1.5 text-zinc-500 hover:text-rose-400" title="Delete job">
+                      <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
                   </td>
                 </tr>
               </template>
               <tr x-show="jobsList.length === 0">
-                <td colspan="6" class="p-4 text-center text-zinc-600 italic">No job descriptions stored yet. Ingest a job from URL, PDF, or text above!</td>
+                <td colspan="6" class="p-4 text-center text-zinc-600 italic">No job descriptions stored yet. Ingest a job from URL, PDF, text, or import .zip above!</td>
               </tr>
             </tbody>
           </table>
@@ -770,12 +856,12 @@
     </div>
   </div>
 
-  <!-- Modal 3: Fullscreen PDF Reader Modal -->
+  <!-- Modal 3: In-App Fullscreen File / PDF Reader Modal -->
   <div x-show="showPdfViewerModal" x-cloak class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
     <div class="bg-[#121215] border border-zinc-800 rounded-2xl max-w-5xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="flex justify-between items-center p-3.5 border-b border-zinc-800 bg-zinc-950">
         <div class="flex items-center gap-2">
-          <i class="fa-solid fa-file-pdf text-[#89CFF0] text-sm"></i>
+          <i class="fa-solid fa-file text-[#89CFF0] text-sm"></i>
           <span class="font-bold text-white text-xs" x-text="activePdfViewerTitle"></span>
         </div>
         <div class="flex items-center gap-3">

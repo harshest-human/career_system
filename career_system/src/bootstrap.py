@@ -66,6 +66,9 @@ def check_and_bootstrap_environment() -> bool:
     return True
 
 
+bootstrap_environment = check_and_bootstrap_environment
+
+
 def check_latex_compiler() -> str:
     """Verify presence of XeLaTeX compiler."""
     compiler = shutil.which("xelatex")

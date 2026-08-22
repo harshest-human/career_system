@@ -1,52 +1,53 @@
 """
-Career System Local Web Application (FastAPI Server)
-Provides REST API and visual browser dashboard for Profile Management,
-Job Ingestion, AI Gap Analysis, Interactive LaTeX CV/Cover Letter Studio, and Networking CRM.
+Career System - Central FastAPI Server & REST API
+Manages Profiles, Job Parsing, AI Matrix Breakdown, Bilingual HTML CV/Letter Generation,
+Dedicated Local Job Folders, and 1-Click Zip Package Cloud Sync.
 """
 
 from __future__ import annotations
 
+import io
 import json
 import os
+import re
 import shutil
-import sys
+import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import uvicorn
 from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-# Add workspace root to sys.path
+# Initialize App and Root Paths
 ROOT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT_DIR))
 
 from src.ai_assistant import CareerAIAssistant
-from src.bootstrap import check_and_bootstrap_environment
+from src.bootstrap import bootstrap_environment
 from src.database import Database
 from src.extractor import JobExtractor
-from src.generator import DocumentGenerator
-from src.google_sync import GoogleWorkspaceSync, GOOGLE_APPS_SCRIPT_TEMPLATE
+from src.generator import LatexPipeline
+from src.google_sync import GOOGLE_APPS_SCRIPT_TEMPLATE, GoogleWorkspaceSync
 from src.html_templates import render_html_cover_letter, render_html_cv
 from src.matcher import CandidateMatcher
 from src.scraper import JobScraper
 from src.tracker import NetworkTracker
 
-# Initialize dependencies & DB
-check_and_bootstrap_environment()
-db = Database()
-ai_assistant = CareerAIAssistant()
+# Initialize core services
+bootstrap_environment()
+db = Database(ROOT_DIR / "career_system.db")
 extractor = JobExtractor()
 matcher = CandidateMatcher()
-generator = DocumentGenerator()
+generator = LatexPipeline()
 scraper = JobScraper()
 tracker = NetworkTracker()
+ai_assistant = CareerAIAssistant()
 google_sync = GoogleWorkspaceSync()
 
-app = FastAPI(title="Anti-Gravity Career System", version="2.0.0")
+app = FastAPI(title="Career System AI Studio", version="3.0.0")
 
 # CORS middleware
 app.add_middleware(
@@ -58,12 +59,12 @@ app.add_middleware(
 )
 
 # Ensure directories exist
-for folder in ["static", "templates", "job_ads_manual", "job_ads_auto", "outputs"]:
-    Path(folder).mkdir(parents=True, exist_ok=True)
+for folder in ["static", "templates", "job_ads_manual", "job_ads_auto", "jobs"]:
+    (ROOT_DIR / folder).mkdir(parents=True, exist_ok=True)
 
 # Mount static asset folders
 app.mount("/static", StaticFiles(directory=str(ROOT_DIR / "static")), name="static")
-app.mount("/outputs", StaticFiles(directory=str(ROOT_DIR / "outputs")), name="outputs")
+app.mount("/jobs", StaticFiles(directory=str(ROOT_DIR / "jobs")), name="jobs")
 app.mount("/job_ads_manual", StaticFiles(directory=str(ROOT_DIR / "job_ads_manual")), name="job_ads_manual")
 app.mount("/job_ads_auto", StaticFiles(directory=str(ROOT_DIR / "job_ads_auto")), name="job_ads_auto")
 
@@ -206,6 +207,14 @@ async def scrape_job(req: ScrapeRequest):
         breakdown["full_text"] = raw_text
         job_id = db.add_or_update_job(breakdown)
         breakdown["id"] = job_id
+
+        # Copy original PDF into the job folder
+        job_info = db.get_job(job_id)
+        if job_info and job_info.get("folder_path"):
+            job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+            if job_folder.exists() and pdf_path.exists():
+                shutil.copy2(pdf_path, job_folder / "job_description.pdf")
+
         return {"status": "success", "job_id": job_id, "data": breakdown}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -228,6 +237,14 @@ async def upload_job(
     breakdown["full_text"] = raw_text
     job_id = db.add_or_update_job(breakdown)
     breakdown["id"] = job_id
+
+    # Copy PDF into job folder
+    job_info = db.get_job(job_id)
+    if job_info and job_info.get("folder_path"):
+        job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+        if job_folder.exists() and dest_path.exists():
+            shutil.copy2(dest_path, job_folder / "job_description.pdf")
+
     return {"status": "success", "job_id": job_id, "data": breakdown}
 
 
@@ -239,7 +256,133 @@ async def parse_job_text_endpoint(req: ParseTextRequest):
     breakdown["full_text"] = req.raw_text
     job_id = db.add_or_update_job(breakdown)
     breakdown["id"] = job_id
+
+    # Save raw text file in job folder
+    job_info = db.get_job(job_id)
+    if job_info and job_info.get("folder_path"):
+        job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+        if job_folder.exists():
+            with open(job_folder / "job_description.txt", "w", encoding="utf-8") as f:
+                f.write(req.raw_text)
+
     return {"status": "success", "job_id": job_id, "data": breakdown}
+
+
+@app.put("/api/jobs/{job_id}")
+async def update_job_endpoint(job_id: int, payload: Dict[str, Any] = Body(...)):
+    job = db.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    db.update_job(job_id, payload)
+    return {"status": "success", "job_id": job_id}
+
+
+@app.delete("/api/jobs/{job_id}")
+async def delete_job_endpoint(job_id: int):
+    job = db.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    db.delete_job(job_id)
+
+    # Clean up local folder if it exists
+    if job.get("folder_path"):
+        folder_path = ROOT_DIR / job["folder_path"].lstrip("/")
+        if folder_path.exists():
+            shutil.rmtree(folder_path, ignore_errors=True)
+
+    return {"status": "success", "deleted_job_id": job_id}
+
+
+@app.get("/api/jobs/{job_id}/files")
+async def get_job_files(job_id: int):
+    job = db.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    folder_rel = job.get("folder_path")
+    if not folder_rel:
+        return {"files": []}
+
+    job_folder = ROOT_DIR / folder_rel.lstrip("/")
+    if not job_folder.exists():
+        return {"files": []}
+
+    files = []
+    for f in job_folder.iterdir():
+        if f.is_file():
+            size_kb = round(f.stat().st_size / 1024, 1)
+            files.append({
+                "name": f.name,
+                "path": f"{folder_rel}/{f.name}",
+                "size_kb": size_kb,
+                "modified": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+            })
+
+    return {"status": "success", "folder": folder_rel, "files": files}
+
+
+@app.get("/api/jobs/{job_id}/export-zip")
+async def export_job_zip(job_id: int):
+    job = db.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    folder_rel = job.get("folder_path")
+    if not folder_rel:
+        raise HTTPException(status_code=404, detail="No folder found for this job")
+
+    job_folder = ROOT_DIR / folder_rel.lstrip("/")
+    if not job_folder.exists():
+        raise HTTPException(status_code=404, detail="Job directory does not exist")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for file_path in job_folder.rglob("*"):
+            if file_path.is_file():
+                arcname = file_path.relative_to(job_folder)
+                zip_file.write(file_path, arcname)
+
+    zip_buffer.seek(0)
+    safe_name = re.sub(r"[^\w\-]", "_", f"{job['company']}_{job['role_title']}".lower())
+    headers = {"Content-Disposition": f"attachment; filename=job_package_{safe_name}.zip"}
+    return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
+
+
+@app.post("/api/jobs/import-zip")
+async def import_job_zip(file: UploadFile = File(...)):
+    content = await file.read()
+    zip_buffer = io.BytesIO(content)
+
+    temp_extract = ROOT_DIR / "jobs" / f"temp_{int(datetime.now().timestamp())}"
+    temp_extract.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(zip_buffer, "r") as zf:
+        zf.extractall(temp_extract)
+
+    # Look for job_metadata.json
+    meta_file = temp_extract / "job_metadata.json"
+    job_data = {}
+    if meta_file.exists():
+        with open(meta_file, "r", encoding="utf-8") as f:
+            job_data = json.load(f)
+
+    if not job_data:
+        job_data = {
+            "company": "Imported Company",
+            "role_title": "Imported Position",
+            "location": "Location",
+        }
+
+    job_id = db.add_or_update_job(job_data)
+    job_info = db.get_job(job_id)
+    dest_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+    dest_folder.mkdir(parents=True, exist_ok=True)
+
+    for item in temp_extract.iterdir():
+        shutil.move(str(item), str(dest_folder / item.name))
+
+    shutil.rmtree(temp_extract, ignore_errors=True)
+    return {"status": "success", "job_id": job_id, "data": job_data}
 
 
 @app.put("/api/jobs/{job_id}/status")
@@ -294,46 +437,6 @@ async def ai_suggest(req: SuggestRequest):
     return result
 
 
-# --- Dynamic LaTeX Compilation & PDF Streaming ---
-@app.post("/api/compile")
-async def compile_documents(req: CompileRequest):
-    prof = db.get_profile(req.candidate_id)
-    if not prof:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    profile_data = prof["data"]
-    if req.custom_summary:
-        profile_data.setdefault("executive_summary", {})[req.lang] = req.custom_summary
-
-    # Prepare document generation
-    doc_res = generator.generate_documents(
-        candidate_id=req.candidate_id,
-        job_data=req.job_data,
-        lang=req.lang,
-        custom_summary=req.custom_summary,
-        custom_letter_paragraphs=req.custom_letter_paragraphs,
-    )
-
-    def to_web_path(path_obj: Optional[Path]) -> Optional[str]:
-        if not path_obj:
-            return None
-        try:
-            rel = path_obj.resolve().relative_to(ROOT_DIR.resolve())
-            return f"/{str(rel).replace('\\', '/')}"
-        except Exception:
-            clean = str(path_obj).replace("\\", "/").lstrip("/")
-            return f"/{clean}"
-
-    cv_pdf_rel = to_web_path(doc_res.get("cv_pdf"))
-    letter_pdf_rel = to_web_path(doc_res.get("letter_pdf"))
-
-    return {
-        "status": "success",
-        "cv_pdf": cv_pdf_rel,
-        "letter_pdf": letter_pdf_rel,
-    }
-
-
 # --- HTML Document Rendering Endpoints (No LaTeX Required) ---
 @app.post("/api/render/html-cv")
 async def render_cv_endpoint(req: CompileRequest):
@@ -346,6 +449,17 @@ async def render_cv_endpoint(req: CompileRequest):
         lang=req.lang,
         custom_summary=req.custom_summary,
     )
+
+    # Save to job folder if available
+    job_id = req.job_data.get("id")
+    if job_id:
+        job = db.get_job(job_id)
+        if job and job.get("folder_path"):
+            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
+            if job_folder.exists():
+                with open(job_folder / f"cv_{req.lang}.html", "w", encoding="utf-8") as f:
+                    f.write(html_content)
+
     return {"status": "success", "html": html_content}
 
 
@@ -360,13 +474,24 @@ async def render_letter_endpoint(req: CompileRequest):
         lang=req.lang,
         custom_paragraphs=req.custom_letter_paragraphs,
     )
+
+    # Save to job folder if available
+    job_id = req.job_data.get("id")
+    if job_id:
+        job = db.get_job(job_id)
+        if job and job.get("folder_path"):
+            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
+            if job_folder.exists():
+                with open(job_folder / f"cover_letter_{req.lang}.html", "w", encoding="utf-8") as f:
+                    f.write(html_content)
+
     return {"status": "success", "html": html_content}
 
 
 # --- Google Workspace & Drive Sync Endpoints ---
 @app.post("/api/export/google-docs")
 async def export_to_google_docs(payload: Dict[str, Any] = Body(...)):
-    candidate_id = payload.get("candidate_id", "harsh")
+    candidate_id = payload.get("candidate_id", "default")
     prof = db.get_profile(candidate_id)
     if not prof:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -377,7 +502,6 @@ async def export_to_google_docs(payload: Dict[str, Any] = Body(...)):
 
     formatted_text = google_sync.format_cv_for_google_docs(prof["data"], lang=payload.get("lang", "en"))
     
-    # If webhook configured, create doc in Drive
     if google_sync.webhook_url:
         sync_res = google_sync.create_google_doc(
             title=f"CV - {prof['name']} - {payload.get('company', 'Application')}",
@@ -429,6 +553,25 @@ async def generate_outreach_pitch(req: OutreachRequest):
         role_title=req.role_title,
         template_name=tpl_file,
     )
+
+    # Save to job folder
+    job_id = getattr(req, "job_id", None)
+    if not job_id:
+        # Search by company
+        jobs = db.get_all_jobs()
+        for j in jobs:
+            if j.get("company", "").lower() == req.company.lower():
+                job_id = j.get("id")
+                break
+
+    if job_id:
+        job = db.get_job(job_id)
+        if job and job.get("folder_path"):
+            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
+            if job_folder.exists():
+                with open(job_folder / "outreach_pitch.txt", "w", encoding="utf-8") as f:
+                    f.write(f"Outreach Type: {req.outreach_type}\nContact: {req.contact_name}\n\n{pitch}")
+
     return {"status": "success", "pitch": pitch, "type": req.outreach_type}
 
 

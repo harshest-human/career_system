@@ -369,3 +369,7 @@ class DocumentGenerator:
             "letter_tex": letter_tex_path,
             "letter_pdf": letter_pdf,
         }
+
+
+LatexPipeline = DocumentGenerator
+
