@@ -226,6 +226,13 @@ function careerApp() {
         if (res.ok) {
           const data = await res.json();
           this.profileData = data.data || this.profileData;
+          if (!this.profileData.personal) this.profileData.personal = {};
+          if (!this.profileData.executive_summary) this.profileData.executive_summary = { en: '', de: '' };
+          if (!this.profileData.experience) this.profileData.experience = [];
+          if (!this.profileData.education) this.profileData.education = [];
+          if (!this.profileData.skills) this.profileData.skills = { domains: [], software_tools: [], hardware_instruments: [], languages: [] };
+          if (!this.profileData.leadership_awards) this.profileData.leadership_awards = [];
+
           this.syncMasterProfileToStrings();
           if (!this.studioProfile) {
             this.studioProfile = JSON.parse(JSON.stringify(this.profileData));
