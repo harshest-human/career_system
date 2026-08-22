@@ -1,9 +1,10 @@
 """
 HTML & CSS Resume and Cover Letter Template Engine
 Produces clean, modern, ATS-compliant HTML/CSS documents in English (UK) and Deutsch.
+Strictly calibrated for standard ISO 216 A4 Paper dimensions (210mm x 297mm).
 Optimized for:
-1. Instant live in-browser preview (< 10ms)
-2. High-resolution Print-to-PDF (@media print)
+1. Exact A4 screen and print-to-PDF rendering (@media print with size: A4 portrait)
+2. Instant live in-browser preview (< 10ms)
 3. 1-Click copy as rich formatted text for Google Docs / Microsoft Word
 """
 
@@ -19,7 +20,7 @@ def render_html_cv(
     lang: str = "en",
     custom_summary: Optional[str] = None,
 ) -> str:
-    """Render a complete, self-contained HTML/CSS CV in English (UK) or Deutsch."""
+    """Render a complete, self-contained HTML/CSS CV strictly sized for A4 in English (UK) or Deutsch."""
     is_de = (lang.lower() == "de")
     personal = profile.get("personal", {})
     full_name = personal.get("full_name", "Applicant Name")
@@ -116,26 +117,34 @@ def render_html_cv(
   <title>Curriculum Vitae - {full_name}</title>
   <style>
     @page {{
-      size: A4;
-      margin: 12mm 14mm 12mm 14mm;
+      size: A4 portrait;
+      margin: 0;
     }}
     * {{
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }}
-    body {{
+    html, body {{
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: #f8fafc;
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
       font-size: 9.5pt;
       line-height: 1.45;
       color: #1e293b;
-      background: #ffffff;
-      padding: 12px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }}
-    .cv-container {{
-      max-width: 800px;
-      margin: 0 auto;
+    .cv-page {{
+      width: 210mm;
+      min-height: 297mm;
+      box-sizing: border-box;
+      padding: 14mm 16mm 14mm 16mm;
+      margin: 0 auto 10mm auto;
       background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }}
     /* Header */
     .header {{
@@ -172,10 +181,10 @@ def render_html_cv(
     }}
     /* Section */
     .section {{
-      margin-bottom: 10px;
+      margin-bottom: 11px;
     }}
     .section-title {{
-      font-size: 10pt;
+      font-size: 9.5pt;
       font-weight: 700;
       color: #0f766e;
       text-transform: uppercase;
@@ -243,17 +252,23 @@ def render_html_cv(
       color: #0f172a;
     }}
     @media print {{
-      body {{
+      html, body {{
+        background: #ffffff;
+        margin: 0;
         padding: 0;
+        width: 210mm;
       }}
-      .cv-container {{
+      .cv-page {{
+        margin: 0;
+        padding: 14mm 16mm 14mm 16mm;
         box-shadow: none;
+        page-break-after: always;
       }}
     }}
   </style>
 </head>
 <body>
-  <div class="cv-container">
+  <div class="cv-page">
     <div class="header">
       <div class="header-left">
         <div class="name">{full_name}</div>
@@ -307,7 +322,7 @@ def render_html_cover_letter(
     lang: str = "en",
     custom_paragraphs: Optional[List[str]] = None,
 ) -> str:
-    """Render a complete, self-contained HTML/CSS Cover Letter in English (UK) or Deutsch."""
+    """Render a complete, self-contained HTML/CSS Cover Letter strictly sized for A4 in English (UK) or Deutsch."""
     is_de = (lang.lower() == "de")
     personal = profile.get("personal", {})
     full_name = personal.get("full_name", "Applicant Name")
@@ -359,26 +374,34 @@ def render_html_cover_letter(
   <title>Cover Letter - {full_name} - {company}</title>
   <style>
     @page {{
-      size: A4;
-      margin: 18mm 18mm 18mm 18mm;
+      size: A4 portrait;
+      margin: 0;
     }}
     * {{
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }}
-    body {{
+    html, body {{
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: #f8fafc;
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
       font-size: 10.5pt;
       line-height: 1.55;
       color: #1e293b;
-      background: #ffffff;
-      padding: 14px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }}
-    .letter-container {{
-      max-width: 780px;
-      margin: 0 auto;
+    .letter-page {{
+      width: 210mm;
+      min-height: 297mm;
+      box-sizing: border-box;
+      padding: 20mm 20mm 20mm 20mm;
+      margin: 0 auto 10mm auto;
       background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }}
     .header {{
       display: flex;
@@ -386,7 +409,7 @@ def render_html_cover_letter(
       align-items: flex-start;
       border-bottom: 2px solid #0d9488;
       padding-bottom: 10px;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
     }}
     .name {{
       font-size: 19pt;
@@ -405,13 +428,13 @@ def render_html_cover_letter(
       text-decoration: none;
     }}
     .recipient {{
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       font-size: 10pt;
       color: #334155;
       line-height: 1.4;
     }}
     .date-line {{
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       font-size: 10pt;
       color: #64748b;
     }}
@@ -432,21 +455,30 @@ def render_html_cover_letter(
     }}
     .closing {{
       margin-top: 22px;
-      margin-bottom: 28px;
+      margin-bottom: 26px;
     }}
     .signature-name {{
       font-weight: 700;
       color: #0f172a;
     }}
     @media print {{
-      body {{
+      html, body {{
+        background: #ffffff;
+        margin: 0;
         padding: 0;
+        width: 210mm;
+      }}
+      .letter-page {{
+        margin: 0;
+        padding: 20mm 20mm 20mm 20mm;
+        box-shadow: none;
+        page-break-after: always;
       }}
     }}
   </style>
 </head>
 <body>
-  <div class="letter-container">
+  <div class="letter-page">
     <div class="header">
       <div class="name">{full_name}</div>
       <div class="contact-info">
