@@ -44,6 +44,7 @@ class JobScraper:
         """Fetch raw HTML content with headers and timeout handling."""
         response = requests.get(url, headers=self.headers, timeout=20)
         response.raise_for_status()
+        response.encoding = response.apparent_encoding or "utf-8"
         return response.text
 
     def extract_job_content(self, html: str, url: str) -> Dict[str, Any]:
@@ -75,15 +76,33 @@ class JobScraper:
             except Exception:
                 pass
 
-        # 2. Extract OpenGraph & meta tags for title/company fallback
-        if not title:
-            meta_title = soup.find("meta", property="og:title")
-            if meta_title and meta_title.get("content"):
-                title = str(meta_title["content"]).strip()
-            else:
-                title_tag = soup.find("h1") or soup.find("title")
-                if title_tag:
-                    title = title_tag.get_text(strip=True)
+        # 2. Extract H1 and OpenGraph & meta tags for title/company fallback
+        h1_tag = soup.find("h1")
+        if h1_tag and h1_tag.get_text(strip=True):
+            title = h1_tag.get_text(strip=True)
+
+        meta_title = soup.find("meta", property="og:title")
+        raw_page_title = meta_title.get("content") if meta_title and meta_title.get("content") else (soup.title.get_text(strip=True) if soup.title else "")
+
+        if not title and raw_page_title:
+            title = raw_page_title
+
+        # Determine company from page title patterns (e.g. "Title | Jobs bei Company GmbH", "Title at Company")
+        if not company and raw_page_title:
+            if "jobs bei" in raw_page_title.lower():
+                company = raw_page_title.lower().split("jobs bei")[-1].strip().title()
+                # Clean up original casing from raw_page_title
+                match = re.search(r"jobs bei\s+(.+)$", raw_page_title, re.IGNORECASE)
+                if match:
+                    company = match.group(1).strip()
+            elif " at " in raw_page_title.lower():
+                match = re.search(r"\bat\s+(.+)$", raw_page_title, re.IGNORECASE)
+                if match:
+                    company = match.group(1).strip()
+            elif "|" in raw_page_title:
+                parts = [p.strip() for p in raw_page_title.split("|") if p.strip()]
+                if len(parts) > 1:
+                    company = parts[-1].replace("Jobs", "").replace("Karriere", "").replace("Careers", "").strip()
 
         if not company:
             meta_site = soup.find("meta", property="og:site_name")
@@ -92,6 +111,10 @@ class JobScraper:
             else:
                 domain = urlparse(url).netloc.replace("www.", "")
                 company = domain.split(".")[0].capitalize()
+
+        # Clean title if it contains company suffix
+        if "|" in title and len(title.split("|")) > 1:
+            title = title.split("|")[0].strip()
 
         # 3. Strip boilerplate tags
         for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript", "svg", "button", "input"]):

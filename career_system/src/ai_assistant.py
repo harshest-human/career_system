@@ -149,16 +149,30 @@ Return ONLY valid JSON adhering to this exact schema:
         role_title = "Position"
         location = "Hamburg, Germany"
 
-        # Heuristic search for company & role in top 10 lines
-        for l in lines[:10]:
-            if any(term in l.lower() for term in ["gmbh", "ag", "inc", "corp", "kg", "se", "ltd", "consulting", "institute"]):
-                company = l.replace("Willkommen bei", "").strip()
-                break
+        # Check explicit Title: and Company: lines
+        for l in lines:
+            if l.startswith("Title:") and len(l.split("Title:", 1)[1].strip()) > 2:
+                role_title = l.split("Title:", 1)[1].strip()
+            elif l.startswith("Company:") and len(l.split("Company:", 1)[1].strip()) > 1:
+                company = l.split("Company:", 1)[1].strip()
 
-        for l in lines[:12]:
-            if any(term in l.lower() for term in ["engineer", "consultant", "analyst", "developer", "manager", "scientist", "spezialist", "wissenschaftlicher"]):
-                role_title = l
-                break
+        # Clean title if it contains delimiter
+        if "|" in role_title:
+            role_title = role_title.split("|")[0].strip()
+
+        # Fallback company detection
+        if company == "Target Company":
+            for l in lines[:10]:
+                if any(term in l.lower() for term in ["gmbh", "ag", "inc", "corp", "kg", "se", "ltd", "consulting", "institute"]):
+                    company = l.replace("Willkommen bei", "").replace("Jobs bei", "").strip()
+                    break
+
+        if role_title == "Position":
+            for l in lines[:15]:
+                if any(term in l.lower() for term in ["leiter", "head of", "director", "manager", "scientist", "engineer", "technologist", "entwickler", "consultant", "analyst", "spezialist"]):
+                    if len(l) < 80:
+                        role_title = l
+                        break
 
         # Employment and contract type detection
         lowered = text.lower()
@@ -173,7 +187,9 @@ Return ONLY valid JSON adhering to this exact schema:
             contract = "Fixed-term (Befristet)"
 
         seniority = "Mid-Level"
-        if "senior" in lowered or "lead" in lowered or "principal" in lowered:
+        if "leiter" in lowered or "head of" in lowered or "director" in lowered:
+            seniority = "Head of Department / Lead"
+        elif "senior" in lowered or "lead" in lowered or "principal" in lowered:
             seniority = "Senior"
         elif "junior" in lowered or "entry" in lowered or "einsteiger" in lowered:
             seniority = "Junior"
@@ -184,30 +200,70 @@ Return ONLY valid JSON adhering to this exact schema:
         job_id_match = re.search(r"(?:req|job|ref|kennziffer)[-:\s#]*([a-zA-Z0-9_\-]+)", text, re.IGNORECASE)
         job_id = job_id_match.group(1) if job_id_match else ""
 
-        # Extract keywords
+        # Broad multi-domain keyword dictionary
         known_tech = [
-            "python", " r ", "sql", "git", "docker", "tableau", "power bi", "excel",
-            "agricultural engineering", "dairy science", "livestock emissions", "sensor technology",
-            "greenfeed", "ftir", "gasmet", "time series", "mixed models", "statistics", "esg", "sustainability"
+            "lebensmitteltechnologie", "produktentwicklung", "rezepturentwicklung", "supplements",
+            "nahrungsergänzungsmittel", "nutraceuticals", "functional ingredients", "sensory analysis",
+            "sensorik", "stage-gate", "quality assurance", "qualitätsmanagement", "haccp", "gmp", "ifs",
+            "python", " r ", "sql", "git", "docker", "tableau", "power bi", "excel", "salesforce", "devex",
+            "project management", "projektmanagement", "regulatory affairs", "food safety", "lebensmittelsicherheit"
         ]
         matched_skills = []
         for s in known_tech:
             if s.strip().lower() in lowered:
-                matched_skills.append(s.strip())
+                matched_skills.append(s.strip().title())
 
-        # Split responsibilities and qualifications if bullet markers exist
-        bullet_lines = [l.lstrip("•-* ").strip() for l in lines if l.startswith(("•", "-", "*")) or (len(l) > 20 and l[0].isdigit() and l[1] in ".)")]
+        # Section-based Extraction (Deine Mission / Was du mitbringst / Tasks / Requirements)
+        responsibilities = []
+        requirements = []
+        perks = []
 
-        responsibilities = bullet_lines[:4] if len(bullet_lines) >= 4 else [
-            "Lead technical analysis and deliver project milestones.",
-            "Collaborate with multidisciplinary engineering and science teams.",
-            "Coordinate field campaigns, sensor instrumentation, and reporting.",
-        ]
-        requirements = bullet_lines[4:8] if len(bullet_lines) >= 8 else [
-            "Degree in Agricultural Engineering, Data Science, or related technical domain.",
-            "Proficiency in statistical modeling and data evaluation (R, Python, SQL).",
-            "Hands-on experience with sensor hardware or environmental measurements.",
-        ]
+        current_sec = None
+        for l in lines:
+            lower_l = l.lower()
+            if any(k in lower_l for k in ["deine mission", "aufgaben", "responsibilities", "ihre aufgaben", "das machst du"]):
+                current_sec = "resp"
+                continue
+            elif any(k in lower_l for k in ["was du mitbringst", "qualifikationen", "requirements", "profil", "das bringst du mit"]):
+                current_sec = "req"
+                continue
+            elif any(k in lower_l for k in ["was wir dir bieten", "benefits", "wir bieten", "perks", "unser angebot"]):
+                current_sec = "perks"
+                continue
+            elif l.startswith("SECTION:") or any(k in lower_l for k in ["über uns", "about us", "dein kontakt"]):
+                current_sec = None
+                continue
+
+            if current_sec and (l.startswith(("•", "-", "*")) or len(l) > 15):
+                cleaned_line = l.lstrip("•-* ").strip()
+                if len(cleaned_line) > 10:
+                    if current_sec == "resp" and len(responsibilities) < 8:
+                        responsibilities.append(cleaned_line)
+                    elif current_sec == "req" and len(requirements) < 8:
+                        requirements.append(cleaned_line)
+                    elif current_sec == "perks" and len(perks) < 6:
+                        perks.append(cleaned_line)
+
+        if not responsibilities:
+            responsibilities = [
+                "Entwicklung und Umsetzung der Produktstrategie und Markteinführung innovativer Produkte.",
+                "Steuerung von R&D-Projekten von der Konzeptionierung bis zum erfolgreichen Markteintritt.",
+                "Fachliche Koordination von Rezepturoptimierung, sensorischer Evaluierung und Qualitätsstandards."
+            ]
+        if not requirements:
+            requirements = [
+                "Abgeschlossenes Studium in Lebensmitteltechnologie, Food Science oder vergleichbare Qualifikation.",
+                "Fundierte Praxiserfahrung in Produktentwicklung, Formulierung und Projektmanagement.",
+                "Ausgeprägte Team- und Kommunikationskompetenz in Deutsch und Englisch."
+            ]
+        if not perks:
+            perks = [
+                "Flexible Arbeitszeiten und Homeoffice-Optionen (New Work)",
+                "Attraktive Mitarbeiterrabatte und Sport-/Fitnessförderung",
+                "Dynamisches, wachstumsorientiertes Teamumfeld"
+            ]
+
+        sector = "Food & Sports Nutrition" if any(w in lowered for w in ["food", "lebensmittel", "supplement", "nutrition", "fitness"]) else "Engineering & Technology"
 
         return {
             "company": company,
@@ -219,14 +275,14 @@ Return ONLY valid JSON adhering to this exact schema:
             "job_id": job_id,
             "salary_range": "Not disclosed",
             "application_deadline": "As soon as possible",
-            "industry_sector": "Engineering & Technology",
-            "extracted_skills": matched_skills if matched_skills else ["python", "data analysis", "sensor technology"],
+            "industry_sector": sector,
+            "extracted_skills": matched_skills if matched_skills else ["Produktentwicklung", "Lebensmitteltechnologie", "Projektmanagement"],
             "key_responsibilities": responsibilities,
             "required_qualifications": requirements,
-            "preferred_qualifications": ["German & English communication skills", "Experience with commercial livestock systems"],
-            "tech_stack_tools": [s for s in matched_skills if s in ["python", "r", "sql", "docker", "power bi", "tableau", "excel"]],
-            "language_requirements": ["English (Fluent / C1)", "German (Professional / B2)"],
-            "benefits_perks": ["30 days annual leave", "Flexible / Hybrid work options", "Continuing education support"],
+            "preferred_qualifications": ["German & English communication skills", "Experience with functional foods, supplements or fast-moving formulations"],
+            "tech_stack_tools": [s for s in matched_skills if s.lower() in ["python", "r", "sql", "docker", "power bi", "tableau", "excel", "salesforce", "devex"]],
+            "language_requirements": ["German (Fluent / Professional)", "English (Fluent / Professional)"],
+            "benefits_perks": perks,
             "hiring_manager_contact": "HR & Talent Acquisition Team",
         }
 
@@ -367,46 +423,55 @@ Return ONLY valid JSON matching this exact structure:
         role = job_data.get("role_title") or "the position"
         skills = job_data.get("extracted_skills", [])
 
-        domains_list = master_profile.get("skills", {}).get("domains", []) or []
-        primary_domain_en = domains_list[0] if len(domains_list) > 0 else "applied engineering and technical operations"
-        primary_domain_de = domains_list[0] if len(domains_list) > 0 else "angewandte Technik und operative Prozesse"
+        personal = master_profile.get("personal", {})
+        cand_name = personal.get("full_name", "Applicant")
+        cand_title_en = personal.get("title_en", "Technical Application Scientist")
+        cand_title_de = personal.get("title_de", "Applikationswissenschaftlerin")
 
-        cand_name = master_profile.get("personal", {}).get("full_name", "Applicant")
+        domains_list = master_profile.get("skills", {}).get("domains", []) or []
+        primary_domain_en = (
+            domains_list[0] if len(domains_list) > 0 else "Food Technology & Formulation"
+        )
+        primary_domain_de = (
+            "Lebensmitteltechnologie & Produktentwicklung"
+            if "food" in primary_domain_en.lower() or "application" in primary_domain_en.lower()
+            else primary_domain_en
+        )
 
         # Synthesize tailored summaries
         tailored_prof["executive_summary"] = {
-            "en": f"Results-driven professional with deep expertise in {primary_domain_en} and demonstrated success delivering high-impact solutions. Direct technical alignment with {company}'s {role} objectives.",
-            "de": f"Ergebnisorientierter Spezialist mit fundierter Expertise in {primary_domain_de} und nachgewiesenen Erfolgen bei der Umsetzung anspruchsvoller Projekte. Ideale Passung für die Position als {role} bei {company}.",
+            "en": f"Results-oriented {cand_title_en} with comprehensive expertise in {primary_domain_en}, formulation design, sensory optimization, and technical project delivery. Highly aligned with {company}'s requirements for the {role} position.",
+            "de": f"Ergebnisorientierte {cand_title_de} mit fundierter Expertise in {primary_domain_de}, Rezepturoptimierung und sensorischer Evaluierung sowie nachgewiesenen Erfolgen im Projektmanagement. Ideale fachliche und persönliche Passung für die Position als {role} bei {company}.",
         }
 
-        # Enhance experience bullets if present
+        # Enhance experience bullets to highlight relevance
         if tailored_prof.get("experience"):
             for exp in tailored_prof["experience"]:
                 if "bullets" not in exp or not exp["bullets"]:
                     exp["bullets"] = [
-                        f"Led technical execution aligning with core requirements in {skills[0] if skills else 'engineering and analysis'}.",
-                        f"Streamlined cross-functional operations to accelerate project milestones and maintain quality standards.",
+                        f"Led technical deliverables aligning with core requirements in {skills[0] if skills else 'formulation and product development'}.",
+                        "Streamlined cross-functional operations to accelerate project milestones and maintain high quality standards.",
                     ]
 
         # Synthesize bilingual cover letters
         cover_en = [
-            f"I am writing to express my enthusiastic application for the {role} position at {company}. With my background in {primary_domain_en} and proven hands-on execution, I offer a direct match for your team's current operational and innovation objectives.",
-            f"Regarding your specific requirements: {user_notes if user_notes else ('My background spans core areas including ' + ', '.join(skills[:4]) if skills else 'I have consistently bridged complex analytical workflows with reliable execution.')}. I have delivered measurable impact and streamlined collaboration across technical teams.",
-            f"I am particularly drawn to {company} because of your commitment to technical innovation and excellence. I hold valid work authorization in Germany and look forward to discussing how my experience will support {company}'s continued success.",
+            f"I am writing to express my enthusiastic application for the {role} position at {company}. With my background in {primary_domain_en} and my proven track record translating formulation concepts and technical solutions into market-ready products, I offer a direct match for your team's innovation and development goals.",
+            f"In my current and previous roles—including as Application Scientist EMENA at Sensient Technologies Europe GmbH—I have served as the key technical bridge between R&D, cross-functional teams, and international clients across food, functional ingredients, and nutraceutical applications. {user_notes if user_notes else 'My background combines hands-on formulation design, sensory analysis, and structured stage-gate project execution with a strong focus on quality and commercial viability.'}",
+            f"I am particularly drawn to {company} because of your strong market presence, commitment to quality, and forward-looking product portfolio. Based in Hamburg and holding full work authorization, I look forward to contributing my expertise to {company}'s continued growth and product excellence.",
         ]
 
         cover_de = [
-            f"mit großem Interesse bewerbe ich mich auf die Position als {role} bei {company}. Mein Profil verbindet fundierte Fachkenntnisse in {primary_domain_de} mit zielgerichteter Praxis.",
-            f"Bezugnehmend auf Ihre Anforderungen: {user_notes if user_notes else 'Meine Schwerpunkte liegen in der praktischen Umsetzung und datengestützten Analyse.'} In meinen Projekten habe ich stets gezeigt, wie anspruchsvolle Aufgaben strukturiert und termingerecht gelöst werden.",
-            f"Ich freue mich darauf, meine Erfahrung bei {company} einzubringen. Ich verfüge über eine uneingeschränkte Arbeitserlaubnis in Deutschland und freue mich auf ein persönliches Kennenlernen.",
+            f"mit großem Interesse bewerbe ich mich auf die Position als {role} bei {company}. Als erfahrene Spezialistin für {primary_domain_de} und Produktentwicklung verbinde ich fundiertes wissenschaftliches Know-how mit zielgerichteter Praxiserfahrung in der Umsetzung innovativer Rezepturen.",
+            f"In meiner bisherigen Tätigkeit als Application Scientist EMENA bei Sensient Technologies Europe GmbH steuere ich die Schnittstelle zwischen R&D, Vertrieb und internationalen Kunden in den Bereichen Lebensmittel, funktionelle Inhaltsstoffe und Nutrazeutika. {user_notes if user_notes else 'Meine Kernkompetenzen liegen in der Entwicklung und Optimierung von Formulierungen, der sensorischen Evaluierung sowie im strukturierten Projektmanagement.'} Ich zeichne mich durch Pragmatismus, Umsetzungsstärke und interdisziplinäre Teamarbeit aus.",
+            f"Die Innovationskraft und der hohe Qualitätsanspruch von {company} begeistern mich sehr. Mit Wohnsitz in Hamburg und uneingeschränkter Arbeitserlaubnis freue ich mich auf die Gelegenheit, meine Expertise gewinnbringend in Ihr Team einzubringen und die Produktstrategie erfolgreich mitzugestalten.",
         ]
 
         # Synthesize outreach
         outreach = {
-            "linkedin_connection": f"Hi {job_data.get('hiring_manager_contact', 'there')}, I saw your opening for {role} at {company}. My background in {primary_domain_en} aligns closely. Would love to connect!",
-            "linkedin_inmail": f"Hi {job_data.get('hiring_manager_contact', 'Hiring Team')},\n\nI recently came across the {role} opportunity at {company}. Given my background in {primary_domain_en} and experience with {', '.join(skills[:3]) if skills else 'technical solutions'}, I wanted to reach out directly. I'd welcome the chance to briefly discuss how my background aligns with your team's goals.\n\nBest regards,\n{cand_name}",
-            "cold_email_subject": f"Application: {role} — {cand_name}",
-            "cold_email_body": f"Dear {job_data.get('hiring_manager_contact', 'Hiring Team')},\n\nI am writing to express my strong interest in the {role} role at {company}.\n\nWith extensive experience in {primary_domain_en} and hands-on proficiency in {', '.join(skills[:3]) if skills else 'core competencies'}, I have consistently delivered measurable outcomes.\n\nPlease find my tailored CV attached for your review. I would welcome the opportunity to discuss my qualifications.\n\nSincerely,\n{cand_name}",
+            "linkedin_connection": f"Hi {job_data.get('hiring_manager_contact', 'there')}, I saw your opening for {role} at {company}. With my background in food tech & functional formulation, I'd love to connect!",
+            "linkedin_inmail": f"Dear {job_data.get('hiring_manager_contact', 'Hiring Team')},\n\nI recently came across the {role} opportunity at {company} in Hamburg. Given my background as an Application Scientist in food and nutraceutical formulation (EIT Food M.Sc. & Sensient Technologies), I wanted to reach out directly. I would welcome the opportunity to discuss how my formulation and project management experience align with your team's product goals.\n\nBest regards,\n{cand_name}",
+            "cold_email_subject": f"Bewerbung: {role} — {cand_name}",
+            "cold_email_body": f"Sehr geehrte Damen und Herren,\n\nmit großem Interesse bewerbe ich mich auf die Position als {role} bei {company}.\n\nAls Application Scientist und Lebensmitteltechnologin mit Schwerpunkt auf funktionellen Inhaltsstoffen und Produktentwicklung bringe ich mehrjährige Erfahrung in Rezepturoptimierung, sensorischer Analyse und Projektsteuerung mit.\n\nGerne stelle ich Ihnen meine Qualifikationen in einem persönlichen Gespräch näher vor. Meine vollständigen Bewerbungsunterlagen finden Sie anbei.\n\nMit freundlichen Grüßen\n{cand_name}",
         }
 
         return {
@@ -418,7 +483,8 @@ Return ONLY valid JSON matching this exact structure:
             "outreach": outreach,
             "tailoring_highlights": [
                 f"Generated tailored summaries for {company}",
-                "Structured cover letter and outreach pitches",
+                f"Aligned experience and skills with {role}",
+                "Structured bilingual cover letter and outreach pitches",
             ],
             "ai_model_used": "offline_nlp",
         }
