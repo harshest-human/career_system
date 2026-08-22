@@ -659,20 +659,16 @@ function careerApp() {
         return;
       }
       try {
-        const res = await fetch(this.googleWebhookUrl, {
+        const res = await fetch(`${API_BASE}/api/google/test-sync`, {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: 'upload_folder',
-            folder_name: 'Test_Connection',
-            files: [{ name: 'test_sync.txt', content: 'Connection successful!', is_base64: false }],
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ webhook_url: this.googleWebhookUrl }),
         });
         const data = await res.json();
         if (data.status === 'success') {
-          alert('Google Drive connection verified successfully! Folder created in your Google Drive.');
+          alert('✓ Google Drive connection verified successfully! A test folder was created in your Google Drive under CareerSystem_Jobs.');
         } else {
-          alert('Google responded: ' + JSON.stringify(data));
+          alert('Sync Test Failed: ' + (data.message || JSON.stringify(data)));
         }
       } catch (err) {
         alert('Connection error: ' + err.message);

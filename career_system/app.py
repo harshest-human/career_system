@@ -633,6 +633,46 @@ async def get_google_script_template():
     return {"script": GOOGLE_APPS_SCRIPT_TEMPLATE}
 
 
+@app.post("/api/google/test-sync")
+async def test_google_sync(payload: Dict[str, Any] = Body(default={})):
+    webhook_url = payload.get("webhook_url")
+    if webhook_url:
+        google_sync.webhook_url = webhook_url
+
+    if not google_sync.webhook_url:
+        raise HTTPException(status_code=400, detail="Webhook URL is empty. Please enter your Webhook URL.")
+
+    cleaned_url = google_sync.clean_webhook_url(google_sync.webhook_url)
+    test_payload = {
+        "action": "test",
+        "folder_name": "CareerSystem_Test_Connection",
+        "files": [{"name": "test_sync.txt", "content": "Career System connection verified successfully!", "is_base64": False}],
+    }
+    try:
+        import requests
+        res = requests.post(
+            cleaned_url,
+            data=json.dumps(test_payload),
+            headers={"Content-Type": "text/plain;charset=utf-8"},
+            timeout=30,
+            allow_redirects=True,
+        )
+        try:
+            return res.json()
+        except Exception:
+            if "accounts.google.com" in res.text or "Sign in" in res.text:
+                return {
+                    "status": "error",
+                    "message": "Google Authorization Error: In your Apps Script deployment, make sure 'Who has access' is set to 'Anyone' (not 'Only myself').",
+                }
+            return {
+                "status": "error",
+                "message": f"Google Script Error (HTTP {res.status_code}): {res.text[:250]}",
+            }
+    except Exception as e:
+        return {"status": "error", "message": f"Connection Error: {str(e)}"}
+
+
 @app.post("/api/contacts")
 async def create_contact(payload: Dict[str, Any] = Body(...)):
     contact_id = db.add_contact(payload)
