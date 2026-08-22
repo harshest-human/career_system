@@ -630,6 +630,7 @@ function careerApp() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             candidate_id: this.activeProfileId,
+            job_id: this.studioJob.id || null,
             company: this.outreachForm.company,
             contact_name: this.outreachForm.contact_name,
             role_title: this.outreachForm.role_title,

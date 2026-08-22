@@ -1,7 +1,7 @@
 """
 Career System - Central FastAPI Server & REST API
 Manages Profiles, Job Parsing, AI Matrix Breakdown, Bilingual HTML CV/Letter Generation,
-Dedicated Local Job Folders, and 1-Click Zip Package Cloud Sync.
+Dedicated Local Job Folders with Systematic Nomenclature: {jobposition}_{jobID}_{companyname}_{suffix}
 """
 
 from __future__ import annotations
@@ -12,13 +12,14 @@ import os
 import re
 import shutil
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import uvicorn
 from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -27,7 +28,7 @@ ROOT_DIR = Path(__file__).resolve().parent
 
 from src.ai_assistant import CareerAIAssistant
 from src.bootstrap import bootstrap_environment
-from src.database import Database
+from src.database import Database, get_job_prefix
 from src.extractor import JobExtractor
 from src.generator import LatexPipeline
 from src.google_sync import GOOGLE_APPS_SCRIPT_TEMPLATE, GoogleWorkspaceSync
@@ -47,7 +48,7 @@ tracker = NetworkTracker()
 ai_assistant = CareerAIAssistant()
 google_sync = GoogleWorkspaceSync()
 
-app = FastAPI(title="Career System AI Studio", version="3.0.0")
+app = FastAPI(title="Career System AI Studio", version="3.1.0")
 
 # CORS middleware
 app.add_middleware(
@@ -115,6 +116,7 @@ class OutreachRequest(BaseModel):
     contact_name: str
     role_title: str
     outreach_type: str = "connection"
+    job_id: Optional[int] = None
 
 
 # --- HTML Frontend Route ---
@@ -188,7 +190,7 @@ async def delete_portal(portal_id: int):
     return {"status": "success"}
 
 
-# --- Job Endpoints ---
+# --- Job Endpoints with Systematic Nomenclature ---
 @app.get("/api/jobs")
 async def get_jobs():
     return db.get_all_jobs()
@@ -208,12 +210,14 @@ async def scrape_job(req: ScrapeRequest):
         job_id = db.add_or_update_job(breakdown)
         breakdown["id"] = job_id
 
-        # Copy original PDF into the job folder
+        # Copy original PDF with systematic naming: {jobposition}_{jobID}_{companyname}_description.pdf
         job_info = db.get_job(job_id)
         if job_info and job_info.get("folder_path"):
             job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+            prefix = get_job_prefix(breakdown, job_id)
+            desc_name = f"{prefix}_description.pdf"
             if job_folder.exists() and pdf_path.exists():
-                shutil.copy2(pdf_path, job_folder / "job_description.pdf")
+                shutil.copy2(pdf_path, job_folder / desc_name)
 
         return {"status": "success", "job_id": job_id, "data": breakdown}
     except Exception as e:
@@ -238,12 +242,14 @@ async def upload_job(
     job_id = db.add_or_update_job(breakdown)
     breakdown["id"] = job_id
 
-    # Copy PDF into job folder
+    # Copy PDF with systematic naming: {jobposition}_{jobID}_{companyname}_description.pdf
     job_info = db.get_job(job_id)
     if job_info and job_info.get("folder_path"):
         job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+        prefix = get_job_prefix(breakdown, job_id)
+        desc_name = f"{prefix}_description.pdf"
         if job_folder.exists() and dest_path.exists():
-            shutil.copy2(dest_path, job_folder / "job_description.pdf")
+            shutil.copy2(dest_path, job_folder / desc_name)
 
     return {"status": "success", "job_id": job_id, "data": breakdown}
 
@@ -257,12 +263,14 @@ async def parse_job_text_endpoint(req: ParseTextRequest):
     job_id = db.add_or_update_job(breakdown)
     breakdown["id"] = job_id
 
-    # Save raw text file in job folder
+    # Save description text file with systematic naming: {jobposition}_{jobID}_{companyname}_description.txt
     job_info = db.get_job(job_id)
     if job_info and job_info.get("folder_path"):
         job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+        prefix = get_job_prefix(breakdown, job_id)
+        desc_name = f"{prefix}_description.txt"
         if job_folder.exists():
-            with open(job_folder / "job_description.txt", "w", encoding="utf-8") as f:
+            with open(job_folder / desc_name, "w", encoding="utf-8") as f:
                 f.write(req.raw_text)
 
     return {"status": "success", "job_id": job_id, "data": breakdown}
@@ -308,7 +316,7 @@ async def get_job_files(job_id: int):
         return {"files": []}
 
     files = []
-    for f in job_folder.iterdir():
+    for f in sorted(job_folder.iterdir(), key=lambda x: x.name):
         if f.is_file():
             size_kb = round(f.stat().st_size / 1024, 1)
             files.append({
@@ -343,8 +351,8 @@ async def export_job_zip(job_id: int):
                 zip_file.write(file_path, arcname)
 
     zip_buffer.seek(0)
-    safe_name = re.sub(r"[^\w\-]", "_", f"{job['company']}_{job['role_title']}".lower())
-    headers = {"Content-Disposition": f"attachment; filename=job_package_{safe_name}.zip"}
+    prefix = get_job_prefix(job, job_id)
+    headers = {"Content-Disposition": f"attachment; filename={prefix}.zip"}
     return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
 
 
@@ -359,11 +367,11 @@ async def import_job_zip(file: UploadFile = File(...)):
     with zipfile.ZipFile(zip_buffer, "r") as zf:
         zf.extractall(temp_extract)
 
-    # Look for job_metadata.json
-    meta_file = temp_extract / "job_metadata.json"
+    # Look for any *_meta_data.json or job_metadata.json
+    meta_files = list(temp_extract.glob("*meta_data.json"))
     job_data = {}
-    if meta_file.exists():
-        with open(meta_file, "r", encoding="utf-8") as f:
+    if meta_files:
+        with open(meta_files[0], "r", encoding="utf-8") as f:
             job_data = json.load(f)
 
     if not job_data:
@@ -437,7 +445,7 @@ async def ai_suggest(req: SuggestRequest):
     return result
 
 
-# --- HTML Document Rendering Endpoints (No LaTeX Required) ---
+# --- HTML Document Rendering Endpoints (Saves {jobposition}_{jobID}_{companyname}_{suffix}) ---
 @app.post("/api/render/html-cv")
 async def render_cv_endpoint(req: CompileRequest):
     prof = db.get_profile(req.candidate_id)
@@ -450,14 +458,16 @@ async def render_cv_endpoint(req: CompileRequest):
         custom_summary=req.custom_summary,
     )
 
-    # Save to job folder if available
+    # Save to job folder: {jobposition}_{jobID}_{companyname}_cv_{lang}.html
     job_id = req.job_data.get("id")
     if job_id:
         job = db.get_job(job_id)
         if job and job.get("folder_path"):
             job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
             if job_folder.exists():
-                with open(job_folder / f"cv_{req.lang}.html", "w", encoding="utf-8") as f:
+                prefix = get_job_prefix(job, job_id)
+                filename = f"{prefix}_cv_{req.lang}.html"
+                with open(job_folder / filename, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
     return {"status": "success", "html": html_content}
@@ -475,14 +485,16 @@ async def render_letter_endpoint(req: CompileRequest):
         custom_paragraphs=req.custom_letter_paragraphs,
     )
 
-    # Save to job folder if available
+    # Save to job folder: {jobposition}_{jobID}_{companyname}_coverletter_{lang}.html
     job_id = req.job_data.get("id")
     if job_id:
         job = db.get_job(job_id)
         if job and job.get("folder_path"):
             job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
             if job_folder.exists():
-                with open(job_folder / f"cover_letter_{req.lang}.html", "w", encoding="utf-8") as f:
+                prefix = get_job_prefix(job, job_id)
+                filename = f"{prefix}_coverletter_{req.lang}.html"
+                with open(job_folder / filename, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
     return {"status": "success", "html": html_content}
@@ -554,10 +566,9 @@ async def generate_outreach_pitch(req: OutreachRequest):
         template_name=tpl_file,
     )
 
-    # Save to job folder
-    job_id = getattr(req, "job_id", None)
+    # Save to job folder: {jobposition}_{jobID}_{companyname}_outreach.txt
+    job_id = req.job_id
     if not job_id:
-        # Search by company
         jobs = db.get_all_jobs()
         for j in jobs:
             if j.get("company", "").lower() == req.company.lower():
@@ -569,8 +580,10 @@ async def generate_outreach_pitch(req: OutreachRequest):
         if job and job.get("folder_path"):
             job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
             if job_folder.exists():
-                with open(job_folder / "outreach_pitch.txt", "w", encoding="utf-8") as f:
-                    f.write(f"Outreach Type: {req.outreach_type}\nContact: {req.contact_name}\n\n{pitch}")
+                prefix = get_job_prefix(job, job_id)
+                filename = f"{prefix}_outreach.txt"
+                with open(job_folder / filename, "w", encoding="utf-8") as f:
+                    f.write(f"Outreach Channel: {req.outreach_type}\nContact: {req.contact_name}\nRole: {req.role_title}\nCompany: {req.company}\n\n{pitch}")
 
     return {"status": "success", "pitch": pitch, "type": req.outreach_type}
 
@@ -580,7 +593,8 @@ def main():
     print(f"\n=======================================================")
     print(f" [Career System] Local Web App Running at:")
     print(f"    http://localhost:{port} (or http://127.0.0.1:{port})")
-    print(f"=======================================================\n")
+    print(f"=======================================================")
+    print(f" Nomenclature: {{jobposition}}_{{jobID}}_{{companyname}}_{{suffix}}\n")
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 

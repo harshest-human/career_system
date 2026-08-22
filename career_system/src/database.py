@@ -1,7 +1,7 @@
 """
 SQLite Database Layer for Career System Local Web App
 Manages structured data for Profiles, Jobs, Portal Credentials, Contacts, and Outreach Logs,
-with bidirectional synchronization to YAML profile files and dedicated Job Folders.
+with systematic nomenclature: {jobposition}_{jobID}_{companyname}_{suffix}
 """
 
 from __future__ import annotations
@@ -14,6 +14,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
+
+
+def get_job_prefix(job_data: Dict[str, Any], fallback_id: int | str = "") -> str:
+    """Generate systematic prefix: {jobposition}_{jobID}_{companyname}."""
+    role = re.sub(r"[^\w\-]", "_", str(job_data.get("role_title") or "Position"))
+    jid = re.sub(r"[^\w\-]", "_", str(job_data.get("job_id") or job_data.get("job_id_ref") or fallback_id or "job"))
+    comp = re.sub(r"[^\w\-]", "_", str(job_data.get("company") or "Company"))
+
+    slug = f"{role}_{jid}_{comp}"
+    slug = re.sub(r"_+", "_", slug).strip("_")
+    return slug or f"job_{fallback_id}"
 
 
 class Database:
@@ -200,7 +211,6 @@ class Database:
             )
             conn.commit()
 
-        # Sync back to profiles/<id>/profile.yaml
         prof_dir = self.db_path.parent / "profiles" / profile_id
         prof_dir.mkdir(parents=True, exist_ok=True)
         with open(prof_dir / "profile.yaml", "w", encoding="utf-8") as f:
@@ -259,7 +269,7 @@ class Database:
             conn.execute("DELETE FROM portal_credentials WHERE id = ?", (portal_id,))
             conn.commit()
 
-    # --- Job Operations ---
+    # --- Job Operations with Systematic Nomenclature ---
     def add_or_update_job(self, job_data: Dict[str, Any]) -> int:
         now = datetime.now().isoformat()
         with self.get_connection() as conn:
@@ -312,15 +322,15 @@ class Database:
             conn.commit()
             job_id = cursor.lastrowid
 
-            # Create dedicated job folder
-            safe_comp = re.sub(r"[^\w\-]", "_", job_data.get("company", "Company"))
-            safe_role = re.sub(r"[^\w\-]", "_", job_data.get("role_title", "Role"))
-            folder_name = f"{job_id}_{safe_comp}_{safe_role}"
+            # Create dedicated job folder following: {jobposition}_{jobID}_{companyname}
+            prefix = get_job_prefix(job_data, job_id)
+            folder_name = prefix
             job_folder = self.db_path.parent / "jobs" / folder_name
             job_folder.mkdir(parents=True, exist_ok=True)
 
-            # Save initial job_metadata.json
-            with open(job_folder / "job_metadata.json", "w", encoding="utf-8") as f:
+            # Save initial {jobposition}_{jobID}_{companyname}_meta_data.json
+            meta_filename = f"{prefix}_meta_data.json"
+            with open(job_folder / meta_filename, "w", encoding="utf-8") as f:
                 json.dump({**job_data, "id": job_id}, f, indent=2, ensure_ascii=False)
 
             cursor.execute("UPDATE jobs SET folder_path = ? WHERE id = ?", (f"/jobs/{folder_name}", job_id))
@@ -375,12 +385,14 @@ class Database:
             )
             conn.commit()
 
-            # Update job_metadata.json in folder if exists
+            # Update {jobposition}_{jobID}_{companyname}_meta_data.json in folder if exists
             row = conn.execute("SELECT folder_path FROM jobs WHERE id = ?", (job_id,)).fetchone()
             if row and row["folder_path"]:
                 folder_path = self.db_path.parent / row["folder_path"].lstrip("/")
                 if folder_path.exists():
-                    with open(folder_path / "job_metadata.json", "w", encoding="utf-8") as f:
+                    prefix = get_job_prefix(job_data, job_id)
+                    meta_filename = f"{prefix}_meta_data.json"
+                    with open(folder_path / meta_filename, "w", encoding="utf-8") as f:
                         json.dump({**job_data, "id": job_id}, f, indent=2, ensure_ascii=False)
 
     def delete_job(self, job_id: int) -> Optional[Dict[str, Any]]:
