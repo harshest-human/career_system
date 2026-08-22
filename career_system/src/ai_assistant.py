@@ -15,10 +15,59 @@ from typing import Any, Dict, List, Optional
 
 
 class CareerAIAssistant:
-    GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+    GEMINI_MODELS = [
+        "gemini-3.5-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-flash-lite-latest",
+        "gemini-3.7-flash",
+        "gemma-4-31b-it",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+    ]
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+
+    def _call_gemini_api(self, prompt: str, api_key: str) -> Optional[str]:
+        """Query Gemini models via REST endpoint or google-genai SDK."""
+        import requests
+
+        clean_key = api_key.strip()
+        for model_name in self.GEMINI_MODELS:
+            try:
+                # Direct REST call to Generative Language API
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={clean_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}]
+                }
+                res = requests.post(url, json=payload, timeout=25)
+                if res.status_code == 200:
+                    data = res.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and parts[0].get("text"):
+                            return parts[0]["text"]
+            except Exception as e:
+                print(f"[AI Assistant] Model {model_name} REST error: {e}")
+                continue
+
+            # SDK fallback
+            try:
+                from google import genai
+                client = genai.Client(api_key=clean_key)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                )
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                print(f"[AI Assistant] Model {model_name} SDK error: {e}")
+                continue
+
+        return None
 
     def test_api_key(self, api_key: Optional[str] = None) -> Dict[str, Any]:
         """Test API key connectivity and return active model and status."""
@@ -31,46 +80,51 @@ class CareerAIAssistant:
                 "message": "No API key configured. System is running in offline heuristic mode.",
             }
 
-        try:
-            from google import genai
-            client = genai.Client(api_key=active_key.strip())
-            for model_name in self.GEMINI_MODELS:
-                try:
-                    response = client.models.generate_content(
-                        model=model_name,
-                        contents="Respond with the exact word 'READY' if you can read this.",
-                    )
-                    if response and response.text:
-                        return {
-                            "status": "connected",
-                            "connected": True,
-                            "model": model_name,
-                            "message": f"Successfully connected to Google Gemini ({model_name}).",
-                        }
-                except Exception as model_err:
-                    continue
-            return {
-                "status": "error",
-                "connected": False,
-                "model": "None",
-                "message": "API key was provided, but could not connect to Gemini models. Check key validity and quota.",
-            }
-        except Exception as e:
-            return {
-                "status": "error",
-                "connected": False,
-                "model": "None",
-                "message": f"Gemini initialization error: {str(e)}",
-            }
+        import requests
+        clean_key = active_key.strip()
+        for model_name in self.GEMINI_MODELS:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={clean_key}"
+                res = requests.post(url, json={"contents": [{"parts": [{"text": "Respond with the word READY"}]}]}, timeout=12)
+                if res.status_code == 200:
+                    return {
+                        "status": "connected",
+                        "connected": True,
+                        "model": model_name,
+                        "message": f"Successfully connected to Google Gemini ({model_name}).",
+                    }
+            except Exception:
+                continue
+
+            try:
+                from google import genai
+                client = genai.Client(api_key=clean_key)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents="Respond with the word READY",
+                )
+                if response and response.text:
+                    return {
+                        "status": "connected",
+                        "connected": True,
+                        "model": model_name,
+                        "message": f"Successfully connected to Google Gemini ({model_name}).",
+                    }
+            except Exception:
+                continue
+
+        return {
+            "status": "error",
+            "connected": False,
+            "model": "None",
+            "message": "API key was provided, but could not connect to Gemini models. Check key validity and quota.",
+        }
 
     def extract_job_breakdown(self, job_text: str, custom_api_key: Optional[str] = None) -> Dict[str, Any]:
         """Extract deep, structured breakdown from job advertisement text using Gemini API or offline NLP."""
         active_key = custom_api_key or self.api_key
         if active_key and active_key.strip():
-            try:
-                from google import genai
-                client = genai.Client(api_key=active_key.strip())
-                prompt = f"""
+            prompt = f"""
 You are an expert ATS recruitment analyst and technical job parser.
 Analyze this job description carefully and extract all key metadata and requirement categories into a clean, structured JSON object.
 
@@ -90,7 +144,7 @@ Return ONLY valid JSON adhering to this exact schema:
   "job_id": "Job Reference Number or Req ID if present, otherwise ''",
   "salary_range": "Salary or Compensation if mentioned, otherwise 'Not disclosed'",
   "application_deadline": "Deadline date or earliest start date if mentioned, otherwise ''",
-  "industry_sector": "Industry or Domain (e.g. Agricultural Tech, Data Analytics, Software, Consulting)",
+  "industry_sector": "Industry or Domain (e.g. Agricultural Tech, Food & Nutrition, Software, Consulting)",
   "extracted_skills": ["skill1", "skill2", "skill3"],
   "key_responsibilities": [
     "Responsibility item 1",
@@ -119,23 +173,16 @@ Return ONLY valid JSON adhering to this exact schema:
   "hiring_manager_contact": "Contact person name, email or department if mentioned"
 }}
 """
-                for model_name in self.GEMINI_MODELS:
+            text_out = self._call_gemini_api(prompt, active_key)
+            if text_out:
+                json_match = re.search(r"\{.*\}", text_out, re.DOTALL)
+                if json_match:
                     try:
-                        response = client.models.generate_content(
-                            model=model_name,
-                            contents=prompt,
-                        )
-                        text_out = response.text
-                        json_match = re.search(r"\{.*\}", text_out, re.DOTALL)
-                        if json_match:
-                            data = json.loads(json_match.group(0))
-                            data["ai_model_used"] = model_name
-                            return data
+                        data = json.loads(json_match.group(0))
+                        data["ai_model_used"] = "gemini-flash"
+                        return data
                     except Exception as e:
-                        print(f"[AI Assistant] Model {model_name} breakdown error: {e}")
-                        continue
-            except Exception as e:
-                print(f"[AI Assistant] Gemini Job Breakdown error: {e}. Falling back to NLP heuristics.")
+                        print(f"[AI Assistant] JSON parsing error: {e}")
 
         # Robust Offline NLP Fallback Parser
         data = self._offline_job_breakdown(job_text)
@@ -305,11 +352,7 @@ Return ONLY valid JSON adhering to this exact schema:
         """
         active_key = custom_api_key or self.api_key
         if active_key and active_key.strip():
-            try:
-                from google import genai
-                client = genai.Client(api_key=active_key.strip())
-
-                prompt = f"""
+            prompt = f"""
 You are an elite executive career strategist, technical recruiter, and bilingual CV tailoring AI.
 Your goal is to tailor the candidate's Master CV, Cover Letter, and Outreach pitches for a specific target job posting.
 
@@ -384,28 +427,21 @@ Return ONLY valid JSON matching this exact structure:
     "cold_email_body": "Dear [Name] / Hiring Team,\\n\\n..."
   }},
   "tailoring_highlights": [
-    "Emphasized Python and data analysis in recent role",
-    "Tailored cover letter to highlight experience with sensor hardware"
+    "Emphasized relevant skills and experience matching target job",
+    "Generated tailored bilingual cover letter and outreach pitches"
   ]
 }}
 """
-                for model_name in self.GEMINI_MODELS:
+            text_out = self._call_gemini_api(prompt, active_key)
+            if text_out:
+                json_match = re.search(r"\{.*\}", text_out, re.DOTALL)
+                if json_match:
                     try:
-                        response = client.models.generate_content(
-                            model=model_name,
-                            contents=prompt,
-                        )
-                        text_out = response.text
-                        json_match = re.search(r"\{.*\}", text_out, re.DOTALL)
-                        if json_match:
-                            data = json.loads(json_match.group(0))
-                            data["ai_model_used"] = model_name
-                            return data
+                        data = json.loads(json_match.group(0))
+                        data["ai_model_used"] = "gemini-flash"
+                        return data
                     except Exception as e:
-                        print(f"[AI Assistant] Model {model_name} tailoring error: {e}")
-                        continue
-            except Exception as e:
-                print(f"[AI Assistant] Gemini tailoring failed: {e}. Using rule-based synthesizer.")
+                        print(f"[AI Assistant] JSON parsing error: {e}")
 
         # Offline Fallback Synthesizer
         return self._offline_tailor_application(master_profile, job_data, user_notes, lang)
