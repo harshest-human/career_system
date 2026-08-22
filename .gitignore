@@ -24,5 +24,19 @@ tmp/
 .DS_Store
 Thumbs.db
 
-# Sensitive local configurations (optional override)
+# Personal Job Folders & Specific Job Ads (Excluded from GitHub)
+C-Lock_FAS_Product_Development/
+ISF_Schaumann_Junior_Product_Manager/
+Websites.txt
+*.docx
+
+# Local Database & Personal Job Downloads
+career_system/*.db
+career_system/job_ads_manual/*.pdf
+career_system/job_ads_auto/*.pdf
+career_system/job_ads_auto/*.json
+!career_system/job_ads_manual/.gitkeep
+!career_system/job_ads_auto/.gitkeep
+
+# Sensitive local configurations
 local_settings.yaml
