@@ -559,55 +559,41 @@ function careerApp() {
       }
     },
 
-    async exportToGoogleDriveDoc() {
+    isUploadingDrive: false,
+
+    async uploadJobToGoogleDrive(jobId) {
+      if (!jobId) {
+        alert('Please select or analyze a job first.');
+        return;
+      }
       if (!this.googleWebhookUrl) {
-        alert('Google Webhook URL not configured. Please paste your Webhook URL in Step 1 (Account & Connectors) or use Download .zip to backup locally.');
+        alert('Google Drive Webhook URL not configured. Please paste your Webhook URL in Step 1 (Account & Connectors).');
         this.currentStep = 1;
         return;
       }
+      this.isUploadingDrive = true;
       try {
-        const res = await fetch(`${API_BASE}/api/export/google-docs`, {
+        const res = await fetch(`${API_BASE}/api/jobs/${jobId}/upload-to-drive`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            candidate_id: this.activeProfileId,
-            company: this.studioJob.company,
-            webhook_url: this.googleWebhookUrl,
-            lang: this.studioLang,
-          }),
+          body: JSON.stringify({ webhook_url: this.googleWebhookUrl }),
         });
         const data = await res.json();
-        if (data.doc_url) {
-          window.open(data.doc_url, '_blank');
+        if (data.status === 'success') {
+          if (data.folder_url) {
+            if (confirm('Job folder and files successfully uploaded to Google Drive! Open Google Drive folder now?')) {
+              window.open(data.folder_url, '_blank');
+            }
+          } else {
+            alert('Job folder uploaded to Google Drive successfully!');
+          }
         } else {
-          alert('Document created in Google Drive!');
+          alert('Upload failed: ' + (data.message || 'Check your Google Script deployment'));
         }
       } catch (err) {
-        alert('Error saving to Google Drive: ' + err.message);
-      }
-    },
-
-    async syncActiveJobToGoogleSheet() {
-      if (!this.googleWebhookUrl) {
-        alert('Google Webhook URL not configured. Please paste your Webhook URL in Step 1 (Account & Connectors) or download .zip to save data locally.');
-        this.currentStep = 1;
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE}/api/export/google-sheets`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            webhook_url: this.googleWebhookUrl,
-            job_data: this.studioJob,
-            candidate_name: this.profileData.personal?.full_name || 'Applicant',
-            fit_score: this.analysisResult?.match_result?.match_score ? `${this.analysisResult.match_result.match_score}%` : '',
-          }),
-        });
-        const data = await res.json();
-        alert('Job logged to your Google Sheet Tracker successfully!');
-      } catch (err) {
-        alert('Error syncing to Google Sheet: ' + err.message);
+        alert('Error uploading to Google Drive: ' + err.message);
+      } finally {
+        this.isUploadingDrive = false;
       }
     },
 
@@ -617,19 +603,18 @@ function careerApp() {
         return;
       }
       try {
-        const res = await fetch(`${API_BASE}/api/export/google-sheets`, {
+        const res = await fetch(this.googleWebhookUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({
-            webhook_url: this.googleWebhookUrl,
-            job_data: { company: 'Test Company', role_title: 'Test Position', location: 'Hamburg' },
-            candidate_name: this.profileData.personal?.full_name || 'Test User',
-            fit_score: '100%',
+            action: 'upload_folder',
+            folder_name: 'Test_Connection',
+            files: [{ name: 'test_sync.txt', content: 'Connection successful!', is_base64: false }],
           }),
         });
         const data = await res.json();
-        if (data.status === 'success' || data.message) {
-          alert('Google Sheets & Drive connection verified successfully!');
+        if (data.status === 'success') {
+          alert('Google Drive connection verified successfully! Folder created in your Google Drive.');
         } else {
           alert('Google responded: ' + JSON.stringify(data));
         }

@@ -180,15 +180,15 @@
       <!-- Cloud Sync & Gemini Configuration -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         
-        <!-- Google Drive Sync Card -->
+        <!-- Google Drive Cloud Sync Card -->
         <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-3 shadow-md">
           <div class="flex justify-between items-center">
-            <h3 class="text-sm font-bold text-white">Google Drive & Sheets Sync</h3>
+            <h3 class="text-sm font-bold text-white">Google Drive 1-Click Folder Upload</h3>
             <button @click="showGoogleScriptModal = true" class="text-xs text-[#89CFF0] hover:underline">
               Setup Guide
             </button>
           </div>
-          <p class="text-xs text-zinc-400">Paste your Google Apps Script Webhook URL to sync generated documents and spreadsheets.</p>
+          <p class="text-xs text-zinc-400">Paste your Google Apps Script Webhook URL to enable 1-click folder upload directly to your Google Drive.</p>
           <div class="flex gap-2">
             <input type="text" x-model="googleWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
             <button @click="testGoogleSync()" class="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold rounded-lg text-xs border border-zinc-700 transition">
@@ -337,6 +337,13 @@
                 <i class="fa-solid fa-floppy-disk"></i> Save Details
               </button>
 
+              <!-- Upload Folder to Google Drive -->
+              <button @click="uploadJobToGoogleDrive(analysisResult.job.id)" :disabled="isUploadingDrive" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-zinc-200 font-medium rounded-lg text-xs border border-zinc-700 flex items-center gap-1.5 transition" title="Upload this job folder and files directly to Google Drive">
+                <i class="fa-brands fa-google-drive text-[#89CFF0]"></i>
+                <span x-show="!isUploadingDrive">Upload to Drive</span>
+                <span x-show="isUploadingDrive">Uploading...</span>
+              </button>
+
               <!-- Open Folder in Windows Explorer -->
               <button @click="openJobLocalFolder(analysisResult.job.id)" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-medium rounded-lg text-xs border border-zinc-700 flex items-center gap-1.5 transition" title="Open this job's dedicated local folder in Windows File Explorer">
                 <i class="fa-solid fa-folder-open text-[#89CFF0]"></i> Open Folder
@@ -416,9 +423,11 @@
               <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <i class="fa-solid fa-folder-tree text-[#89CFF0]"></i> Job Folder Assets & Saved Files
               </h4>
-              <button @click="openJobLocalFolder(analysisResult.job.id)" class="text-[11px] text-[#89CFF0] hover:underline font-mono">
-                Open in Windows Explorer &rarr;
-              </button>
+              <div class="flex items-center gap-3 text-[11px]">
+                <button @click="openJobLocalFolder(analysisResult.job.id)" class="text-zinc-400 hover:text-white font-mono">
+                  <i class="fa-solid fa-folder-open text-[#89CFF0] mr-1"></i> Open in Windows Explorer
+                </button>
+              </div>
             </div>
 
             <!-- File Grid / List -->
@@ -545,8 +554,10 @@
 
           <!-- Bottom Action Bar -->
           <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3 border-t border-zinc-800/80">
-            <button @click="syncActiveJobToGoogleSheet()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold rounded-lg text-xs border border-zinc-700 transition">
-              Log to Google Sheet Tracker
+            <button @click="uploadJobToGoogleDrive(analysisResult.job.id)" :disabled="isUploadingDrive" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold rounded-lg text-xs border border-zinc-700 transition flex items-center gap-2">
+              <i class="fa-brands fa-google-drive text-[#89CFF0]"></i>
+              <span x-show="!isUploadingDrive">Upload Folder to Google Drive</span>
+              <span x-show="isUploadingDrive">Uploading...</span>
             </button>
             <button @click="selectJobForStudio(analysisResult.job); currentStep = 3;" class="px-5 py-2 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition">
               Proceed to Step 3: CV Builder &rarr;
@@ -711,7 +722,12 @@
             <button @click="printHtmlDocument()" class="px-4 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition">
               <i class="fa-solid fa-print mr-1"></i> Print / Save PDF
             </button>
-            <button @click="openJobLocalFolder(studioJob.id)" class="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold rounded-lg text-xs border border-zinc-700 transition">
+            <button @click="uploadJobToGoogleDrive(studioJob.id)" :disabled="isUploadingDrive" class="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-zinc-200 font-semibold rounded-lg text-xs border border-zinc-700 transition">
+              <i class="fa-brands fa-google-drive text-[#89CFF0] mr-1"></i>
+              <span x-show="!isUploadingDrive">Upload Folder to Google Drive</span>
+              <span x-show="isUploadingDrive">Uploading...</span>
+            </button>
+            <button @click="openJobLocalFolder(studioJob.id)" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold rounded-lg text-xs border border-zinc-700 transition">
               <i class="fa-solid fa-folder-open text-[#89CFF0] mr-1"></i> Open Local Folder
             </button>
           </div>
@@ -779,8 +795,10 @@
             <button @click="currentStep = 3" class="text-xs text-zinc-400 hover:text-white">
               &larr; Back to Step 3 (CV Builder)
             </button>
-            <button @click="openJobLocalFolder(studioJob.id)" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold rounded-lg text-xs border border-zinc-700 transition">
-              <i class="fa-solid fa-folder-open text-[#89CFF0] mr-1"></i> Open Local Folder
+            <button @click="uploadJobToGoogleDrive(studioJob.id)" :disabled="isUploadingDrive" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold rounded-lg text-xs border border-zinc-700 transition flex items-center gap-2">
+              <i class="fa-brands fa-google-drive text-[#89CFF0]"></i>
+              <span x-show="!isUploadingDrive">Upload Folder to Google Drive</span>
+              <span x-show="isUploadingDrive">Uploading...</span>
             </button>
           </div>
         </div>
@@ -871,13 +889,13 @@
   <div x-show="showGoogleScriptModal" x-cloak class="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-[#121215] border border-zinc-800 p-6 rounded-2xl max-w-2xl w-full space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-zinc-800/80 pb-3">
-        <h3 class="font-bold text-white text-sm">Google Drive & Sheets 2-Minute Setup</h3>
+        <h3 class="font-bold text-white text-sm">Google Drive 2-Minute Setup</h3>
         <button @click="showGoogleScriptModal = false" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="text-xs text-zinc-300 space-y-2 leading-relaxed">
-        <p><b>1.</b> Create an empty Google Sheet in your Google Drive.</p>
-        <p><b>2.</b> Click <b>Extensions &gt; Apps Script</b> in the top menu.</p>
-        <p><b>3.</b> Paste this code and click <b>Deploy &gt; New Deployment &gt; Web App (Access: Anyone)</b>.</p>
+        <p><b>1.</b> Open <a href="https://script.google.com" target="_blank" class="text-[#89CFF0] underline">script.google.com</a> and click <b>New Project</b>.</p>
+        <p><b>2.</b> Paste the code below.</p>
+        <p><b>3.</b> Click <b>Deploy &gt; New Deployment &gt; Web App (Execute as: Me, Access: Anyone)</b>.</p>
         <p><b>4.</b> Copy the Web App URL and paste it into Step 1.</p>
       </div>
       <pre class="bg-zinc-950 p-3 rounded-lg border border-zinc-800 text-[11px] text-zinc-300 overflow-x-auto font-mono max-h-48" x-text="googleScriptCode"></pre>

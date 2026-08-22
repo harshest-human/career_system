@@ -522,42 +522,24 @@ async def render_letter_endpoint(req: CompileRequest):
     return {"status": "success", "html": html_content}
 
 
-# --- Google Workspace & Drive Sync Endpoints ---
-@app.post("/api/export/google-docs")
-async def export_to_google_docs(payload: Dict[str, Any] = Body(...)):
-    candidate_id = payload.get("candidate_id", "default")
-    prof = db.get_profile(candidate_id)
-    if not prof:
-        raise HTTPException(status_code=404, detail="Profile not found")
+# --- Google Drive Cloud Sync Endpoint ---
+@app.post("/api/jobs/{job_id}/upload-to-drive")
+async def upload_job_to_drive(job_id: int, payload: Dict[str, Any] = Body(default={})):
+    job = db.get_job(job_id)
+    if not job or not job.get("folder_path"):
+        raise HTTPException(status_code=404, detail="Job folder not found")
 
     webhook_url = payload.get("webhook_url")
     if webhook_url:
         google_sync.webhook_url = webhook_url
 
-    formatted_text = google_sync.format_cv_for_google_docs(prof["data"], lang=payload.get("lang", "en"))
-    
-    if google_sync.webhook_url:
-        sync_res = google_sync.create_google_doc(
-            title=f"CV - {prof['name']} - {payload.get('company', 'Application')}",
-            content=formatted_text,
-        )
-        return {"status": "success", "doc_url": sync_res.get("doc_url"), "text": formatted_text}
+    if not google_sync.webhook_url:
+        raise HTTPException(status_code=400, detail="Google Drive Webhook URL not configured. Paste your URL in Step 1 (Account & Connectors).")
 
-    return {"status": "success", "text": formatted_text}
-
-
-@app.post("/api/export/google-sheets")
-async def export_to_google_sheets(payload: Dict[str, Any] = Body(...)):
-    webhook_url = payload.get("webhook_url")
-    if webhook_url:
-        google_sync.webhook_url = webhook_url
-
-    job_data = payload.get("job_data", {})
-    candidate_name = payload.get("candidate_name", "Applicant")
-    fit_score = payload.get("fit_score", "")
-
-    sync_res = google_sync.sync_job_to_sheet(job_data, candidate_name, fit_score)
-    return sync_res
+    job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
+    folder_name = job_folder.name
+    res = google_sync.upload_job_folder_to_drive(job_folder, folder_name)
+    return res
 
 
 @app.get("/api/google/script-template")
