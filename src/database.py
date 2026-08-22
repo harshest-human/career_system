@@ -1,7 +1,7 @@
 """
 SQLite Database Layer for Career System Local Web App
 Manages structured data for Profiles, Jobs, Contacts, and Outreach Logs,
-with bidirectional synchronization to YAML profile files.
+with bidirectional synchronization to YAML profile files and rich Job Metadata storage.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ class Database:
         return conn
 
     def init_db(self) -> None:
-        """Create tables if they do not exist."""
+        """Create tables and migrate schema if needed."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             # Profiles table
@@ -47,18 +47,43 @@ class Database:
                     company TEXT NOT NULL,
                     role_title TEXT NOT NULL,
                     location TEXT,
+                    employment_type TEXT,
+                    contract_type TEXT,
+                    seniority_level TEXT,
+                    job_id_ref TEXT,
+                    salary_range TEXT,
+                    industry_sector TEXT,
                     deadline TEXT,
                     start_date TEXT,
-                    contract_type TEXT,
                     source_file TEXT,
                     source_url TEXT,
+                    pdf_path TEXT,
                     status TEXT DEFAULT 'New',
                     extracted_skills_json TEXT,
+                    metadata_json TEXT,
                     full_text TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 )
             """)
+            # Schema migration helper for existing DBs
+            columns = [c[1] for c in cursor.execute("PRAGMA table_info(jobs)").fetchall()]
+            extra_cols = [
+                ("employment_type", "TEXT"),
+                ("seniority_level", "TEXT"),
+                ("job_id_ref", "TEXT"),
+                ("salary_range", "TEXT"),
+                ("industry_sector", "TEXT"),
+                ("pdf_path", "TEXT"),
+                ("metadata_json", "TEXT"),
+            ]
+            for col_name, col_type in extra_cols:
+                if col_name not in columns:
+                    try:
+                        cursor.execute(f"ALTER TABLE jobs ADD COLUMN {col_name} {col_type}")
+                    except Exception:
+                        pass
+
             # Contacts table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS contacts (
@@ -99,17 +124,16 @@ class Database:
             return
 
         with self.get_connection() as conn:
-            cursor = conn.cursor()
-            for prof_folder in profiles_dir.iterdir():
-                if prof_folder.is_dir():
-                    prof_yaml = prof_folder / "profile.yaml"
-                    if prof_yaml.exists():
-                        with open(prof_yaml, "r", encoding="utf-8") as f:
+            for prof_dir in profiles_dir.iterdir():
+                if prof_dir.is_dir():
+                    prof_id = prof_dir.name
+                    prof_file = prof_dir / "profile.yaml"
+                    if prof_file.exists():
+                        with open(prof_file, "r", encoding="utf-8") as f:
                             data = yaml.safe_load(f)
-                            if data:
-                                prof_id = prof_folder.name
-                                name = data.get("personal", {}).get("full_name", prof_id.capitalize())
-                                cursor.execute(
+                            if data and "personal" in data:
+                                name = data["personal"].get("full_name", prof_id.capitalize())
+                                conn.execute(
                                     """
                                     INSERT INTO profiles (id, name, default_lang, data_json, updated_at)
                                     VALUES (?, ?, ?, ?, ?)
@@ -166,23 +190,45 @@ class Database:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             skills_json = json.dumps(job_data.get("extracted_skills", []))
+            
+            # Pack detailed breakdown into metadata_json
+            meta = {
+                "key_responsibilities": job_data.get("key_responsibilities", []),
+                "required_qualifications": job_data.get("required_qualifications", []),
+                "preferred_qualifications": job_data.get("preferred_qualifications", []),
+                "tech_stack_tools": job_data.get("tech_stack_tools", []),
+                "language_requirements": job_data.get("language_requirements", []),
+                "benefits_perks": job_data.get("benefits_perks", []),
+                "hiring_manager_contact": job_data.get("hiring_manager_contact", ""),
+            }
+            metadata_json = json.dumps(meta)
+
             cursor.execute(
                 """
-                INSERT INTO jobs (company, role_title, location, deadline, start_date, contract_type,
-                                  source_file, source_url, status, extracted_skills_json, full_text, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO jobs (company, role_title, location, employment_type, contract_type,
+                                  seniority_level, job_id_ref, salary_range, industry_sector,
+                                  deadline, start_date, source_file, source_url, pdf_path,
+                                  status, extracted_skills_json, metadata_json, full_text, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    job_data.get("company", "Unknown"),
-                    job_data.get("role_title", "Unknown"),
-                    job_data.get("location", ""),
-                    job_data.get("deadline", ""),
+                    job_data.get("company", "Target Company"),
+                    job_data.get("role_title", "Position"),
+                    job_data.get("location", "Hamburg, Germany"),
+                    job_data.get("employment_type", "Full-time"),
+                    job_data.get("contract_type", "Permanent / Unlimited"),
+                    job_data.get("seniority_level", "Mid-Level"),
+                    job_data.get("job_id", job_data.get("job_id_ref", "")),
+                    job_data.get("salary_range", "Not disclosed"),
+                    job_data.get("industry_sector", "Engineering & Technology"),
+                    job_data.get("application_deadline", job_data.get("deadline", "")),
                     job_data.get("start_date", ""),
-                    job_data.get("contract_type", "Full-time"),
                     job_data.get("source_file", ""),
                     job_data.get("source_url", ""),
+                    job_data.get("pdf_path", ""),
                     job_data.get("status", "New"),
                     skills_json,
+                    metadata_json,
                     job_data.get("full_text", ""),
                     now,
                     now,
@@ -198,6 +244,10 @@ class Database:
             for r in rows:
                 d = dict(r)
                 d["extracted_skills"] = json.loads(d["extracted_skills_json"] or "[]")
+                try:
+                    d["metadata"] = json.loads(d.get("metadata_json") or "{}")
+                except Exception:
+                    d["metadata"] = {}
                 result.append(d)
             return result
 
@@ -207,15 +257,16 @@ class Database:
             if row:
                 d = dict(row)
                 d["extracted_skills"] = json.loads(d["extracted_skills_json"] or "[]")
+                try:
+                    d["metadata"] = json.loads(d.get("metadata_json") or "{}")
+                except Exception:
+                    d["metadata"] = {}
                 return d
         return None
 
     def update_job_status(self, job_id: int, status: str) -> None:
         with self.get_connection() as conn:
-            conn.execute(
-                "UPDATE jobs SET status = ?, updated_at = ? WHERE id = ?",
-                (status, datetime.now().isoformat(), job_id),
-            )
+            conn.execute("UPDATE jobs SET status = ?, updated_at = ? WHERE id = ?", (status, datetime.now().isoformat(), job_id))
             conn.commit()
 
     # --- Contact Operations ---
@@ -224,7 +275,7 @@ class Database:
             rows = conn.execute("SELECT * FROM contacts ORDER BY id DESC").fetchall()
             return [dict(r) for r in rows]
 
-    def add_contact(self, data: Dict[str, Any]) -> int:
+    def add_contact(self, contact_data: Dict[str, Any]) -> int:
         now = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -234,15 +285,15 @@ class Database:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    data.get("company", ""),
-                    data.get("contact_name", ""),
-                    data.get("position", ""),
-                    data.get("linkedin_url", ""),
-                    data.get("email", ""),
-                    data.get("phone", ""),
-                    data.get("status", "Identified"),
-                    data.get("notes", ""),
-                    data.get("last_contact", now[:10]),
+                    contact_data.get("company", ""),
+                    contact_data.get("contact_name", "Hiring Contact"),
+                    contact_data.get("position", ""),
+                    contact_data.get("linkedin_url", ""),
+                    contact_data.get("email", ""),
+                    contact_data.get("phone", ""),
+                    contact_data.get("status", "Identified"),
+                    contact_data.get("notes", ""),
+                    contact_data.get("last_contact", ""),
                     now,
                 ),
             )

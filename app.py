@@ -72,6 +72,12 @@ app.mount("/job_ads_auto", StaticFiles(directory=str(ROOT_DIR / "job_ads_auto"))
 class ScrapeRequest(BaseModel):
     url: str
     custom_name: Optional[str] = None
+    gemini_api_key: Optional[str] = None
+
+
+class ParseTextRequest(BaseModel):
+    raw_text: str
+    gemini_api_key: Optional[str] = None
 
 
 class JobStatusUpdate(BaseModel):
@@ -82,6 +88,7 @@ class AnalyzeRequest(BaseModel):
     candidate_id: str
     job_id: Optional[int] = None
     raw_text: Optional[str] = None
+    gemini_api_key: Optional[str] = None
 
 
 class SuggestRequest(BaseModel):
@@ -156,26 +163,49 @@ async def get_jobs():
 async def scrape_job(req: ScrapeRequest):
     try:
         pdf_path = scraper.scrape_url(req.url, req.custom_name)
-        extracted = extractor.process_pdf(pdf_path)
-        extracted["source_url"] = req.url
-        extracted["source_file"] = pdf_path.name
-        job_id = db.add_or_update_job(extracted)
-        return {"status": "success", "job_id": job_id, "data": extracted}
+        raw_text = extractor.extract_text_from_pdf(pdf_path)
+        gemini_key = req.gemini_api_key or os.getenv("GEMINI_API_KEY")
+        breakdown = ai_assistant.extract_job_breakdown(raw_text, custom_api_key=gemini_key)
+        breakdown["source_url"] = req.url
+        breakdown["source_file"] = pdf_path.name
+        breakdown["pdf_path"] = f"/job_ads_auto/{pdf_path.name}"
+        breakdown["full_text"] = raw_text
+        job_id = db.add_or_update_job(breakdown)
+        breakdown["id"] = job_id
+        return {"status": "success", "job_id": job_id, "data": breakdown}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/jobs/upload")
-async def upload_job(file: UploadFile = File(...)):
+async def upload_job(
+    file: UploadFile = File(...),
+    gemini_api_key: Optional[str] = None,
+):
     dest_path = ROOT_DIR / "job_ads_manual" / file.filename
     with open(dest_path, "wb") as f:
         content = await file.read()
         f.write(content)
 
-    extracted = extractor.process_pdf(dest_path)
-    extracted["source_file"] = file.filename
-    job_id = db.add_or_update_job(extracted)
-    return {"status": "success", "job_id": job_id, "data": extracted}
+    raw_text = extractor.extract_text_from_pdf(dest_path)
+    breakdown = ai_assistant.extract_job_breakdown(raw_text, custom_api_key=gemini_api_key)
+    breakdown["source_file"] = file.filename
+    breakdown["pdf_path"] = f"/job_ads_manual/{file.filename}"
+    breakdown["full_text"] = raw_text
+    job_id = db.add_or_update_job(breakdown)
+    breakdown["id"] = job_id
+    return {"status": "success", "job_id": job_id, "data": breakdown}
+
+
+@app.post("/api/jobs/parse-text")
+async def parse_job_text_endpoint(req: ParseTextRequest):
+    gemini_key = req.gemini_api_key or os.getenv("GEMINI_API_KEY")
+    breakdown = ai_assistant.extract_job_breakdown(req.raw_text, custom_api_key=gemini_key)
+    breakdown["source_file"] = "manual_text_input"
+    breakdown["full_text"] = req.raw_text
+    job_id = db.add_or_update_job(breakdown)
+    breakdown["id"] = job_id
+    return {"status": "success", "job_id": job_id, "data": breakdown}
 
 
 @app.put("/api/jobs/{job_id}/status")
@@ -195,7 +225,11 @@ async def analyze_match(req: AnalyzeRequest):
     if req.job_id:
         job_data = db.get_job(req.job_id)
     elif req.raw_text:
-        job_data = extractor.parse_job_text(req.raw_text, "custom_input.txt")
+        gemini_key = req.gemini_api_key or os.getenv("GEMINI_API_KEY")
+        job_data = ai_assistant.extract_job_breakdown(req.raw_text, custom_api_key=gemini_key)
+        job_data["source_file"] = "manual_text_input"
+        job_id = db.add_or_update_job(job_data)
+        job_data["id"] = job_id
 
     if not job_data:
         raise HTTPException(status_code=400, detail="No job data provided")

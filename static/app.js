@@ -15,8 +15,18 @@ function careerApp() {
     activeProfileId: 'harsh',
     profileData: { personal: {}, executive_summary: {}, experience: [], education: [], skills: {} },
     jobsList: [],
+
+    // Ingestion state
+    ingestMode: 'url',
     scrapeUrlInput: '',
+    rawJobTextInput: '',
+    isLoadingBreakdown: false,
     analysisResult: null,
+
+    // PDF Viewer Modal
+    showPdfViewerModal: false,
+    activePdfViewerUrl: '',
+    activePdfViewerTitle: 'Job Advertisement PDF',
 
     // Google Sync
     googleWebhookUrl: localStorage.getItem('google_webhook_url') || '',
@@ -136,49 +146,93 @@ function careerApp() {
 
     async scrapeJobUrl() {
       if (!this.scrapeUrlInput) return;
+      this.isLoadingBreakdown = true;
       try {
         const res = await fetch(`${API_BASE}/api/jobs/scrape`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: this.scrapeUrlInput }),
+          body: JSON.stringify({
+            url: this.scrapeUrlInput,
+            gemini_api_key: this.geminiApiKey || null,
+          }),
         });
         const data = await res.json();
-        if (res.ok) {
+        if (res.ok && data.data) {
           this.scrapeUrlInput = '';
           await this.loadJobs();
-          if (data.data) {
-            await this.selectJobForAnalysis(data.data);
-          }
-          alert('Job scraped and analyzed successfully!');
+          await this.selectJobForAnalysis(data.data);
+          alert('Job analyzed with Gemini & breakdown generated in table below!');
         } else {
           alert('Scraping error: ' + (data.detail || 'Failed'));
         }
       } catch (err) {
         alert('Error: ' + err.message);
+      } finally {
+        this.isLoadingBreakdown = false;
       }
     },
 
     async uploadJobPdf(event) {
       const file = event.target.files[0];
       if (!file) return;
+      this.isLoadingBreakdown = true;
       const formData = new FormData();
       formData.append('file', file);
+      if (this.geminiApiKey) {
+        formData.append('gemini_api_key', this.geminiApiKey);
+      }
       try {
         const res = await fetch(`${API_BASE}/api/jobs/upload`, {
           method: 'POST',
           body: formData,
         });
         const data = await res.json();
-        if (res.ok) {
+        if (res.ok && data.data) {
           await this.loadJobs();
-          if (data.data) {
-            await this.selectJobForAnalysis(data.data);
-          }
-          alert('Job PDF uploaded and analyzed!');
+          await this.selectJobForAnalysis(data.data);
+          alert('Job PDF parsed & breakdown generated in table below!');
+        } else {
+          alert('Upload error: ' + (data.detail || res.statusText));
         }
       } catch (err) {
         alert('Upload error: ' + err.message);
+      } finally {
+        this.isLoadingBreakdown = false;
       }
+    },
+
+    async parseRawJobText() {
+      if (!this.rawJobTextInput) return;
+      this.isLoadingBreakdown = true;
+      try {
+        const res = await fetch(`${API_BASE}/api/jobs/parse-text`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            raw_text: this.rawJobTextInput,
+            gemini_api_key: this.geminiApiKey || null,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.data) {
+          this.rawJobTextInput = '';
+          await this.loadJobs();
+          await this.selectJobForAnalysis(data.data);
+          alert('Job description analyzed with Gemini & stored in database!');
+        } else {
+          alert('Parsing error: ' + (data.detail || 'Failed'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        this.isLoadingBreakdown = false;
+      }
+    },
+
+    openPdfViewer(pdfPath, roleTitle) {
+      this.activePdfViewerUrl = (API_BASE ? API_BASE : '') + pdfPath;
+      this.activePdfViewerTitle = roleTitle || 'Job Advertisement PDF';
+      this.showPdfViewerModal = true;
     },
 
     async updateJobStatus(jobId, status) {
@@ -198,7 +252,11 @@ function careerApp() {
         const res = await fetch(`${API_BASE}/api/analyze`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ candidate_id: this.activeProfileId, job_id: job.id }),
+          body: JSON.stringify({
+            candidate_id: this.activeProfileId,
+            job_id: job.id,
+            gemini_api_key: this.geminiApiKey || null,
+          }),
         });
         if (res.ok) {
           this.analysisResult = await res.json();
@@ -213,7 +271,7 @@ function careerApp() {
       this.studioSummary = this.profileData.executive_summary?.[this.studioLang] || '';
       this.outreachForm.company = job.company || '';
       this.outreachForm.role_title = job.role_title || '';
-      this.outreachForm.contact_name = 'Hiring Team';
+      this.outreachForm.contact_name = job.metadata?.hiring_manager_contact || job.hiring_manager_contact || 'Hiring Team';
 
       if (this.studioLang === 'en') {
         this.studioLetterParagraphs = [

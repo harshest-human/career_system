@@ -23,7 +23,7 @@
         </div>
         <div>
           <span class="font-bold text-lg text-white tracking-wide">Career<span class="text-teal-400">System</span></span>
-          <span class="text-xs bg-teal-500/10 text-teal-300 px-2 py-0.5 rounded-full ml-2 border border-teal-500/30">Cloud & HTML Studio</span>
+          <span class="text-xs bg-teal-500/10 text-teal-300 px-2 py-0.5 rounded-full ml-2 border border-teal-500/30">AI Job Studio</span>
         </div>
       </div>
 
@@ -46,7 +46,7 @@
           </select>
         </div>
 
-        <button @click="showSettingsModal = true" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+        <button @click="showSettingsModal = true" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition" title="Settings & Gemini API Key">
           <i class="fa-solid fa-gear"></i>
         </button>
       </div>
@@ -63,7 +63,7 @@
 
         <button @click="currentStep = 2" :class="currentStep === 2 ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'" class="p-2.5 rounded-xl border transition flex items-center justify-center gap-2">
           <span class="w-5 h-5 rounded-full bg-teal-500 text-slate-950 flex items-center justify-center text-xs font-bold">2</span>
-          <span>Job Ingestion & Fit</span>
+          <span>Job Ingestion & Breakdown</span>
         </button>
 
         <button @click="currentStep = 3" :class="currentStep === 3 ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'" class="p-2.5 rounded-xl border transition flex items-center justify-center gap-2">
@@ -95,14 +95,14 @@
             <i class="fa-solid fa-user-pen text-teal-400"></i>
             <span x-text="profileData.personal?.full_name || 'Applicant Profile'"></span>
           </h2>
-          <p class="text-xs text-slate-400">Saved locally in database and ready for Google Drive export.</p>
+          <p class="text-xs text-slate-400">Personal & technical experience repository, saved locally in database.</p>
         </div>
         <div class="flex gap-2">
           <button @click="saveProfile()" class="px-5 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl shadow transition flex items-center gap-2 text-sm">
             <i class="fa-solid fa-floppy-disk"></i> Save Profile
           </button>
           <button @click="currentStep = 2" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2">
-            Next: Job Analysis <i class="fa-solid fa-arrow-right"></i>
+            Next: Ingest Job <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
@@ -172,123 +172,289 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- STEP 2: JOB INGESTION & INSTANT AI FIT ANALYSIS -->
+    <!-- STEP 2: JOB INGESTION & AUTO-TABULAR AI BREAKDOWN -->
     <!-- ========================================================================= -->
     <div x-show="currentStep === 2" x-cloak class="space-y-6">
       
-      <!-- Ingestion Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        <!-- Scrape URL Box -->
-        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3">
-          <h3 class="text-md font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-globe text-teal-400"></i> Ingest Job from URL
-          </h3>
-          <p class="text-xs text-slate-400">Paste any job link to automatically clean, archive, and extract requirements.</p>
+      <!-- Ingestion Tabs / Modes -->
+      <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex space-x-2">
+            <button @click="ingestMode = 'url'" :class="ingestMode === 'url' ? 'bg-teal-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-4 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5">
+              <i class="fa-solid fa-globe"></i> Paste URL
+            </button>
+            <button @click="ingestMode = 'pdf'" :class="ingestMode === 'pdf' ? 'bg-teal-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-4 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5">
+              <i class="fa-solid fa-file-pdf"></i> Upload PDF
+            </button>
+            <button @click="ingestMode = 'text'" :class="ingestMode === 'text' ? 'bg-teal-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-4 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5">
+              <i class="fa-solid fa-align-left"></i> Paste Job Text
+            </button>
+          </div>
+          <span class="text-xs text-teal-400 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-microchip"></i> Auto-Analyzed by Gemini AI
+          </span>
+        </div>
+
+        <!-- Mode 1: URL -->
+        <div x-show="ingestMode === 'url'" class="space-y-2">
+          <p class="text-xs text-slate-400">Enter any job posting link (LinkedIn, Stepstone, Arcadis, Company Career Pages):</p>
           <div class="flex gap-2">
-            <input type="text" x-model="scrapeUrlInput" placeholder="https://..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white">
-            <button @click="scrapeJobUrl()" class="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs transition">
-              Scrape & Analyze
+            <input type="text" x-model="scrapeUrlInput" placeholder="https://company.com/careers/job-12345" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-teal-500">
+            <button @click="scrapeJobUrl()" :disabled="isLoadingBreakdown" class="px-6 py-2.5 bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-xs transition flex items-center gap-2">
+              <span x-show="!isLoadingBreakdown"><i class="fa-solid fa-bolt"></i> Scrape & Breakdown</span>
+              <span x-show="isLoadingBreakdown"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing...</span>
             </button>
           </div>
         </div>
 
-        <!-- Upload PDF Box -->
-        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3">
-          <h3 class="text-md font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-file-arrow-up text-sky-400"></i> Upload Job PDF or Text
-          </h3>
-          <p class="text-xs text-slate-400">Drop a job ad PDF directly for instant analysis.</p>
-          <input type="file" @change="uploadJobPdf($event)" accept=".pdf" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 cursor-pointer">
+        <!-- Mode 2: PDF Upload -->
+        <div x-show="ingestMode === 'pdf'" class="space-y-2">
+          <p class="text-xs text-slate-400">Select or drop a job advertisement PDF:</p>
+          <input type="file" @change="uploadJobPdf($event)" accept=".pdf" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 cursor-pointer">
+        </div>
+
+        <!-- Mode 3: Raw Text Paste -->
+        <div x-show="ingestMode === 'text'" class="space-y-2">
+          <p class="text-xs text-slate-400">Paste raw job description text below:</p>
+          <textarea rows="4" x-model="rawJobTextInput" placeholder="Paste full job description here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-teal-500"></textarea>
+          <div class="flex justify-end">
+            <button @click="parseRawJobText()" :disabled="isLoadingBreakdown" class="px-6 py-2 bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-xs transition flex items-center gap-2">
+              <span x-show="!isLoadingBreakdown"><i class="fa-solid fa-wand-magic-sparkles"></i> Breakdown with Gemini</span>
+              <span x-show="isLoadingBreakdown"><i class="fa-solid fa-spinner fa-spin"></i> Processing...</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Analysis Results Banner -->
+      <!-- ===================================================================== -->
+      <!-- TABULAR BREAKDOWN MATRIX & FIT SCORE CARD -->
+      <!-- ===================================================================== -->
       <template x-if="analysisResult">
-        <div class="bg-slate-900 p-6 rounded-2xl border border-teal-500/40 space-y-4 shadow-xl">
-          <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+        <div class="bg-slate-900 p-6 rounded-3xl border border-teal-500/40 space-y-6 shadow-2xl">
+          
+          <!-- Top Header: Role, Fit Score, Actions -->
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-5">
             <div>
-              <span class="text-xs font-semibold text-teal-400 uppercase tracking-wide">Analysis Ready</span>
-              <h3 class="text-xl font-bold text-white" x-text="analysisResult.job.company + ' — ' + analysisResult.job.role_title"></h3>
-              <p class="text-xs text-slate-400" x-text="analysisResult.job.location + ' | Evaluated for: ' + analysisResult.candidate"></p>
-            </div>
-            <div class="text-right">
-              <div class="text-3xl font-black text-teal-400" x-text="analysisResult.match_result.match_score + '%'"></div>
-              <span class="text-xs text-slate-400">Profile Fit Score</span>
-            </div>
-          </div>
-
-          <!-- Matched vs Gap Chips -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-2">
-              <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                <i class="fa-solid fa-circle-check"></i> Matched Strengths (Include in CV)
-              </span>
-              <div class="flex flex-wrap gap-1.5">
-                <template x-for="s in analysisResult.match_result.matched_skills" :key="s">
-                  <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-xs" x-text="s"></span>
-                </template>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-teal-400 uppercase tracking-wider">Job Breakdown Matrix</span>
+                <span x-show="analysisResult.job.job_id || analysisResult.job.job_id_ref" class="bg-slate-800 text-slate-300 text-[11px] px-2 py-0.5 rounded border border-slate-700" x-text="'Ref: ' + (analysisResult.job.job_id || analysisResult.job.job_id_ref)"></span>
               </div>
+              <h3 class="text-2xl font-black text-white mt-1" x-text="analysisResult.job.company + ' — ' + analysisResult.job.role_title"></h3>
+              <p class="text-xs text-slate-400 mt-0.5">
+                <i class="fa-solid fa-location-dot text-teal-400"></i> <span x-text="analysisResult.job.location"></span> | 
+                Evaluated for: <b class="text-slate-200" x-text="analysisResult.candidate"></b>
+              </p>
             </div>
 
-            <div class="bg-slate-950 p-4 rounded-xl border border-amber-500/30 space-y-2">
-              <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                <i class="fa-solid fa-triangle-exclamation"></i> Missing Gap Keywords to Address
-              </span>
-              <div class="flex flex-wrap gap-1.5">
-                <template x-for="s in analysisResult.match_result.missing_skills" :key="s">
-                  <span class="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded text-xs" x-text="s"></span>
-                </template>
+            <div class="flex items-center gap-4">
+              <!-- Built-in PDF Reader Button -->
+              <template x-if="analysisResult.job.pdf_path">
+                <button @click="openPdfViewer(analysisResult.job.pdf_path, analysisResult.job.role_title)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-300 font-semibold rounded-xl text-xs border border-teal-500/30 flex items-center gap-2 shadow transition">
+                  <i class="fa-solid fa-file-pdf text-rose-400"></i> Read / View Job PDF
+                </button>
+              </template>
+
+              <!-- Fit Score Badge -->
+              <div class="bg-slate-950 px-4 py-2 rounded-2xl border border-teal-500/30 text-center">
+                <div class="text-2xl font-black text-teal-400" x-text="analysisResult.match_result.match_score + '%'"></div>
+                <span class="text-[10px] text-slate-400 uppercase font-semibold">Match Score</span>
               </div>
             </div>
           </div>
 
-          <div class="flex justify-between items-center pt-4">
-            <button @click="syncActiveJobToGoogleSheet()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-300 font-semibold rounded-xl text-xs border border-teal-500/30 flex items-center gap-2">
+          <!-- Structured Metadata Badges Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-xs">
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold block">Employment</span>
+              <span class="font-bold text-slate-200" x-text="analysisResult.job.employment_type || 'Full-time'"></span>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold block">Contract</span>
+              <span class="font-bold text-slate-200" x-text="analysisResult.job.contract_type || 'Permanent'"></span>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold block">Seniority</span>
+              <span class="font-bold text-slate-200" x-text="analysisResult.job.seniority_level || 'Mid-Level'"></span>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold block">Salary / Comp</span>
+              <span class="font-bold text-slate-200" x-text="analysisResult.job.salary_range || 'Not disclosed'"></span>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold block">Deadline / Start</span>
+              <span class="font-bold text-slate-200" x-text="analysisResult.job.deadline || analysisResult.job.application_deadline || 'Open'"></span>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold block">Domain / Sector</span>
+              <span class="font-bold text-slate-200 truncate block" x-text="analysisResult.job.industry_sector || 'Engineering'"></span>
+            </div>
+          </div>
+
+          <!-- 2-Column Tabular Details Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Left Column: Responsibilities & Tech Stack -->
+            <div class="space-y-4">
+              <!-- Key Responsibilities Table -->
+              <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                <h4 class="text-xs font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="fa-solid fa-list-check"></i> Key Responsibilities & Deliverables
+                </h4>
+                <ul class="space-y-1.5 text-xs text-slate-300">
+                  <template x-for="r in (analysisResult.job.metadata?.key_responsibilities || analysisResult.job.key_responsibilities || [])" :key="r">
+                    <li class="flex items-start gap-2">
+                      <span class="text-teal-400 mt-0.5">•</span>
+                      <span x-text="r"></span>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+
+              <!-- Tech Stack & Tools -->
+              <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                <h4 class="text-xs font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="fa-solid fa-laptop-code"></i> Tech Stack & Tools
+                </h4>
+                <div class="flex flex-wrap gap-1.5">
+                  <template x-for="t in (analysisResult.job.metadata?.tech_stack_tools || analysisResult.job.tech_stack_tools || analysisResult.job.extracted_skills || [])" :key="t">
+                    <span class="px-2.5 py-1 bg-slate-900 border border-slate-700 text-teal-300 rounded-lg text-xs font-mono" x-text="t"></span>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Languages -->
+              <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                <h4 class="text-xs font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="fa-solid fa-language"></i> Language Requirements
+                </h4>
+                <div class="flex flex-wrap gap-2 text-xs text-slate-300">
+                  <template x-for="l in (analysisResult.job.metadata?.language_requirements || analysisResult.job.language_requirements || ['English (Fluent)', 'German (Professional)'])" :key="l">
+                    <span class="px-2 py-0.5 bg-slate-900 rounded border border-slate-800 text-xs" x-text="l"></span>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Qualifications, Perks, Strengths -->
+            <div class="space-y-4">
+              <!-- Required Qualifications -->
+              <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="fa-solid fa-graduation-cap"></i> Must-Have Qualifications
+                </h4>
+                <ul class="space-y-1.5 text-xs text-slate-300">
+                  <template x-for="q in (analysisResult.job.metadata?.required_qualifications || analysisResult.job.required_qualifications || [])" :key="q">
+                    <li class="flex items-start gap-2">
+                      <span class="text-sky-400 mt-0.5">✓</span>
+                      <span x-text="q"></span>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+
+              <!-- Preferred Qualifications & Perks -->
+              <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="fa-solid fa-gift"></i> Benefits & Perks
+                </h4>
+                <div class="flex flex-wrap gap-1.5">
+                  <template x-for="b in (analysisResult.job.metadata?.benefits_perks || analysisResult.job.benefits_perks || ['30 Days Vacation', 'Flexible Hybrid Work', 'Training Budget'])" :key="b">
+                    <span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded-lg text-xs" x-text="b"></span>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Matched vs Gap Skills -->
+              <div class="grid grid-cols-2 gap-3 pt-1">
+                <div class="bg-slate-950 p-3 rounded-xl border border-emerald-500/30">
+                  <span class="text-[11px] font-bold text-emerald-400 block mb-1.5">✓ Matched Strengths</span>
+                  <div class="flex flex-wrap gap-1">
+                    <template x-for="s in analysisResult.match_result.matched_skills" :key="s">
+                      <span class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-[11px]" x-text="s"></span>
+                    </template>
+                  </div>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-xl border border-amber-500/30">
+                  <span class="text-[11px] font-bold text-amber-400 block mb-1.5">! Keywords to Add</span>
+                  <div class="flex flex-wrap gap-1">
+                    <template x-for="s in analysisResult.match_result.missing_skills" :key="s">
+                      <span class="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded text-[11px]" x-text="s"></span>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Action Bar -->
+          <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-800">
+            <button @click="syncActiveJobToGoogleSheet()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-teal-300 font-semibold rounded-xl text-xs border border-teal-500/30 flex items-center gap-2">
               <i class="fa-solid fa-table-cells"></i> Log to Google Sheet Tracker
             </button>
-            <button @click="selectJobForStudio(analysisResult.job); currentStep = 3;" class="px-6 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-sm shadow transition flex items-center gap-2">
+            <button @click="selectJobForStudio(analysisResult.job); currentStep = 3;" class="px-6 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-sm shadow-lg transition flex items-center gap-2">
               Proceed to Step 3: CV & Cover Letter Studio <i class="fa-solid fa-arrow-right"></i>
             </button>
           </div>
+
         </div>
       </template>
 
-      <!-- Jobs Table -->
-      <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
-          <h3 class="font-bold text-white text-sm">Saved Job Opportunities</h3>
-          <span class="text-xs text-slate-400" x-text="jobsList.length + ' positions'"></span>
+      <!-- Jobs Library Table -->
+      <div class="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-xl">
+        <div class="p-5 border-b border-slate-800 flex justify-between items-center">
+          <h3 class="font-bold text-white text-sm flex items-center gap-2">
+            <i class="fa-solid fa-folder-open text-teal-400"></i> Stored Jobs & Applications Database
+          </h3>
+          <span class="text-xs text-slate-400" x-text="jobsList.length + ' stored opportunities'"></span>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-300">
             <thead class="bg-slate-950 text-slate-400 uppercase">
               <tr>
-                <th class="p-3">Company</th>
-                <th class="p-3">Role</th>
-                <th class="p-3">Location</th>
-                <th class="p-3">Status</th>
-                <th class="p-3">Action</th>
+                <th class="p-3.5">Company & Role</th>
+                <th class="p-3.5">Type & Level</th>
+                <th class="p-3.5">Location</th>
+                <th class="p-3.5">Status</th>
+                <th class="p-3.5">PDF</th>
+                <th class="p-3.5">Action</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-800">
               <template x-for="j in jobsList" :key="j.id">
                 <tr class="hover:bg-slate-800/40 transition">
-                  <td class="p-3 font-bold text-white" x-text="j.company"></td>
-                  <td class="p-3" x-text="j.role_title"></td>
-                  <td class="p-3 text-slate-400" x-text="j.location"></td>
-                  <td class="p-3">
-                    <select x-model="j.status" @change="updateJobStatus(j.id, j.status)" class="bg-slate-950 text-xs rounded border border-slate-800 px-2 py-1">
+                  <td class="p-3.5">
+                    <div class="font-bold text-white" x-text="j.company"></div>
+                    <div class="text-slate-400" x-text="j.role_title"></div>
+                  </td>
+                  <td class="p-3.5">
+                    <div class="font-medium text-slate-300" x-text="j.employment_type || 'Full-time'"></div>
+                    <div class="text-slate-500 text-[11px]" x-text="j.seniority_level || 'Mid-Level'"></div>
+                  </td>
+                  <td class="p-3.5 text-slate-400" x-text="j.location"></td>
+                  <td class="p-3.5">
+                    <select x-model="j.status" @change="updateJobStatus(j.id, j.status)" class="bg-slate-950 text-xs rounded-lg border border-slate-800 px-2 py-1 text-slate-200">
                       <option value="New">New</option>
                       <option value="In Progress">In Progress</option>
                       <option value="Applied">Applied</option>
                       <option value="Interview">Interview</option>
                       <option value="Offer">Offer</option>
+                      <option value="Rejected">Rejected</option>
                     </select>
                   </td>
-                  <td class="p-3 space-x-2">
-                    <button @click="selectJobForAnalysis(j)" class="px-2.5 py-1 bg-teal-500/20 text-teal-300 rounded hover:bg-teal-500/40">Analyze</button>
-                    <button @click="selectJobForStudio(j); currentStep = 3;" class="px-2.5 py-1 bg-sky-500/20 text-sky-300 rounded hover:bg-sky-500/40">Build CV</button>
+                  <td class="p-3.5">
+                    <template x-if="j.pdf_path">
+                      <button @click="openPdfViewer(j.pdf_path, j.role_title)" class="px-2.5 py-1 bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded-lg hover:bg-rose-500/20 text-xs flex items-center gap-1 font-medium">
+                        <i class="fa-solid fa-file-pdf"></i> Read PDF
+                      </button>
+                    </template>
+                    <template x-if="!j.pdf_path">
+                      <span class="text-slate-500 text-[11px]">-</span>
+                    </template>
+                  </td>
+                  <td class="p-3.5 space-x-2">
+                    <button @click="selectJobForAnalysis(j)" class="px-2.5 py-1 bg-teal-500/20 text-teal-300 rounded-lg hover:bg-teal-500/40">Analyze</button>
+                    <button @click="selectJobForStudio(j); currentStep = 3;" class="px-2.5 py-1 bg-sky-500/20 text-sky-300 rounded-lg hover:bg-sky-500/40">Build CV</button>
                   </td>
                 </tr>
               </template>
@@ -463,6 +629,29 @@
 
   </main>
 
+  <!-- ========================================================================= -->
+  <!-- BUILT-IN FULLSCREEN PDF READER / VIEWER MODAL -->
+  <!-- ========================================================================= -->
+  <div x-show="showPdfViewerModal" x-cloak class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-5xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-950">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-file-pdf text-rose-400 text-lg"></i>
+          <span class="font-bold text-white text-sm" x-text="activePdfViewerTitle"></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <a :href="activePdfViewerUrl" target="_blank" class="text-xs text-teal-400 hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open in New Tab
+          </a>
+          <button @click="showPdfViewerModal = false" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+      </div>
+      <div class="flex-1 bg-slate-950">
+        <iframe :src="activePdfViewerUrl" class="w-full h-full border-0"></iframe>
+      </div>
+    </div>
+  </div>
+
   <!-- Google Apps Script Setup Modal -->
   <div x-show="showGoogleScriptModal" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-2xl w-full space-y-4 shadow-2xl">
@@ -495,7 +684,7 @@
       <div>
         <label class="block text-xs font-medium text-slate-300 mb-1">Google Gemini API Key (Optional)</label>
         <input type="password" x-model="geminiApiKey" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-teal-500">
-        <p class="text-xs text-slate-400 mt-1">Unlocks advanced AI reasoning for "Why I Fit" synthesis.</p>
+        <p class="text-xs text-slate-400 mt-1">Unlocks advanced AI reasoning for Job Breakdown and "Why I Fit" synthesis.</p>
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button @click="showSettingsModal = false" class="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold rounded-xl">Done</button>
