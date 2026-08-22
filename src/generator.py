@@ -194,6 +194,7 @@ class DocumentGenerator:
         profile: Dict[str, Any],
         job_data: Dict[str, Any],
         lang: str = "en",
+        custom_paragraphs: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Generate tailored cover letter paragraphs matching company and role requirements."""
         personal = profile.get("personal", {})
@@ -208,7 +209,9 @@ class DocumentGenerator:
             else f"Sehr geehrte(r) {job_data.get('hiring_manager', 'Damen und Herren')},"
         )
 
-        if lang == "en":
+        if custom_paragraphs and len(custom_paragraphs) > 0:
+            paragraphs = [p for p in custom_paragraphs if p and p.strip()]
+        elif lang == "en":
             paragraphs = [
                 (
                     f"I am writing to express my strong interest in the {role} position at {company}. "
@@ -303,7 +306,7 @@ class DocumentGenerator:
         pdf_name = tex_file.stem + ".pdf"
         pdf_path = output_dir / pdf_name
         if pdf_path.exists():
-            return pdf_path
+            return pdf_path.resolve()
         return None
 
     def generate_documents(
@@ -311,15 +314,20 @@ class DocumentGenerator:
         candidate_id: str,
         job_data: Dict[str, Any],
         lang: str = "en",
+        custom_summary: Optional[str] = None,
+        custom_letter_paragraphs: Optional[List[str]] = None,
     ) -> Dict[str, Path]:
         """Generate tailored CV and Cover Letter .tex and compile them to PDFs."""
         profile = self.load_profile(candidate_id)
         bullets_repo = self.load_bullets(candidate_id, lang)
 
+        if custom_summary:
+            profile.setdefault("executive_summary", {})[lang] = custom_summary
+
         # Setup destination directory
         company_slug = re.sub(r"[^\w\-]", "_", job_data.get("company", "Company"))
         role_slug = re.sub(r"[^\w\-]", "_", job_data.get("role_title", "Role"))
-        target_dir = self.outputs_dir / candidate_id / f"{company_slug}_{role_slug}_{lang}"
+        target_dir = (self.outputs_dir / candidate_id / f"{company_slug}_{role_slug}_{lang}").resolve()
         target_dir.mkdir(parents=True, exist_ok=True)
 
         # Copy style.tex to target_dir so relative input works seamlessly
@@ -338,7 +346,7 @@ class DocumentGenerator:
         cv_pdf = self.compile_pdf(cv_tex_path, target_dir)
 
         # 2. Render Cover Letter
-        letter_context = self.tailor_cover_letter_context(profile, job_data, lang)
+        letter_context = self.tailor_cover_letter_context(profile, job_data, lang, custom_letter_paragraphs)
         letter_template_name = f"letter_{lang}.tex"
         letter_template = self.jinja_env.get_template(letter_template_name)
         letter_tex_content = letter_template.render(letter_context)

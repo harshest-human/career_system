@@ -239,15 +239,27 @@ async def compile_documents(req: CompileRequest):
         candidate_id=req.candidate_id,
         job_data=req.job_data,
         lang=req.lang,
+        custom_summary=req.custom_summary,
+        custom_letter_paragraphs=req.custom_letter_paragraphs,
     )
 
-    cv_pdf_rel = str(doc_res["cv_pdf"].relative_to(ROOT_DIR)).replace("\\", "/") if doc_res.get("cv_pdf") else None
-    letter_pdf_rel = str(doc_res["letter_pdf"].relative_to(ROOT_DIR)).replace("\\", "/") if doc_res.get("letter_pdf") else None
+    def to_web_path(path_obj: Optional[Path]) -> Optional[str]:
+        if not path_obj:
+            return None
+        try:
+            rel = path_obj.resolve().relative_to(ROOT_DIR.resolve())
+            return f"/{str(rel).replace('\\', '/')}"
+        except Exception:
+            clean = str(path_obj).replace("\\", "/").lstrip("/")
+            return f"/{clean}"
+
+    cv_pdf_rel = to_web_path(doc_res.get("cv_pdf"))
+    letter_pdf_rel = to_web_path(doc_res.get("letter_pdf"))
 
     return {
         "status": "success",
-        "cv_pdf": f"/{cv_pdf_rel}" if cv_pdf_rel else None,
-        "letter_pdf": f"/{letter_pdf_rel}" if letter_pdf_rel else None,
+        "cv_pdf": cv_pdf_rel,
+        "letter_pdf": letter_pdf_rel,
     }
 
 

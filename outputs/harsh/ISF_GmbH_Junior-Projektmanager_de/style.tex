@@ -1,0 +1,52 @@
+\usepackage[a4paper,margin=1.5cm,top=1.2cm,bottom=1.2cm]{geometry}
+\usepackage{fontspec}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+\usepackage{setspace}
+
+% Windows native Arial font
+\setmainfont{Arial}
+\definecolor{accent}{HTML}{174A66}
+\definecolor{muted}{HTML}{4B5563}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\urlstyle{same}
+\emergencystretch=2em
+
+\titleformat{\section}{\large\bfseries\color{accent}}{}{0pt}{}[\vspace{-4pt}\color{accent}\titlerule]
+\titlespacing*{\section}{0pt}{6pt}{3pt}
+
+\newcommand{\cvheader}[6]{%
+  {\fontsize{22}{25}\selectfont\bfseries\color{accent}#1}\hfill
+  \begin{minipage}[t]{0.52\textwidth}\raggedleft\small
+    #3 \enspace|\enspace #4\\
+    \href{mailto:#5}{#5}\\
+    \href{#6}{#6}
+  \end{minipage}
+  \vspace{3pt}\par
+  {\large\bfseries #2}\par
+  \vspace{2pt}\color{accent}\hrule\color{black}\vspace{3pt}
+}
+
+\newcommand{\letterheader}[5]{%
+  {\fontsize{20}{23}\selectfont\bfseries\color{accent}#1}\hfill
+  \begin{minipage}[t]{0.52\textwidth}\raggedleft\small
+    #2 \enspace|\enspace #3\\
+    \href{mailto:#4}{#4}\\
+    \href{#5}{#5}
+  \end{minipage}
+  \vspace{4pt}\par\color{accent}\hrule\color{black}\vspace{10pt}
+}
+
+\newcommand{\entry}[4]{%
+  \textbf{#1}\hfill\textbf{#2}\par
+  \textit{#3}\if\relax\detokenize{#4}\relax\else\hfill\textit{#4}\fi\par
+}
+
+\newenvironment{cvitems}{\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=1.5pt,parsep=0pt]}{\end{itemize}}

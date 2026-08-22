@@ -245,6 +245,10 @@ function careerApp() {
     },
 
     async compileDocuments() {
+      if (!this.serverConnected) {
+        alert('Server is offline. Please launch start_web.bat to connect.');
+        return;
+      }
       try {
         const res = await fetch(`${API_BASE}/api/compile`, {
           method: 'POST',
@@ -257,15 +261,26 @@ function careerApp() {
             custom_letter_paragraphs: this.studioLetterParagraphs,
           }),
         });
+        if (!res.ok) {
+          const errText = await res.text();
+          let msg = errText;
+          try {
+            const errJson = JSON.parse(errText);
+            msg = errJson.detail || errJson.message || errText;
+          } catch (_) {}
+          alert('Compilation error: ' + msg);
+          return;
+        }
         const data = await res.json();
         if (data.cv_pdf) {
           this.generatedPdfs.cv = (API_BASE ? API_BASE : '') + data.cv_pdf + '?t=' + Date.now();
           this.generatedPdfs.letter = data.letter_pdf ? (API_BASE ? API_BASE : '') + data.letter_pdf + '?t=' + Date.now() : null;
+          alert('LaTeX Compilation successful! Preview updated on the right.');
         } else {
-          alert('LaTeX Compilation finished. Check outputs directory.');
+          alert('LaTeX Compilation completed without producing PDF files. Check your LaTeX installation.');
         }
       } catch (err) {
-        alert('Compilation error: ' + err);
+        alert('Compilation error: ' + err.message);
       }
     },
 
