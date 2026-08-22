@@ -33,15 +33,38 @@
 
   <!-- Top Navigation Header -->
   <header class="bg-[#09090b]/95 backdrop-blur border-b border-zinc-800/80 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
       
-      <!-- Brand Logo & Title -->
-      <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center p-1.5 shadow-sm">
+      <!-- Enlarged Brand Logo, Title, Author & Bazuka Tag -->
+      <div class="flex items-center space-x-3.5">
+        <div class="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center p-2 shadow-md">
           <img src="/static/icon.png" alt="Career System Logo" class="w-full h-full object-contain invert">
         </div>
-        <div>
-          <span class="font-black text-lg text-white tracking-tight">Career<span class="text-[#89CFF0]">System</span></span>
+        <div class="space-y-0.5">
+          <div class="flex items-center gap-2">
+            <span class="font-black text-2xl text-white tracking-tight">Career<span class="text-[#89CFF0]">System</span></span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-zinc-400 flex-wrap">
+            <span>Developed by <strong class="text-zinc-200 font-semibold">Harsh Sahu</strong></span>
+            <span class="text-zinc-600 hidden sm:inline">&bull;</span>
+            <div class="relative group inline-block cursor-help">
+              <span class="text-zinc-300 hover:text-[#89CFF0] font-medium flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-rocket text-[#89CFF0]"></i> Bazuka to hit jobs!
+              </span>
+              <!-- Interactive Hover Guide Tooltip -->
+              <div class="absolute left-0 top-7 hidden group-hover:block w-80 p-3 bg-zinc-950 text-xs text-zinc-300 rounded-xl border border-zinc-800 shadow-2xl z-50 pointer-events-none leading-relaxed">
+                <div class="font-bold text-white mb-1.5 flex items-center gap-1.5">
+                  <i class="fa-solid fa-circle-info text-[#89CFF0]"></i> How to Use CareerSystem:
+                </div>
+                <ol class="space-y-1 text-[11px] list-decimal list-inside text-zinc-400">
+                  <li><b class="text-zinc-200">Account:</b> Set up your profile & local portal login connectors.</li>
+                  <li><b class="text-zinc-200">Ingest:</b> Paste job URL or PDF for pointwise Gemini AI breakdown.</li>
+                  <li><b class="text-zinc-200">CV Builder:</b> Generate & print tailored bilingual A4 CV & letters.</li>
+                  <li><b class="text-zinc-200">Outreach:</b> Generate tailored LinkedIn connection notes & cold emails.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -257,11 +280,11 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- STEP 2: JOB INGESTION, BREAKDOWN & DEDICATED FILE DRAWER -->
+    <!-- STEP 2: JOB INGESTION, STORED OPPORTUNITIES & POINTWISE BREAKDOWN -->
     <!-- ========================================================================= -->
     <div x-show="currentStep === 2" x-cloak class="space-y-6">
       
-      <!-- Ingestion Tabs / Modes -->
+      <!-- 1. Top Section: Ingestion Card with Gemini Logo -->
       <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-4 shadow-md">
         <div class="flex items-center justify-between border-b border-zinc-800/80 pb-3">
           <div class="flex space-x-2">
@@ -275,9 +298,12 @@
               Paste Text
             </button>
           </div>
-          <span class="text-xs text-zinc-400 font-medium">
-            Pointwise Gemini Analysis
-          </span>
+          
+          <!-- Pointwise Gemini Analysis Badge with Logo -->
+          <div class="flex items-center gap-1.5 bg-zinc-950 px-2.5 py-1 rounded-lg border border-zinc-800 text-xs font-semibold text-zinc-300 shadow-sm">
+            <img src="/static/gemini_logo.png" alt="Google Gemini Logo" class="w-4 h-4 object-contain">
+            <span>Pointwise Gemini Analysis</span>
+          </div>
         </div>
 
         <!-- Mode 1: URL -->
@@ -311,7 +337,77 @@
         </div>
       </div>
 
-      <!-- POINTWISE BREAKDOWN & EDITABLE MATRIX -->
+      <!-- 2. Middle Section: Stored Opportunities Database (Placed ABOVE the detailed breakdown) -->
+      <div class="bg-[#121215] rounded-xl border border-zinc-800 overflow-hidden shadow-md">
+        <div class="p-4 border-b border-zinc-800/80 flex justify-between items-center">
+          <h3 class="font-bold text-white text-xs">
+            Stored Opportunities Database
+          </h3>
+          <span class="text-xs text-zinc-500" x-text="jobsList.length + ' stored opportunities'"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-zinc-300">
+            <thead class="bg-zinc-900 text-zinc-400 uppercase text-[10px] tracking-wider">
+              <tr>
+                <th class="p-3">Company & Role</th>
+                <th class="p-3">Type & Level</th>
+                <th class="p-3">Location</th>
+                <th class="p-3">Status</th>
+                <th class="p-3">PDF</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y border-zinc-800/80">
+              <template x-for="j in jobsList" :key="j.id">
+                <tr class="hover:bg-zinc-900/40 transition">
+                  <td class="p-3 cursor-pointer" @click="selectJobForAnalysis(j)">
+                    <div class="font-semibold text-white hover:text-[#89CFF0] transition" x-text="j.company"></div>
+                    <div class="text-zinc-400 text-[11px]" x-text="j.role_title"></div>
+                  </td>
+                  <td class="p-3">
+                    <div class="text-zinc-200" x-text="j.employment_type || 'Full-time'"></div>
+                    <div class="text-zinc-500 text-[11px]" x-text="j.seniority_level || 'Mid-Level'"></div>
+                  </td>
+                  <td class="p-3 text-zinc-400" x-text="j.location"></td>
+                  <td class="p-3">
+                    <select x-model="j.status" @change="updateJobStatus(j.id, j.status)" class="bg-zinc-950 text-xs rounded border border-zinc-700 px-2 py-1 text-zinc-200 focus:outline-none">
+                      <option value="New">New</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Applied">Applied</option>
+                      <option value="Interview">Interview</option>
+                      <option value="Offer">Offer</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </td>
+                  <td class="p-3">
+                    <template x-if="j.pdf_path">
+                      <button @click="openPdfViewer(j.pdf_path, j.role_title)" class="px-2.5 py-1 bg-zinc-900 text-zinc-200 border border-zinc-700 rounded hover:bg-zinc-800 text-[11px] font-semibold">
+                        Read PDF
+                      </button>
+                    </template>
+                    <template x-if="!j.pdf_path">
+                      <span class="text-zinc-600 text-[11px]">-</span>
+                    </template>
+                  </td>
+                  <td class="p-3 text-right space-x-1.5">
+                    <button @click="selectJobForAnalysis(j)" class="px-3 py-1 bg-white hover:bg-zinc-200 text-zinc-950 rounded text-xs font-bold shadow-sm" title="View Breakdown & Manage Job">
+                      Analyze
+                    </button>
+                    <button @click="deleteJob(j.id)" class="p-1.5 text-zinc-500 hover:text-rose-400 transition" title="Delete job">
+                      <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="jobsList.length === 0">
+                <td colspan="6" class="p-4 text-center text-zinc-600 italic">No job descriptions stored yet. Ingest a job from URL, PDF, or text above!</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 3. Bottom Section: POINTWISE BREAKDOWN & EDITABLE MATRIX (Opens UNDER the database table) -->
       <template x-if="analysisResult">
         <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-6 shadow-xl">
           
@@ -319,7 +415,10 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-800/80 pb-4">
             <div class="flex-1 space-y-1">
               <div class="flex items-center gap-2">
-                <span class="text-[11px] font-bold text-[#89CFF0] uppercase tracking-wider">Pointwise Breakdown & Local Folder</span>
+                <span class="text-[11px] font-bold text-[#89CFF0] uppercase tracking-wider flex items-center gap-1.5">
+                  <img src="/static/gemini_logo.png" alt="Gemini Logo" class="w-3.5 h-3.5 object-contain">
+                  Pointwise Breakdown & Local Folder
+                </span>
                 <span x-show="analysisResult.job.job_id_ref || analysisResult.job.job_id" class="bg-zinc-900 text-zinc-300 text-[10px] px-2 py-0.5 rounded border border-zinc-800" x-text="'Ref: ' + (analysisResult.job.job_id_ref || analysisResult.job.job_id)"></span>
               </div>
               <!-- Editable Company & Role Title -->
@@ -566,76 +665,6 @@
 
         </div>
       </template>
-
-      <!-- Jobs Library Table -->
-      <div class="bg-[#121215] rounded-xl border border-zinc-800 overflow-hidden shadow-md">
-        <div class="p-4 border-b border-zinc-800/80 flex justify-between items-center">
-          <h3 class="font-bold text-white text-xs">
-            Stored Opportunities Database
-          </h3>
-          <span class="text-xs text-zinc-500" x-text="jobsList.length + ' stored opportunities'"></span>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-zinc-300">
-            <thead class="bg-zinc-900 text-zinc-400 uppercase text-[10px] tracking-wider">
-              <tr>
-                <th class="p-3">Company & Role</th>
-                <th class="p-3">Type & Level</th>
-                <th class="p-3">Location</th>
-                <th class="p-3">Status</th>
-                <th class="p-3">PDF</th>
-                <th class="p-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y border-zinc-800/80">
-              <template x-for="j in jobsList" :key="j.id">
-                <tr class="hover:bg-zinc-900/40 transition">
-                  <td class="p-3 cursor-pointer" @click="selectJobForAnalysis(j)">
-                    <div class="font-semibold text-white hover:text-[#89CFF0] transition" x-text="j.company"></div>
-                    <div class="text-zinc-400 text-[11px]" x-text="j.role_title"></div>
-                  </td>
-                  <td class="p-3">
-                    <div class="text-zinc-200" x-text="j.employment_type || 'Full-time'"></div>
-                    <div class="text-zinc-500 text-[11px]" x-text="j.seniority_level || 'Mid-Level'"></div>
-                  </td>
-                  <td class="p-3 text-zinc-400" x-text="j.location"></td>
-                  <td class="p-3">
-                    <select x-model="j.status" @change="updateJobStatus(j.id, j.status)" class="bg-zinc-950 text-xs rounded border border-zinc-700 px-2 py-1 text-zinc-200 focus:outline-none">
-                      <option value="New">New</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Applied">Applied</option>
-                      <option value="Interview">Interview</option>
-                      <option value="Offer">Offer</option>
-                      <option value="Rejected">Rejected</option>
-                    </select>
-                  </td>
-                  <td class="p-3">
-                    <template x-if="j.pdf_path">
-                      <button @click="openPdfViewer(j.pdf_path, j.role_title)" class="px-2.5 py-1 bg-zinc-900 text-zinc-200 border border-zinc-700 rounded hover:bg-zinc-800 text-[11px] font-semibold">
-                        Read PDF
-                      </button>
-                    </template>
-                    <template x-if="!j.pdf_path">
-                      <span class="text-zinc-600 text-[11px]">-</span>
-                    </template>
-                  </td>
-                  <td class="p-3 text-right space-x-1.5">
-                    <button @click="selectJobForAnalysis(j)" class="px-3 py-1 bg-white hover:bg-zinc-200 text-zinc-950 rounded text-xs font-bold shadow-sm" title="View Breakdown & Manage Job">
-                      Analyze
-                    </button>
-                    <button @click="deleteJob(j.id)" class="p-1.5 text-zinc-500 hover:text-rose-400 transition" title="Delete job">
-                      <i class="fa-solid fa-trash text-xs"></i>
-                    </button>
-                  </td>
-                </tr>
-              </template>
-              <tr x-show="jobsList.length === 0">
-                <td colspan="6" class="p-4 text-center text-zinc-600 italic">No job descriptions stored yet. Ingest a job from URL, PDF, or text above!</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
 
     </div>
 
