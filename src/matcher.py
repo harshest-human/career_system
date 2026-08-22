@@ -15,22 +15,38 @@ import yaml
 
 
 class CandidateMatcher:
-    def __init__(self, profiles_dir: Path = Path("profiles")):
-        self.profiles_dir = profiles_dir
+    def __init__(self, profiles_dir: Optional[Path] = None):
+        self.profiles_dir = Path(profiles_dir) if profiles_dir else Path(__file__).resolve().parent.parent / "profiles"
         self.profiles: Dict[str, Dict[str, Any]] = self._load_profiles()
 
     def _load_profiles(self) -> Dict[str, Dict[str, Any]]:
         loaded = {}
-        if not self.profiles_dir.exists():
-            return loaded
+        # 1. Load from YAML files
+        if self.profiles_dir.exists():
+            for profile_folder in self.profiles_dir.iterdir():
+                if profile_folder.is_dir():
+                    profile_file = profile_folder / "profile.yaml"
+                    if profile_file.exists():
+                        try:
+                            with open(profile_file, "r", encoding="utf-8") as f:
+                                data = yaml.safe_load(f)
+                                if data:
+                                    loaded[profile_folder.name] = data
+                        except Exception:
+                            pass
 
-        for profile_folder in self.profiles_dir.iterdir():
-            if profile_folder.is_dir():
-                profile_file = profile_folder / "profile.yaml"
-                if profile_file.exists():
-                    with open(profile_file, "r", encoding="utf-8") as f:
-                        data = yaml.safe_load(f)
-                        loaded[profile_folder.name] = data
+        # 2. Augment from SQLite database if available
+        try:
+            from src.database import Database
+            db = Database()
+            db_profs = db.get_all_profiles()
+            for p in db_profs:
+                pid = p.get("id")
+                if pid and p.get("data"):
+                    loaded[pid] = p["data"]
+        except Exception:
+            pass
+
         return loaded
 
     def compute_match(self, candidate_id: str, job_data: Dict[str, Any]) -> Dict[str, Any]:

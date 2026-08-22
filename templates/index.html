@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Career System - AI Job & Application Studio</title>
+  <title>Career System - Cloud-Connected AI Job Studio</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Alpine.js -->
@@ -12,22 +12,22 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans" x-data="careerApp()" x-init="init()">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans" x-data="careerApp()" x-init="init()">
 
-  <!-- Top Navigation Bar -->
-  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-40">
+  <!-- Top Header Bar -->
+  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-sky-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
           <i class="fa-solid fa-briefcase text-white text-lg"></i>
         </div>
         <div>
-          <span class="font-bold text-lg text-white tracking-wide">Career<span class="text-sky-400">System</span></span>
-          <span class="text-xs bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-full ml-2 border border-sky-500/30">Local AI Studio</span>
+          <span class="font-bold text-lg text-white tracking-wide">Career<span class="text-teal-400">System</span></span>
+          <span class="text-xs bg-teal-500/10 text-teal-300 px-2 py-0.5 rounded-full ml-2 border border-teal-500/30">Cloud & HTML Studio</span>
         </div>
       </div>
 
-      <!-- Candidate Profile Switcher & Settings -->
+      <!-- User Account Switcher & Server Status -->
       <div class="flex items-center space-x-4">
         <!-- Server Connection Badge -->
         <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium border"
@@ -36,196 +36,259 @@
           <span x-text="serverConnected ? 'Server Online' : 'Server Offline'"></span>
         </div>
 
-        <div class="flex items-center space-x-2 bg-slate-700/60 px-3 py-1.5 rounded-lg border border-slate-600">
-          <i class="fa-solid fa-user-circle text-sky-400"></i>
-          <span class="text-xs text-slate-400 font-medium">Active Candidate:</span>
+        <div class="flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+          <i class="fa-solid fa-user-circle text-teal-400"></i>
+          <span class="text-xs text-slate-400 font-medium">Candidate:</span>
           <select x-model="activeProfileId" @change="loadActiveProfile()" class="bg-transparent text-sm font-semibold text-white focus:outline-none cursor-pointer">
             <template x-for="p in profiles" :key="p.id">
-              <option :value="p.id" x-text="p.name" class="bg-slate-800 text-white"></option>
+              <option :value="p.id" x-text="p.name" class="bg-slate-900 text-white"></option>
             </template>
           </select>
         </div>
 
-        <button @click="showSettingsModal = true" class="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+        <button @click="showSettingsModal = true" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">
           <i class="fa-solid fa-gear"></i>
         </button>
       </div>
     </div>
 
-    <!-- Offline Warning Alert -->
-    <template x-if="!serverConnected">
-      <div class="bg-rose-500/20 border-y border-rose-500/40 px-4 py-2 text-center text-xs text-rose-300 font-medium flex items-center justify-center gap-2">
-        <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
-        <span>Local Backend Server is not running. Please double-click <b>start_web.bat</b> (or run <code>python app.py</code> in terminal) to connect.</span>
-      </div>
-    </template>
+    <!-- 4-Step Sequential Stepper Navigation -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 border-t border-slate-800">
+      <div class="grid grid-cols-4 gap-2 text-center text-xs font-semibold">
+        
+        <button @click="currentStep = 1" :class="currentStep === 1 ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'" class="p-2.5 rounded-xl border transition flex items-center justify-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-teal-500 text-slate-950 flex items-center justify-center text-xs font-bold">1</span>
+          <span>Profile & Drive</span>
+        </button>
 
-    <!-- Navigation Tabs -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-2 border-t border-slate-700/50 pt-1">
-      <button @click="activeTab = 'profile'" :class="activeTab === 'profile' ? 'border-sky-400 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'" class="px-4 py-2.5 text-sm font-medium border-b-2 transition flex items-center space-x-2">
-        <i class="fa-solid fa-id-card"></i> <span>1. Profile Manager</span>
-      </button>
-      <button @click="activeTab = 'jobs'" :class="activeTab === 'jobs' ? 'border-sky-400 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'" class="px-4 py-2.5 text-sm font-medium border-b-2 transition flex items-center space-x-2">
-        <i class="fa-solid fa-satellite-dish"></i> <span>2. Job Radar & Library</span>
-      </button>
-      <button @click="activeTab = 'analyzer'" :class="activeTab === 'analyzer' ? 'border-sky-400 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'" class="px-4 py-2.5 text-sm font-medium border-b-2 transition flex items-center space-x-2">
-        <i class="fa-solid fa-chart-pie"></i> <span>3. Job Analyzer & Fit</span>
-      </button>
-      <button @click="activeTab = 'studio'" :class="activeTab === 'studio' ? 'border-sky-400 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'" class="px-4 py-2.5 text-sm font-medium border-b-2 transition flex items-center space-x-2">
-        <i class="fa-solid fa-file-signature"></i> <span>4. CV & Letter Studio</span>
-      </button>
-      <button @click="activeTab = 'outreach'" :class="activeTab === 'outreach' ? 'border-sky-400 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'" class="px-4 py-2.5 text-sm font-medium border-b-2 transition flex items-center space-x-2">
-        <i class="fa-solid fa-paper-plane"></i> <span>5. Hiring Team & Outreach</span>
-      </button>
+        <button @click="currentStep = 2" :class="currentStep === 2 ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'" class="p-2.5 rounded-xl border transition flex items-center justify-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-teal-500 text-slate-950 flex items-center justify-center text-xs font-bold">2</span>
+          <span>Job Ingestion & Fit</span>
+        </button>
+
+        <button @click="currentStep = 3" :class="currentStep === 3 ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'" class="p-2.5 rounded-xl border transition flex items-center justify-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-teal-500 text-slate-950 flex items-center justify-center text-xs font-bold">3</span>
+          <span>HTML CV & Letter</span>
+        </button>
+
+        <button @click="currentStep = 4" :class="currentStep === 4 ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'" class="p-2.5 rounded-xl border transition flex items-center justify-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-teal-500 text-slate-950 flex items-center justify-center text-xs font-bold">4</span>
+          <span>Outreach & Sheets</span>
+        </button>
+
+      </div>
     </div>
   </header>
 
-  <!-- Main Container -->
+  <!-- Main Content Container -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
     <!-- ========================================================================= -->
-    <!-- TAB 1: PROFILE MANAGER -->
+    <!-- STEP 1: APPLICANT PROFILE & GOOGLE DRIVE INTEGRATION -->
     <!-- ========================================================================= -->
-    <div x-show="activeTab === 'profile'" x-cloak class="space-y-6">
-      <div class="flex justify-between items-center bg-slate-800/60 p-4 rounded-xl border border-slate-700">
+    <div x-show="currentStep === 1" x-cloak class="space-y-6">
+      
+      <!-- Top Action Bar -->
+      <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-800">
         <div>
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-user-pen text-sky-400"></i>
+            <i class="fa-solid fa-user-pen text-teal-400"></i>
             <span x-text="profileData.personal?.full_name || 'Applicant Profile'"></span>
           </h2>
-          <p class="text-xs text-slate-400">Your master profile is stored locally and used to generate tailored LaTeX documents.</p>
+          <p class="text-xs text-slate-400">Saved locally in database and ready for Google Drive export.</p>
         </div>
-        <button @click="saveProfile()" class="px-5 py-2 bg-sky-500 hover:bg-sky-400 text-white font-semibold rounded-lg shadow transition flex items-center gap-2">
-          <i class="fa-solid fa-floppy-disk"></i> Save Profile
-        </button>
+        <div class="flex gap-2">
+          <button @click="saveProfile()" class="px-5 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl shadow transition flex items-center gap-2 text-sm">
+            <i class="fa-solid fa-floppy-disk"></i> Save Profile
+          </button>
+          <button @click="currentStep = 2" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2">
+            Next: Job Analysis <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
       </div>
 
-      <!-- Personal Info Grid -->
-      <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-700 space-y-4">
-        <h3 class="text-md font-semibold text-slate-200 border-b border-slate-700 pb-2">Personal & Contact Details</h3>
+      <!-- Google Drive & Sheets Integration Card -->
+      <div class="bg-gradient-to-br from-teal-950/30 via-slate-900 to-slate-900 p-6 rounded-2xl border border-teal-500/30 space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-md font-bold text-teal-300 flex items-center gap-2">
+            <i class="fa-brands fa-google-drive text-teal-400"></i> Google Drive & Google Sheets Sync (Optional)
+          </h3>
+          <button @click="showGoogleScriptModal = true" class="text-xs text-teal-400 hover:underline flex items-center gap-1 font-medium">
+            <i class="fa-solid fa-circle-info"></i> How to set up Google Webhook
+          </button>
+        </div>
+        <p class="text-xs text-slate-400">Paste your Google Apps Script Webhook URL to automatically save generated Google Docs to Drive and append jobs to Google Sheets.</p>
+        <div class="flex gap-2">
+          <input type="text" x-model="googleWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          <button @click="testGoogleSync()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-300 font-semibold rounded-xl text-xs transition border border-teal-500/30">
+            Test Sync
+          </button>
+        </div>
+      </div>
+
+      <!-- Personal Info Fields -->
+      <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-2">Personal & Contact Info</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-xs font-medium text-slate-400 mb-1">Full Name</label>
-            <input type="text" x-model="profileData.personal.full_name" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
+            <input type="text" x-model="profileData.personal.full_name" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-teal-500">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Email Address</label>
-            <input type="email" x-model="profileData.personal.email" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
+            <label class="block text-xs font-medium text-slate-400 mb-1">Email</label>
+            <input type="email" x-model="profileData.personal.email" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-teal-500">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Phone Number</label>
-            <input type="text" x-model="profileData.personal.phone" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
+            <label class="block text-xs font-medium text-slate-400 mb-1">Phone</label>
+            <input type="text" x-model="profileData.personal.phone" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-teal-500">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">City / Location (EN)</label>
-            <input type="text" x-model="profileData.personal.city_en" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
+            <label class="block text-xs font-medium text-slate-400 mb-1">City / Location</label>
+            <input type="text" x-model="profileData.personal.city_en" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-teal-500">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">City / Location (DE)</label>
-            <input type="text" x-model="profileData.personal.city_de" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
+            <label class="block text-xs font-medium text-slate-400 mb-1">LinkedIn Profile URL</label>
+            <input type="text" x-model="profileData.personal.linkedin_url" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-teal-500">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">LinkedIn URL</label>
-            <input type="text" x-model="profileData.personal.linkedin_url" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Professional Headline (EN)</label>
-            <input type="text" x-model="profileData.personal.title_en" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Professional Headline (DE)</label>
-            <input type="text" x-model="profileData.personal.title_de" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Work Authorization</label>
-            <input type="text" x-model="profileData.personal.residence_status" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
+            <label class="block text-xs font-medium text-slate-400 mb-1">Professional Title</label>
+            <input type="text" x-model="profileData.personal.title_en" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-teal-500">
           </div>
         </div>
       </div>
 
       <!-- Executive Summaries -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-700 space-y-2">
-          <h3 class="text-md font-semibold text-slate-200">Executive Summary (English)</h3>
-          <textarea rows="5" x-model="profileData.executive_summary.en" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:border-sky-500"></textarea>
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-2">
+          <h3 class="text-sm font-bold text-slate-200">Executive Summary (English)</h3>
+          <textarea rows="5" x-model="profileData.executive_summary.en" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-teal-500"></textarea>
         </div>
-        <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-700 space-y-2">
-          <h3 class="text-md font-semibold text-slate-200">Executive Summary (German)</h3>
-          <textarea rows="5" x-model="profileData.executive_summary.de" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:border-sky-500"></textarea>
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-2">
+          <h3 class="text-sm font-bold text-slate-200">Executive Summary (German)</h3>
+          <textarea rows="5" x-model="profileData.executive_summary.de" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-teal-500"></textarea>
         </div>
       </div>
+
     </div>
 
     <!-- ========================================================================= -->
-    <!-- TAB 2: JOB RADAR & LIBRARY -->
+    <!-- STEP 2: JOB INGESTION & INSTANT AI FIT ANALYSIS -->
     <!-- ========================================================================= -->
-    <div x-show="activeTab === 'jobs'" x-cloak class="space-y-6">
-      <!-- Ingestion Controls -->
+    <div x-show="currentStep === 2" x-cloak class="space-y-6">
+      
+      <!-- Ingestion Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
         <!-- Scrape URL Box -->
-        <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-3">
-          <h3 class="text-md font-semibold text-white flex items-center gap-2">
-            <i class="fa-solid fa-globe text-sky-400"></i> Ingest Job from URL
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3">
+          <h3 class="text-md font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-globe text-teal-400"></i> Ingest Job from URL
           </h3>
-          <p class="text-xs text-slate-400">Scrapes HTML, cleans content, and generates archived PDF in <code>job_ads_auto/</code>.</p>
+          <p class="text-xs text-slate-400">Paste any job link to automatically clean, archive, and extract requirements.</p>
           <div class="flex gap-2">
-            <input type="text" x-model="scrapeUrlInput" placeholder="https://www.stellenanzeigen.de/suche/..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
-            <button @click="scrapeJobUrl()" class="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white font-medium rounded-lg text-sm transition">
-              <i class="fa-solid fa-download"></i> Scrape & Save
+            <input type="text" x-model="scrapeUrlInput" placeholder="https://..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white">
+            <button @click="scrapeJobUrl()" class="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs transition">
+              Scrape & Analyze
             </button>
           </div>
         </div>
 
         <!-- Upload PDF Box -->
-        <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-3">
-          <h3 class="text-md font-semibold text-white flex items-center gap-2">
-            <i class="fa-solid fa-file-pdf text-red-400"></i> Upload Job PDF
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3">
+          <h3 class="text-md font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-file-arrow-up text-sky-400"></i> Upload Job PDF or Text
           </h3>
-          <p class="text-xs text-slate-400">Upload a PDF directly into <code>job_ads_manual/</code> for instant extraction.</p>
-          <input type="file" @change="uploadJobPdf($event)" accept=".pdf" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-white hover:file:bg-slate-600 cursor-pointer">
+          <p class="text-xs text-slate-400">Drop a job ad PDF directly for instant analysis.</p>
+          <input type="file" @change="uploadJobPdf($event)" accept=".pdf" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 cursor-pointer">
         </div>
       </div>
 
-      <!-- Job Postings Table -->
-      <div class="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden">
-        <div class="p-4 border-b border-slate-700 flex justify-between items-center">
-          <h3 class="font-bold text-white">Saved Job Descriptions</h3>
-          <span class="text-xs text-slate-400" x-text="jobsList.length + ' postings found'"></span>
+      <!-- Analysis Results Banner -->
+      <template x-if="analysisResult">
+        <div class="bg-slate-900 p-6 rounded-2xl border border-teal-500/40 space-y-4 shadow-xl">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+            <div>
+              <span class="text-xs font-semibold text-teal-400 uppercase tracking-wide">Analysis Ready</span>
+              <h3 class="text-xl font-bold text-white" x-text="analysisResult.job.company + ' — ' + analysisResult.job.role_title"></h3>
+              <p class="text-xs text-slate-400" x-text="analysisResult.job.location + ' | Evaluated for: ' + analysisResult.candidate"></p>
+            </div>
+            <div class="text-right">
+              <div class="text-3xl font-black text-teal-400" x-text="analysisResult.match_result.match_score + '%'"></div>
+              <span class="text-xs text-slate-400">Profile Fit Score</span>
+            </div>
+          </div>
+
+          <!-- Matched vs Gap Chips -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-2">
+              <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-check"></i> Matched Strengths (Include in CV)
+              </span>
+              <div class="flex flex-wrap gap-1.5">
+                <template x-for="s in analysisResult.match_result.matched_skills" :key="s">
+                  <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-xs" x-text="s"></span>
+                </template>
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-4 rounded-xl border border-amber-500/30 space-y-2">
+              <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-triangle-exclamation"></i> Missing Gap Keywords to Address
+              </span>
+              <div class="flex flex-wrap gap-1.5">
+                <template x-for="s in analysisResult.match_result.missing_skills" :key="s">
+                  <span class="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded text-xs" x-text="s"></span>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center pt-4">
+            <button @click="syncActiveJobToGoogleSheet()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-300 font-semibold rounded-xl text-xs border border-teal-500/30 flex items-center gap-2">
+              <i class="fa-solid fa-table-cells"></i> Log to Google Sheet Tracker
+            </button>
+            <button @click="selectJobForStudio(analysisResult.job); currentStep = 3;" class="px-6 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-sm shadow transition flex items-center gap-2">
+              Proceed to Step 3: CV & Cover Letter Studio <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Jobs Table -->
+      <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+          <h3 class="font-bold text-white text-sm">Saved Job Opportunities</h3>
+          <span class="text-xs text-slate-400" x-text="jobsList.length + ' positions'"></span>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm text-slate-300">
-            <thead class="bg-slate-900/60 text-xs uppercase text-slate-400">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase">
               <tr>
-                <th class="px-4 py-3">Company</th>
-                <th class="px-4 py-3">Role Title</th>
-                <th class="px-4 py-3">Location</th>
-                <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3">Actions</th>
+                <th class="p-3">Company</th>
+                <th class="p-3">Role</th>
+                <th class="p-3">Location</th>
+                <th class="p-3">Status</th>
+                <th class="p-3">Action</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-700/50">
+            <tbody class="divide-y divide-slate-800">
               <template x-for="j in jobsList" :key="j.id">
-                <tr class="hover:bg-slate-700/30 transition">
-                  <td class="px-4 py-3 font-semibold text-white" x-text="j.company"></td>
-                  <td class="px-4 py-3" x-text="j.role_title"></td>
-                  <td class="px-4 py-3 text-slate-400" x-text="j.location"></td>
-                  <td class="px-4 py-3">
-                    <select x-model="j.status" @change="updateJobStatus(j.id, j.status)" class="bg-slate-900 text-xs rounded border border-slate-700 px-2 py-1 text-slate-200">
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="p-3 font-bold text-white" x-text="j.company"></td>
+                  <td class="p-3" x-text="j.role_title"></td>
+                  <td class="p-3 text-slate-400" x-text="j.location"></td>
+                  <td class="p-3">
+                    <select x-model="j.status" @change="updateJobStatus(j.id, j.status)" class="bg-slate-950 text-xs rounded border border-slate-800 px-2 py-1">
                       <option value="New">New</option>
                       <option value="In Progress">In Progress</option>
                       <option value="Applied">Applied</option>
                       <option value="Interview">Interview</option>
                       <option value="Offer">Offer</option>
-                      <option value="Rejected">Rejected</option>
                     </select>
                   </td>
-                  <td class="px-4 py-3 space-x-2">
-                    <button @click="selectJobForAnalysis(j)" class="px-3 py-1 bg-sky-500/20 text-sky-300 hover:bg-sky-500/40 rounded text-xs transition">
-                      <i class="fa-solid fa-magnifying-glass"></i> Analyze
-                    </button>
-                    <button @click="selectJobForStudio(j)" class="px-3 py-1 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40 rounded text-xs transition">
-                      <i class="fa-solid fa-pen-nib"></i> Build CV
-                    </button>
+                  <td class="p-3 space-x-2">
+                    <button @click="selectJobForAnalysis(j)" class="px-2.5 py-1 bg-teal-500/20 text-teal-300 rounded hover:bg-teal-500/40">Analyze</button>
+                    <button @click="selectJobForStudio(j); currentStep = 3;" class="px-2.5 py-1 bg-sky-500/20 text-sky-300 rounded hover:bg-sky-500/40">Build CV</button>
                   </td>
                 </tr>
               </template>
@@ -233,231 +296,209 @@
           </table>
         </div>
       </div>
+
     </div>
 
     <!-- ========================================================================= -->
-    <!-- TAB 3: JOB ANALYZER & FIT SCORE -->
+    <!-- STEP 3: HTML CV & COVER LETTER STUDIO (NO LATEX REQUIRED) -->
     <!-- ========================================================================= -->
-    <div x-show="activeTab === 'analyzer'" x-cloak class="space-y-6">
-      <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-700 space-y-4">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-magnifying-glass-chart text-sky-400"></i> Job Requirement & Skill Match Analyzer
-        </h3>
-
-        <!-- Match Result Banner -->
-        <template x-if="analysisResult">
-          <div class="space-y-6">
-            <div class="flex items-center justify-between bg-slate-900 p-4 rounded-xl border border-slate-700">
-              <div>
-                <h4 class="text-xl font-bold text-white" x-text="analysisResult.job.company + ' — ' + analysisResult.job.role_title"></h4>
-                <p class="text-xs text-slate-400" x-text="'Evaluated for: ' + analysisResult.candidate"></p>
-              </div>
-              <div class="flex items-center gap-3">
-                <div class="text-right">
-                  <div class="text-2xl font-extrabold text-sky-400" x-text="analysisResult.match_result.match_score + '%'"></div>
-                  <div class="text-xs text-slate-400">Profile Fit Score</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Matched Skills vs Missing Gap Skills -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="bg-slate-900/60 p-5 rounded-xl border border-emerald-500/30 space-y-3">
-                <h4 class="text-sm font-bold text-emerald-400 flex items-center gap-2">
-                  <i class="fa-solid fa-circle-check"></i> Matched Strengths (Include in CV)
-                </h4>
-                <div class="flex flex-wrap gap-2">
-                  <template x-for="skill in analysisResult.match_result.matched_skills" :key="skill">
-                    <span class="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 rounded-lg text-xs font-medium border border-emerald-500/30" x-text="skill"></span>
-                  </template>
-                </div>
-              </div>
-
-              <div class="bg-slate-900/60 p-5 rounded-xl border border-amber-500/30 space-y-3">
-                <h4 class="text-sm font-bold text-amber-400 flex items-center gap-2">
-                  <i class="fa-solid fa-triangle-exclamation"></i> Missing / Gap Keywords to Address
-                </h4>
-                <div class="flex flex-wrap gap-2">
-                  <template x-for="skill in analysisResult.match_result.missing_skills" :key="skill">
-                    <span class="px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-xs font-medium border border-amber-500/30" x-text="skill"></span>
-                  </template>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex justify-end">
-              <button @click="selectJobForStudio(analysisResult.job)" class="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-white font-semibold rounded-lg shadow transition flex items-center gap-2">
-                <i class="fa-solid fa-arrow-right"></i> Open in CV & Letter Studio
-              </button>
-            </div>
-          </div>
-        </template>
-
-        <template x-if="!analysisResult">
-          <div class="text-center py-12 text-slate-500">
-            <i class="fa-solid fa-magnifying-glass text-4xl mb-3 text-slate-600"></i>
-            <p>Select a job from the <a @click="activeTab = 'jobs'" class="text-sky-400 underline cursor-pointer">Job Radar</a> tab to view its detailed match score.</p>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    <!-- ========================================================================= -->
-    <!-- TAB 4: INTERACTIVE CV & COVER LETTER STUDIO -->
-    <!-- ========================================================================= -->
-    <div x-show="activeTab === 'studio'" x-cloak class="space-y-6">
+    <div x-show="currentStep === 3" x-cloak class="space-y-6">
+      
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- Left: Editable Sections & "Why I Fit" AI Box -->
-        <div class="lg:col-span-7 space-y-6">
+        <!-- Left Column: Controls & Live Editable Boxes -->
+        <div class="lg:col-span-6 space-y-4">
           
-          <!-- Job Context Bar -->
-          <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+          <!-- Studio Header & Action Bar -->
+          <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
             <div>
-              <span class="text-xs text-slate-400">Target Role:</span>
-              <h3 class="font-bold text-white text-md" x-text="studioJob.company + ' — ' + studioJob.role_title"></h3>
+              <span class="text-xs text-slate-400">Targeting:</span>
+              <h3 class="font-bold text-white text-sm" x-text="studioJob.company + ' — ' + studioJob.role_title"></h3>
             </div>
-            <div class="flex items-center gap-3">
-              <select x-model="studioLang" class="bg-slate-900 text-xs rounded border border-slate-700 px-3 py-1.5 text-slate-200">
-                <option value="en">English (EN)</option>
-                <option value="de">German (DE)</option>
+            <div class="flex items-center gap-2">
+              <select x-model="studioDocType" @change="renderHtmlPreview()" class="bg-slate-950 text-xs rounded-lg border border-slate-700 px-2.5 py-1.5 text-white">
+                <option value="cv">CV / Resume</option>
+                <option value="letter">Cover Letter</option>
               </select>
-              <button @click="compileDocuments()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-lg text-sm shadow transition flex items-center gap-2">
-                <i class="fa-solid fa-file-pdf"></i> Compile LaTeX PDF
-              </button>
+              <select x-model="studioLang" @change="renderHtmlPreview()" class="bg-slate-950 text-xs rounded-lg border border-slate-700 px-2.5 py-1.5 text-white">
+                <option value="en">English</option>
+                <option value="de">German</option>
+              </select>
             </div>
           </div>
 
           <!-- "Why I Fit" Notes Box (AI Assistant) -->
-          <div class="bg-gradient-to-br from-indigo-900/40 to-slate-800/80 p-5 rounded-xl border border-indigo-500/30 space-y-3">
+          <div class="bg-gradient-to-br from-teal-950/40 via-slate-900 to-slate-900 p-5 rounded-2xl border border-teal-500/30 space-y-3">
             <div class="flex justify-between items-center">
-              <h4 class="text-sm font-bold text-indigo-300 flex items-center gap-2">
-                <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i>
-                "Why I Fit" Notes (AI Synthesis)
+              <h4 class="text-xs font-bold text-teal-300 flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-teal-400"></i> "Why I Fit" Notes (AI Synthesis)
               </h4>
-              <button @click="requestAiSuggestions()" class="px-3 py-1 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold rounded-md shadow transition flex items-center gap-1.5">
-                <i class="fa-solid fa-bolt"></i> Analyze with AI
+              <button @click="requestAiSuggestions()" class="px-3 py-1 bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold rounded-lg shadow transition">
+                <i class="fa-solid fa-bolt"></i> Generate with AI
               </button>
             </div>
-            <p class="text-xs text-slate-400">Write why you want this role or key projects you want highlighted. Gemini/Local AI will tailor your cover letter body and bullets.</p>
-            <textarea rows="3" x-model="userFitNotes" placeholder="e.g. I have 4 years of experience working with continuous gas monitoring and leading commercial farm trials in Northern Germany..." class="w-full bg-slate-900/80 border border-slate-700 rounded-lg p-3 text-sm text-white focus:border-indigo-500"></textarea>
+            <textarea rows="3" x-model="userFitNotes" placeholder="Write personal project highlights or motivation. AI will adapt your letter and bullets..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-teal-500"></textarea>
           </div>
 
-          <!-- Section 1: Tailored Executive Summary -->
-          <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-2">
-            <h4 class="text-sm font-bold text-white">Executive Summary (Editable)</h4>
-            <textarea rows="4" x-model="studioSummary" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:border-sky-500"></textarea>
-          </div>
+          <!-- Editable Summary & Paragraphs -->
+          <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3">
+            <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Live Editable Text</h4>
+            
+            <div x-show="studioDocType === 'cv'" class="space-y-2">
+              <label class="block text-xs text-slate-400">Executive Summary</label>
+              <textarea rows="4" x-model="studioSummary" @input="renderHtmlPreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-teal-500"></textarea>
+            </div>
 
-          <!-- Section 2: Cover Letter Body Paragraphs -->
-          <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-3">
-            <h4 class="text-sm font-bold text-white">Cover Letter Body (Editable Paragraphs)</h4>
-            <template x-for="(para, idx) in studioLetterParagraphs" :key="idx">
-              <div class="space-y-1">
-                <span class="text-xs text-slate-400" x-text="'Paragraph ' + (idx + 1)"></span>
-                <textarea rows="3" x-model="studioLetterParagraphs[idx]" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:border-sky-500"></textarea>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <!-- Right: Live PDF Preview Frame -->
-        <div class="lg:col-span-5 space-y-4">
-          <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
-            <h4 class="font-bold text-white text-sm flex items-center gap-2">
-              <i class="fa-solid fa-eye text-sky-400"></i> Live Compiled PDF
-            </h4>
-            <div class="space-x-2" x-show="generatedPdfs.cv">
-              <a :href="generatedPdfs.cv" target="_blank" class="px-3 py-1 bg-sky-500/20 text-sky-300 hover:bg-sky-500/40 rounded text-xs">
-                <i class="fa-solid fa-download"></i> Download CV
-              </a>
-              <a :href="generatedPdfs.letter" target="_blank" class="px-3 py-1 bg-sky-500/20 text-sky-300 hover:bg-sky-500/40 rounded text-xs">
-                <i class="fa-solid fa-download"></i> Download Letter
-              </a>
+            <div x-show="studioDocType === 'letter'" class="space-y-3">
+              <template x-for="(para, idx) in studioLetterParagraphs" :key="idx">
+                <div>
+                  <span class="text-xs text-slate-400" x-text="'Paragraph ' + (idx + 1)"></span>
+                  <textarea rows="3" x-model="studioLetterParagraphs[idx]" @input="renderHtmlPreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-white focus:border-teal-500"></textarea>
+                </div>
+              </template>
             </div>
           </div>
 
-          <div class="bg-slate-950 rounded-xl border border-slate-800 h-[680px] overflow-hidden flex items-center justify-center">
-            <template x-if="generatedPdfs.cv">
-              <iframe :src="generatedPdfs.cv" class="w-full h-full border-0"></iframe>
-            </template>
-            <template x-if="!generatedPdfs.cv">
-              <div class="text-center p-6 text-slate-500 space-y-3">
-                <i class="fa-solid fa-file-pdf text-5xl text-slate-700"></i>
-                <p class="text-sm">Click <b>"Compile LaTeX PDF"</b> to generate your high-res PDF.</p>
-              </div>
-            </template>
+          <!-- Bottom Navigation -->
+          <div class="flex justify-between items-center">
+            <button @click="currentStep = 2" class="text-xs text-slate-400 hover:underline">
+              <i class="fa-solid fa-arrow-left"></i> Back to Step 2
+            </button>
+            <button @click="currentStep = 4" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-teal-300 font-bold rounded-xl text-xs border border-teal-500/30 transition flex items-center gap-2">
+              Proceed to Step 4: Outreach & CRM <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
         </div>
+
+        <!-- Right Column: Live Instant HTML Preview & Export Bar -->
+        <div class="lg:col-span-6 space-y-3">
+          
+          <!-- Export Action Buttons -->
+          <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex justify-between items-center gap-2">
+            <div class="flex items-center gap-1.5">
+              <button @click="printHtmlDocument()" class="px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-lg text-xs shadow flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-print"></i> Print / Save PDF
+              </button>
+              <button @click="copyFormattedForGoogleDocs()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-lg text-xs border border-slate-700 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-copy"></i> Copy for Google Docs
+              </button>
+            </div>
+            <button @click="exportToGoogleDriveDoc()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-lg text-xs shadow flex items-center gap-1.5 transition">
+              <i class="fa-brands fa-google-drive"></i> Save to Drive
+            </button>
+          </div>
+
+          <!-- Embedded High-Fidelity Preview Frame -->
+          <div class="bg-white rounded-2xl shadow-2xl h-[700px] overflow-hidden border border-slate-700">
+            <iframe id="previewIframe" class="w-full h-full border-0"></iframe>
+          </div>
+
+        </div>
+
       </div>
+
     </div>
 
     <!-- ========================================================================= -->
-    <!-- TAB 5: HIRING TEAM & OUTREACH HUB -->
+    <!-- STEP 4: HIRING TEAM & OUTREACH HUB -->
     <!-- ========================================================================= -->
-    <div x-show="activeTab === 'outreach'" x-cloak class="space-y-6">
+    <div x-show="currentStep === 4" x-cloak class="space-y-6">
+      
       <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
         
         <!-- Outreach Generator Controls -->
-        <div class="md:col-span-5 bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-4">
+        <div class="md:col-span-5 bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
           <h3 class="font-bold text-white text-md flex items-center gap-2">
-            <i class="fa-solid fa-envelope-open-text text-sky-400"></i> Direct Pitch Generator
+            <i class="fa-solid fa-paper-plane text-teal-400"></i> Direct Outreach Pitch Generator
           </h3>
           <div>
-            <label class="block text-xs text-slate-400 mb-1">Company Name</label>
-            <input type="text" x-model="outreachForm.company" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white">
+            <label class="block text-xs text-slate-400 mb-1">Company</label>
+            <input type="text" x-model="outreachForm.company" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white">
           </div>
           <div>
-            <label class="block text-xs text-slate-400 mb-1">Contact / Hiring Manager Name</label>
-            <input type="text" x-model="outreachForm.contact_name" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white">
+            <label class="block text-xs text-slate-400 mb-1">Hiring Manager / Contact Name</label>
+            <input type="text" x-model="outreachForm.contact_name" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white">
           </div>
           <div>
-            <label class="block text-xs text-slate-400 mb-1">Target Role Title</label>
-            <input type="text" x-model="outreachForm.role_title" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white">
+            <label class="block text-xs text-slate-400 mb-1">Role Title</label>
+            <input type="text" x-model="outreachForm.role_title" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white">
           </div>
           <div>
             <label class="block text-xs text-slate-400 mb-1">Message Format</label>
-            <select x-model="outreachForm.outreach_type" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white">
-              <option value="connection">LinkedIn Connection Note (&lt; 300 characters)</option>
+            <select x-model="outreachForm.outreach_type" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white">
+              <option value="connection">LinkedIn Connection Note (&lt; 300 chars)</option>
               <option value="inmail">LinkedIn InMail / Message</option>
               <option value="email">Cold Email</option>
               <option value="followup">Follow-up Note (1-2 weeks)</option>
             </select>
           </div>
-          <button @click="generatePitchMessage()" class="w-full py-2.5 bg-sky-500 hover:bg-sky-400 text-white font-semibold rounded-lg shadow transition">
+          <button @click="generatePitchMessage()" class="w-full py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl shadow transition">
             Generate Pitch
           </button>
         </div>
 
         <!-- Outreach Output & Copy Box -->
-        <div class="md:col-span-7 bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-3">
-          <div class="flex justify-between items-center">
-            <h3 class="font-bold text-white text-md">Generated Pitch Content</h3>
-            <button @click="copyPitchToClipboard()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-xs font-semibold flex items-center gap-1.5 transition">
+        <div class="md:col-span-7 bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h3 class="font-bold text-white text-sm">Generated Pitch Content</h3>
+            <button @click="copyPitchToClipboard()" class="px-3 py-1.5 bg-teal-500/20 text-teal-300 hover:bg-teal-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
               <i class="fa-regular fa-copy"></i> Copy to Clipboard
             </button>
           </div>
-          <textarea rows="14" x-model="generatedPitchText" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white font-mono focus:border-sky-500"></textarea>
+          <textarea rows="13" x-model="generatedPitchText" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white font-mono focus:border-teal-500"></textarea>
+          
+          <div class="flex justify-between items-center pt-2">
+            <button @click="currentStep = 3" class="text-xs text-slate-400 hover:underline">
+              <i class="fa-solid fa-arrow-left"></i> Back to Step 3 (Studio)
+            </button>
+            <button @click="syncActiveJobToGoogleSheet()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-300 font-semibold rounded-xl text-xs border border-teal-500/30 transition">
+              <i class="fa-solid fa-table-cells"></i> Log Application in Google Sheets CRM
+            </button>
+          </div>
         </div>
+
       </div>
+
     </div>
 
   </main>
 
+  <!-- Google Apps Script Setup Modal -->
+  <div x-show="showGoogleScriptModal" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-2xl w-full space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-md flex items-center gap-2">
+          <i class="fa-brands fa-google-drive text-teal-400"></i> Google Drive & Sheets 2-Minute Setup
+        </h3>
+        <button @click="showGoogleScriptModal = false" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="text-xs text-slate-300 space-y-2 leading-relaxed">
+        <p><b>Step 1:</b> Create an empty Google Sheet in your Google Drive.</p>
+        <p><b>Step 2:</b> Click <b>Extensions > Apps Script</b> in the top menu of your Sheet.</p>
+        <p><b>Step 3:</b> Replace the default code with this snippet and click <b>Deploy > New Deployment > Web App (Access: Anyone)</b>.</p>
+        <p><b>Step 4:</b> Copy the Web App URL and paste it into Step 1!</p>
+      </div>
+      <pre class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-teal-300 overflow-x-auto font-mono max-h-48" x-text="googleScriptCode"></pre>
+      <div class="flex justify-end pt-2">
+        <button @click="showGoogleScriptModal = false" class="px-5 py-2 bg-teal-500 text-slate-950 font-bold rounded-xl text-xs">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Modal (Optional Gemini API Key) -->
   <div x-show="showSettingsModal" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl max-w-md w-full space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-        <h3 class="font-bold text-white text-lg">System Settings</h3>
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-sm">System Settings</h3>
         <button @click="showSettingsModal = false" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div>
         <label class="block text-xs font-medium text-slate-300 mb-1">Google Gemini API Key (Optional)</label>
-        <input type="password" x-model="geminiApiKey" placeholder="AIzaSy..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-sky-500">
-        <p class="text-xs text-slate-400 mt-1">If blank, the system uses built-in rule-based NLP and LaTeX synthesis (100% offline).</p>
+        <input type="password" x-model="geminiApiKey" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-teal-500">
+        <p class="text-xs text-slate-400 mt-1">Unlocks advanced AI reasoning for "Why I Fit" synthesis.</p>
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button @click="showSettingsModal = false" class="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white text-sm font-semibold rounded-lg">Done</button>
+        <button @click="showSettingsModal = false" class="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold rounded-xl">Done</button>
       </div>
     </div>
   </div>

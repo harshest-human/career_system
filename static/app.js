@@ -9,7 +9,7 @@ const API_BASE = getApiBase();
 
 function careerApp() {
   return {
-    activeTab: 'jobs',
+    currentStep: 1,
     serverConnected: false,
     profiles: [],
     activeProfileId: 'harsh',
@@ -17,14 +17,20 @@ function careerApp() {
     jobsList: [],
     scrapeUrlInput: '',
     analysisResult: null,
-    
+
+    // Google Sync
+    googleWebhookUrl: localStorage.getItem('google_webhook_url') || '',
+    showGoogleScriptModal: false,
+    googleScriptCode: '',
+
     // Studio state
     studioJob: { company: 'Target Company', role_title: 'Position', location: 'Hamburg, Germany', extracted_skills: [] },
+    studioDocType: 'cv',
     studioLang: 'en',
     userFitNotes: '',
     studioSummary: '',
     studioLetterParagraphs: ['', '', ''],
-    generatedPdfs: { cv: null, letter: null },
+    currentHtmlContent: '',
 
     // Outreach state
     outreachForm: { company: '', contact_name: 'Hiring Team', role_title: '', outreach_type: 'connection' },
@@ -38,22 +44,30 @@ function careerApp() {
       await this.checkServer();
       await this.loadProfiles();
       await this.loadJobs();
-      this.$watch('geminiApiKey', (val) => localStorage.setItem('gemini_api_key', val));
+      await this.loadGoogleScriptTemplate();
 
-      // Periodic health check
+      this.$watch('geminiApiKey', (val) => localStorage.setItem('gemini_api_key', val));
+      this.$watch('googleWebhookUrl', (val) => localStorage.setItem('google_webhook_url', val));
+
       setInterval(() => this.checkServer(), 8000);
     },
 
     async checkServer() {
       try {
         const res = await fetch(`${API_BASE}/api/health`);
-        if (res.ok) {
-          this.serverConnected = true;
-        } else {
-          this.serverConnected = false;
-        }
+        this.serverConnected = res.ok;
       } catch (err) {
         this.serverConnected = false;
+      }
+    },
+
+    async loadGoogleScriptTemplate() {
+      try {
+        const res = await fetch(`${API_BASE}/api/google/script-template`);
+        const data = await res.json();
+        this.googleScriptCode = data.script || '';
+      } catch (err) {
+        console.warn('Could not load script template:', err);
       }
     },
 
@@ -89,7 +103,7 @@ function careerApp() {
 
     async saveProfile() {
       if (!this.serverConnected) {
-        alert('Server is offline. Please launch "start_web.bat" on your PC to connect to http://localhost:8000.');
+        alert('Server is offline. Please launch start_web.bat to connect.');
         return;
       }
       try {
@@ -102,11 +116,10 @@ function careerApp() {
           alert('Profile saved and synced successfully!');
           await this.loadProfiles();
         } else {
-          const errData = await res.json().catch(() => ({}));
-          alert('Error saving profile: ' + (errData.detail || res.statusText));
+          alert('Error saving profile.');
         }
       } catch (err) {
-        alert('Connection error: Cannot reach the local server at http://localhost:8000.\n\nPlease make sure start_web.bat is running.');
+        alert('Connection error: ' + err.message);
       }
     },
 
@@ -123,10 +136,6 @@ function careerApp() {
 
     async scrapeJobUrl() {
       if (!this.scrapeUrlInput) return;
-      if (!this.serverConnected) {
-        alert('Server is offline. Please launch start_web.bat.');
-        return;
-      }
       try {
         const res = await fetch(`${API_BASE}/api/jobs/scrape`, {
           method: 'POST',
@@ -137,12 +146,15 @@ function careerApp() {
         if (res.ok) {
           this.scrapeUrlInput = '';
           await this.loadJobs();
-          alert('Job posting scraped and archived successfully!');
+          if (data.data) {
+            await this.selectJobForAnalysis(data.data);
+          }
+          alert('Job scraped and analyzed successfully!');
         } else {
-          alert('Scraping error: ' + (data.detail || 'Failed to scrape URL'));
+          alert('Scraping error: ' + (data.detail || 'Failed'));
         }
       } catch (err) {
-        alert('Connection error: Make sure start_web.bat is running.');
+        alert('Error: ' + err.message);
       }
     },
 
@@ -156,14 +168,16 @@ function careerApp() {
           method: 'POST',
           body: formData,
         });
+        const data = await res.json();
         if (res.ok) {
           await this.loadJobs();
-          alert('Job PDF uploaded and parsed successfully!');
-        } else {
-          alert('Upload failed: ' + res.statusText);
+          if (data.data) {
+            await this.selectJobForAnalysis(data.data);
+          }
+          alert('Job PDF uploaded and analyzed!');
         }
       } catch (err) {
-        alert('Connection error: Make sure start_web.bat is running.');
+        alert('Upload error: ' + err.message);
       }
     },
 
@@ -188,12 +202,9 @@ function careerApp() {
         });
         if (res.ok) {
           this.analysisResult = await res.json();
-          this.activeTab = 'analyzer';
-        } else {
-          alert('Analysis error: ' + res.statusText);
         }
       } catch (err) {
-        alert('Connection error: Make sure start_web.bat is running.');
+        alert('Analysis error: ' + err.message);
       }
     },
 
@@ -206,19 +217,49 @@ function careerApp() {
 
       if (this.studioLang === 'en') {
         this.studioLetterParagraphs = [
-          `I am writing to express my strong interest in the ${job.role_title} position at ${job.company}. My technical background and applied research directly align with your team's mission.`,
-          `At ${this.profileData.experience?.[0]?.institution_en || 'my current position'}, I have led initiatives involving ${job.extracted_skills?.slice(0, 3).join(', ') || 'key engineering domains'}, delivering measurable results.`,
+          `I am writing to express my strong interest in the ${job.role_title} position at ${job.company}. My technical background and practical execution directly match your team's objectives.`,
+          `In my previous projects, I have led key initiatives involving ${job.extracted_skills?.slice(0, 3).join(', ') || 'core engineering workflows'}, delivering measurable results and seamless collaboration.`,
           `I hold valid work authorization in Germany and look forward to discussing how my experience will support ${job.company}.`,
         ];
       } else {
         this.studioLetterParagraphs = [
           `mit großem Interesse bewerbe ich mich auf die Position als ${job.role_title} bei ${job.company}. Mein Profil verbindet fundierte Fachkenntnisse mit lösungsorientierter Praxis.`,
-          `In meiner bisherigen Tätigkeit bei ${this.profileData.experience?.[0]?.institution_de || 'meinem aktuellen Arbeitgeber'} habe ich Projekte mit Schwerpunkt auf ${job.extracted_skills?.slice(0, 3).join(', ') || 'Schlüsselbereichen'} erfolgreich geleitet.`,
+          `In meiner bisherigen Tätigkeit habe ich Projekte mit Schwerpunkt auf ${job.extracted_skills?.slice(0, 3).join(', ') || 'Schlüsselbereichen'} erfolgreich geleitet.`,
           `Ich verfüge über eine uneingeschränkte Arbeitserlaubnis und freue mich auf ein persönliches Kennenlernen.`,
         ];
       }
 
-      this.activeTab = 'studio';
+      this.renderHtmlPreview();
+    },
+
+    async renderHtmlPreview() {
+      const endpoint = this.studioDocType === 'cv' ? '/api/render/html-cv' : '/api/render/html-letter';
+      try {
+        const res = await fetch(`${API_BASE}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            candidate_id: this.activeProfileId,
+            job_data: this.studioJob,
+            lang: this.studioLang,
+            custom_summary: this.studioSummary,
+            custom_letter_paragraphs: this.studioLetterParagraphs,
+          }),
+        });
+        const data = await res.json();
+        if (data.html) {
+          this.currentHtmlContent = data.html;
+          const iframe = document.getElementById('previewIframe');
+          if (iframe) {
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(data.html);
+            doc.close();
+          }
+        }
+      } catch (err) {
+        console.error('Error rendering HTML preview:', err);
+      }
     },
 
     async requestAiSuggestions() {
@@ -237,50 +278,120 @@ function careerApp() {
         const data = await res.json();
         if (data.cover_letter_paragraphs) {
           this.studioLetterParagraphs = data.cover_letter_paragraphs;
-          alert('AI Suggestions generated! Cover letter paragraphs updated.');
+          this.studioDocType = 'letter';
+          await this.renderHtmlPreview();
+          alert('AI suggestions applied to cover letter and rendered in preview!');
         }
       } catch (err) {
-        alert('Error requesting suggestions: ' + err);
+        alert('Error requesting AI suggestions: ' + err.message);
       }
     },
 
-    async compileDocuments() {
-      if (!this.serverConnected) {
-        alert('Server is offline. Please launch start_web.bat to connect.');
-        return;
+    printHtmlDocument() {
+      const iframe = document.getElementById('previewIframe');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
       }
+    },
+
+    async copyFormattedForGoogleDocs() {
       try {
-        const res = await fetch(`${API_BASE}/api/compile`, {
+        const res = await fetch(`${API_BASE}/api/export/google-docs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             candidate_id: this.activeProfileId,
-            job_data: this.studioJob,
+            company: this.studioJob.company,
             lang: this.studioLang,
-            custom_summary: this.studioSummary,
-            custom_letter_paragraphs: this.studioLetterParagraphs,
           }),
         });
-        if (!res.ok) {
-          const errText = await res.text();
-          let msg = errText;
-          try {
-            const errJson = JSON.parse(errText);
-            msg = errJson.detail || errJson.message || errText;
-          } catch (_) {}
-          alert('Compilation error: ' + msg);
-          return;
-        }
         const data = await res.json();
-        if (data.cv_pdf) {
-          this.generatedPdfs.cv = (API_BASE ? API_BASE : '') + data.cv_pdf + '?t=' + Date.now();
-          this.generatedPdfs.letter = data.letter_pdf ? (API_BASE ? API_BASE : '') + data.letter_pdf + '?t=' + Date.now() : null;
-          alert('LaTeX Compilation successful! Preview updated on the right.');
-        } else {
-          alert('LaTeX Compilation completed without producing PDF files. Check your LaTeX installation.');
+        if (data.text) {
+          navigator.clipboard.writeText(data.text);
+          alert('Formatted CV copied to clipboard! You can now paste directly into Google Docs or Word (Ctrl+V).');
         }
       } catch (err) {
-        alert('Compilation error: ' + err.message);
+        alert('Error copying for Google Docs: ' + err.message);
+      }
+    },
+
+    async exportToGoogleDriveDoc() {
+      if (!this.googleWebhookUrl) {
+        alert('Google Webhook URL not set. Please configure it in Step 1 (Profile & Drive).');
+        this.currentStep = 1;
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/export/google-docs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            candidate_id: this.activeProfileId,
+            company: this.studioJob.company,
+            webhook_url: this.googleWebhookUrl,
+            lang: this.studioLang,
+          }),
+        });
+        const data = await res.json();
+        if (data.doc_url) {
+          window.open(data.doc_url, '_blank');
+        } else {
+          alert('Document created in Google Drive!');
+        }
+      } catch (err) {
+        alert('Error saving to Google Drive: ' + err.message);
+      }
+    },
+
+    async syncActiveJobToGoogleSheet() {
+      if (!this.googleWebhookUrl) {
+        alert('Google Webhook URL not set. Please configure it in Step 1 (Profile & Drive).');
+        this.currentStep = 1;
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/export/google-sheets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            webhook_url: this.googleWebhookUrl,
+            job_data: this.studioJob,
+            candidate_name: this.profileData.personal?.full_name || 'Applicant',
+            fit_score: this.analysisResult?.match_result?.match_score ? `${this.analysisResult.match_result.match_score}%` : '',
+          }),
+        });
+        const data = await res.json();
+        alert('Job logged to your Google Sheet Tracker successfully!');
+      } catch (err) {
+        alert('Error syncing to Google Sheet: ' + err.message);
+      }
+    },
+
+    async testGoogleSync() {
+      if (!this.googleWebhookUrl) {
+        alert('Please enter a Google Apps Script Webhook URL first.');
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/export/google-sheets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            webhook_url: this.googleWebhookUrl,
+            job_data: { company: 'Test Company', role_title: 'Test Position', location: 'Hamburg' },
+            candidate_name: this.profileData.personal?.full_name || 'Test User',
+            fit_score: '100%',
+          }),
+        });
+        const data = await res.json();
+        if (data.status === 'success' || data.message) {
+          alert('Google Sheets & Drive connection verified successfully!');
+        } else {
+          alert('Google responded: ' + JSON.stringify(data));
+        }
+      } catch (err) {
+        alert('Connection error: ' + err.message);
       }
     },
 
@@ -300,14 +411,14 @@ function careerApp() {
         const data = await res.json();
         this.generatedPitchText = data.pitch;
       } catch (err) {
-        alert('Error generating outreach: ' + err);
+        alert('Error generating outreach: ' + err.message);
       }
     },
 
     copyPitchToClipboard() {
       if (!this.generatedPitchText) return;
       navigator.clipboard.writeText(this.generatedPitchText);
-      alert('Copied to clipboard!');
+      alert('Outreach pitch copied to clipboard!');
     },
   };
 }

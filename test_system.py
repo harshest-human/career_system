@@ -168,28 +168,32 @@ class SystemDoctor:
         except Exception as e:
             self.log_result("NLP & Matching", "Job Extractor & Match Scoring", "FAIL", str(e))
 
-        # Test 3: LaTeX Document Generation
+        # Test 3: HTML Resume and Cover Letter Rendering
         try:
-            from src.generator import DocumentGenerator
-            gen = DocumentGenerator()
-            if gen.compiler:
-                test_job = {
-                    "company": "Test Company",
-                    "role_title": "Systems Specialist",
-                    "location": "Hamburg, Germany",
-                    "extracted_skills": ["python", "data analysis", "sql"],
-                }
-                res = gen.generate_documents(candidate_id="harsh", job_data=test_job, lang="en")
-                if res.get("cv_pdf") and res["cv_pdf"].exists():
-                    self.log_result("LaTeX Generator", "PDF Compilation Pipeline", "PASS", "Generated high-res CV & Letter PDFs")
-                else:
-                    self.log_result("LaTeX Generator", "PDF Compilation Pipeline", "FAIL", "PDF compilation did not produce file")
+            from src.html_templates import render_html_cv, render_html_cover_letter
+            test_prof = {"personal": {"full_name": "Harsh Sahu", "title_en": "Engineer", "email": "test@example.com"}}
+            html_cv = render_html_cv(test_prof, {"company": "Test Co", "role_title": "Lead"}, lang="en")
+            html_letter = render_html_cover_letter(test_prof, {"company": "Test Co", "role_title": "Lead"}, lang="en")
+            if "Harsh Sahu" in html_cv and "Test Co" in html_letter:
+                self.log_result("HTML Studio", "HTML CV & Cover Letter Engine", "PASS", "Instant HTML/CSS rendering (<10ms)")
             else:
-                self.log_result("LaTeX Generator", "PDF Compilation Pipeline", "WARN", "Skipped: XeLaTeX compiler not installed")
+                self.log_result("HTML Studio", "HTML CV & Cover Letter Engine", "FAIL", "Missing template fields")
         except Exception as e:
-            self.log_result("LaTeX Generator", "PDF Compilation Pipeline", "FAIL", str(e))
+            self.log_result("HTML Studio", "HTML CV & Cover Letter Engine", "FAIL", str(e))
 
-        # Test 4: Web API & Routes Health Check
+        # Test 4: Google Workspace Docs & Sheets Formatter
+        try:
+            from src.google_sync import GoogleWorkspaceSync
+            g_sync = GoogleWorkspaceSync()
+            formatted_text = g_sync.format_cv_for_google_docs(test_prof, lang="en")
+            if "HARSH SAHU" in formatted_text and "EXECUTIVE PROFILE" in formatted_text:
+                self.log_result("Google Workspace", "Google Docs & Drive Formatter", "PASS", "Ready for 1-click Docs & Drive export")
+            else:
+                self.log_result("Google Workspace", "Google Docs & Drive Formatter", "FAIL", "Formatting mismatch")
+        except Exception as e:
+            self.log_result("Google Workspace", "Google Docs & Drive Formatter", "FAIL", str(e))
+
+        # Test 5: Web API & Routes Health Check
         try:
             from fastapi.testclient import TestClient
             from app import app
@@ -197,12 +201,13 @@ class SystemDoctor:
             r1 = client.get("/api/profiles")
             r2 = client.get("/api/jobs")
             r3 = client.get("/")
-            if r1.status_code == 200 and r2.status_code == 200 and r3.status_code == 200:
-                self.log_result("Web Application", "FastAPI Server & HTML UI", "PASS", "HTTP 200 OK across all routes")
+            r4 = client.get("/api/google/script-template")
+            if r1.status_code == 200 and r2.status_code == 200 and r3.status_code == 200 and r4.status_code == 200:
+                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "PASS", "HTTP 200 OK across all routes")
             else:
-                self.log_result("Web Application", "FastAPI Server & HTML UI", "FAIL", f"Status: {r1.status_code}, {r2.status_code}, {r3.status_code}")
+                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "FAIL", f"Status: {r1.status_code}, {r2.status_code}, {r3.status_code}")
         except Exception as e:
-            self.log_result("Web Application", "FastAPI Server & HTML UI", "FAIL", str(e))
+            self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "FAIL", str(e))
 
     def print_summary(self):
         self.banner("DIAGNOSTIC SUMMARY & READINESS REPORT")

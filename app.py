@@ -29,6 +29,8 @@ from src.bootstrap import check_and_bootstrap_environment
 from src.database import Database
 from src.extractor import JobExtractor
 from src.generator import DocumentGenerator
+from src.google_sync import GoogleWorkspaceSync, GOOGLE_APPS_SCRIPT_TEMPLATE
+from src.html_templates import render_html_cover_letter, render_html_cv
 from src.matcher import CandidateMatcher
 from src.scraper import JobScraper
 from src.tracker import NetworkTracker
@@ -42,6 +44,7 @@ matcher = CandidateMatcher()
 generator = DocumentGenerator()
 scraper = JobScraper()
 tracker = NetworkTracker()
+google_sync = GoogleWorkspaceSync()
 
 app = FastAPI(title="Anti-Gravity Career System", version="2.0.0")
 
@@ -263,10 +266,77 @@ async def compile_documents(req: CompileRequest):
     }
 
 
-# --- Outreach & CRM Endpoints ---
-@app.get("/api/contacts")
-async def get_contacts():
-    return db.get_all_contacts()
+# --- HTML Document Rendering Endpoints (No LaTeX Required) ---
+@app.post("/api/render/html-cv")
+async def render_cv_endpoint(req: CompileRequest):
+    prof = db.get_profile(req.candidate_id)
+    if not prof:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    html_content = render_html_cv(
+        profile=prof["data"],
+        job_data=req.job_data,
+        lang=req.lang,
+        custom_summary=req.custom_summary,
+    )
+    return {"status": "success", "html": html_content}
+
+
+@app.post("/api/render/html-letter")
+async def render_letter_endpoint(req: CompileRequest):
+    prof = db.get_profile(req.candidate_id)
+    if not prof:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    html_content = render_html_cover_letter(
+        profile=prof["data"],
+        job_data=req.job_data,
+        lang=req.lang,
+        custom_paragraphs=req.custom_letter_paragraphs,
+    )
+    return {"status": "success", "html": html_content}
+
+
+# --- Google Workspace & Drive Sync Endpoints ---
+@app.post("/api/export/google-docs")
+async def export_to_google_docs(payload: Dict[str, Any] = Body(...)):
+    candidate_id = payload.get("candidate_id", "harsh")
+    prof = db.get_profile(candidate_id)
+    if not prof:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    webhook_url = payload.get("webhook_url")
+    if webhook_url:
+        google_sync.webhook_url = webhook_url
+
+    formatted_text = google_sync.format_cv_for_google_docs(prof["data"], lang=payload.get("lang", "en"))
+    
+    # If webhook configured, create doc in Drive
+    if google_sync.webhook_url:
+        sync_res = google_sync.create_google_doc(
+            title=f"CV - {prof['name']} - {payload.get('company', 'Application')}",
+            content=formatted_text,
+        )
+        return {"status": "success", "doc_url": sync_res.get("doc_url"), "text": formatted_text}
+
+    return {"status": "success", "text": formatted_text}
+
+
+@app.post("/api/export/google-sheets")
+async def export_to_google_sheets(payload: Dict[str, Any] = Body(...)):
+    webhook_url = payload.get("webhook_url")
+    if webhook_url:
+        google_sync.webhook_url = webhook_url
+
+    job_data = payload.get("job_data", {})
+    candidate_name = payload.get("candidate_name", "Applicant")
+    fit_score = payload.get("fit_score", "")
+
+    sync_res = google_sync.sync_job_to_sheet(job_data, candidate_name, fit_score)
+    return sync_res
+
+
+@app.get("/api/google/script-template")
+async def get_google_script_template():
+    return {"script": GOOGLE_APPS_SCRIPT_TEMPLATE}
 
 
 @app.post("/api/contacts")
