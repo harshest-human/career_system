@@ -697,6 +697,43 @@
             </div>
           </div>
 
+          <!-- CV Profile Photo Upload Card (Only in CV mode) -->
+          <div x-show="studioDocType === 'cv'" class="bg-[#121215] p-4 rounded-xl border border-zinc-800 space-y-2.5 shadow-md">
+            <div class="flex justify-between items-center">
+              <h4 class="text-xs font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-camera text-[#89CFF0]"></i> Profile Picture (Top-Left Corner)
+              </h4>
+              <span class="text-[11px] text-zinc-500">Optional • Saves into Job Folder</span>
+            </div>
+            
+            <div class="flex items-center gap-3">
+              <!-- If photo uploaded, show preview square -->
+              <template x-if="jobPhotoSrc">
+                <div class="relative group">
+                  <img :src="jobPhotoSrc" alt="Profile Photo Preview" class="w-14 h-14 rounded-lg object-cover border border-[#89CFF0] shadow-sm">
+                  <button @click="removeJobPhoto()" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-600 text-white rounded-full text-[10px] flex items-center justify-center shadow hover:bg-rose-700 transition" title="Remove Photo">
+                    &times;
+                  </button>
+                </div>
+              </template>
+
+              <!-- Upload File Picker -->
+              <div class="flex-1">
+                <label class="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 rounded-lg text-xs font-semibold transition">
+                  <i class="fa-solid fa-upload text-zinc-400"></i>
+                  <span x-text="jobPhotoSrc ? 'Change Photo' : 'Upload Profile Photo'"></span>
+                  <input type="file" @change="uploadJobPhoto($event)" accept="image/*" class="hidden">
+                </label>
+                <p class="text-[10px] text-zinc-500 mt-1" x-show="!jobPhotoSrc">
+                  If no photo is uploaded, the photo box is omitted from the CV without any blank gap.
+                </p>
+                <p class="text-[10px] text-emerald-400 mt-1" x-show="jobPhotoSrc">
+                  ✓ Photo active and saved to local job folder.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- "Why I Fit" Notes Box (AI Assistant) -->
           <div class="bg-[#121215] p-4 rounded-xl border border-zinc-800 space-y-3 shadow-md">
             <div class="flex justify-between items-center">

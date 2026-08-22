@@ -6,6 +6,7 @@ Dedicated Local Job Folders with Systematic Nomenclature: {jobposition}_{jobID}_
 
 from __future__ import annotations
 
+import base64
 import io
 import json
 import os
@@ -108,6 +109,8 @@ class CompileRequest(BaseModel):
     custom_summary: Optional[str] = None
     custom_bullets: Optional[List[str]] = None
     custom_letter_paragraphs: Optional[List[str]] = None
+    photo_src: Optional[str] = None
+    photo_base64: Optional[str] = None
 
 
 class OutreachRequest(BaseModel):
@@ -467,21 +470,104 @@ async def ai_suggest(req: SuggestRequest):
     return result
 
 
+# --- Photo Upload & Management Endpoints (Saves into Job Folder: {jobposition}_{jobID}_{companyname}_photo.ext) ---
+@app.post("/api/jobs/{job_id}/photo")
+async def upload_job_photo(job_id: int, file: UploadFile = File(...)):
+    job = db.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    ext = Path(file.filename or "photo.jpg").suffix.lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        ext = ".jpg"
+
+    prefix = get_job_prefix(job, job_id)
+    filename = f"{prefix}_photo{ext}"
+
+    folder_rel = job.get("folder_path") or f"/jobs/{prefix}"
+    job_folder = ROOT_DIR / folder_rel.lstrip("/")
+    job_folder.mkdir(parents=True, exist_ok=True)
+    target_path = job_folder / filename
+
+    content = await file.read()
+    with open(target_path, "wb") as f:
+        f.write(content)
+
+    mime = "image/png" if ext == ".png" else "image/webp" if ext == ".webp" else "image/jpeg"
+    b64_str = f"data:{mime};base64,{base64.b64encode(content).decode('utf-8')}"
+    web_url = f"/jobs/{job_folder.name}/{filename}"
+
+    # Update metadata
+    db.update_job(job_id, {"photo_path": web_url})
+
+    return {
+        "status": "success",
+        "photo_url": web_url,
+        "photo_base64": b64_str,
+        "filename": filename,
+    }
+
+
+@app.delete("/api/jobs/{job_id}/photo")
+async def delete_job_photo(job_id: int):
+    job = db.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    prefix = get_job_prefix(job, job_id)
+    folder_rel = job.get("folder_path") or f"/jobs/{prefix}"
+    job_folder = ROOT_DIR / folder_rel.lstrip("/")
+
+    for ext in [".jpg", ".jpeg", ".png", ".webp"]:
+        p = job_folder / f"{prefix}_photo{ext}"
+        if p.exists():
+            try:
+                p.unlink()
+            except Exception:
+                pass
+
+    db.update_job(job_id, {"photo_path": ""})
+    return {"status": "success", "message": "Photo removed"}
+
+
 # --- HTML Document Rendering Endpoints (Saves {jobposition}_{jobID}_{companyname}_{suffix}) ---
 @app.post("/api/render/html-cv")
 async def render_cv_endpoint(req: CompileRequest):
     prof = db.get_profile(req.candidate_id)
     if not prof:
         raise HTTPException(status_code=404, detail="Profile not found")
+
+    photo_src = req.photo_src or req.photo_base64
+    job_id = req.job_data.get("id")
+
+    # If photo_src was not explicitly passed, inspect job folder for existing photo file
+    if not photo_src and job_id:
+        job = db.get_job(job_id)
+        if job and job.get("folder_path"):
+            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
+            if job_folder.exists():
+                prefix = get_job_prefix(job, job_id)
+                for ext in [".jpg", ".jpeg", ".png", ".webp"]:
+                    p = job_folder / f"{prefix}_photo{ext}"
+                    if p.exists():
+                        try:
+                            with open(p, "rb") as f:
+                                b64 = base64.b64encode(f.read()).decode("utf-8")
+                            mime = "image/png" if ext == ".png" else "image/webp" if ext == ".webp" else "image/jpeg"
+                            photo_src = f"data:{mime};base64,{b64}"
+                        except Exception:
+                            photo_src = f"/jobs/{job_folder.name}/{p.name}"
+                        break
+
     html_content = render_html_cv(
         profile=prof["data"],
         job_data=req.job_data,
         lang=req.lang,
         custom_summary=req.custom_summary,
+        photo_src=photo_src,
     )
 
     # Save to job folder: {jobposition}_{jobID}_{companyname}_cv_{lang}.html
-    job_id = req.job_data.get("id")
     if job_id:
         job = db.get_job(job_id)
         if job and job.get("folder_path"):
@@ -492,7 +578,7 @@ async def render_cv_endpoint(req: CompileRequest):
                 with open(job_folder / filename, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
-    return {"status": "success", "html": html_content}
+    return {"status": "success", "html": html_content, "photo_src": photo_src}
 
 
 @app.post("/api/render/html-letter")

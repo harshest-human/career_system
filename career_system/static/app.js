@@ -51,6 +51,8 @@ function careerApp() {
     studioSummary: '',
     studioLetterParagraphs: ['', '', ''],
     currentHtmlContent: '',
+    jobPhotoSrc: null,
+    isUploadingPhoto: false,
 
     // Outreach state
     outreachForm: { company: '', contact_name: 'Hiring Team', role_title: '', outreach_type: 'connection' },
@@ -475,6 +477,7 @@ function careerApp() {
       this.outreachForm.company = job.company || '';
       this.outreachForm.role_title = job.role_title || '';
       this.outreachForm.contact_name = job.metadata?.hiring_manager_contact || job.hiring_manager_contact || 'Hiring Team';
+      this.jobPhotoSrc = job.photo_path ? ((API_BASE ? API_BASE : '') + job.photo_path) : null;
 
       if (this.studioLang === 'en') {
         this.studioLetterParagraphs = [
@@ -493,6 +496,58 @@ function careerApp() {
       this.renderHtmlPreview();
     },
 
+    async uploadJobPhoto(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!this.studioJob || !this.studioJob.id) {
+        alert('Please select or analyze a job from Step 2 first so the photo can be saved into its dedicated folder.');
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', file);
+      this.isUploadingPhoto = true;
+      try {
+        const res = await fetch(`${API_BASE}/api/jobs/${this.studioJob.id}/photo`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          this.jobPhotoSrc = data.photo_base64 || data.photo_url;
+          if (this.studioJob) {
+            this.studioJob.photo_path = data.photo_url;
+          }
+          await this.renderHtmlPreview();
+          await this.loadJobFiles(this.studioJob.id);
+        } else {
+          alert('Photo upload error: ' + (data.detail || 'Failed'));
+        }
+      } catch (err) {
+        alert('Error uploading photo: ' + err.message);
+      } finally {
+        this.isUploadingPhoto = false;
+      }
+    },
+
+    async removeJobPhoto() {
+      if (!this.studioJob || !this.studioJob.id) {
+        this.jobPhotoSrc = null;
+        await this.renderHtmlPreview();
+        return;
+      }
+      try {
+        await fetch(`${API_BASE}/api/jobs/${this.studioJob.id}/photo`, { method: 'DELETE' });
+        this.jobPhotoSrc = null;
+        if (this.studioJob) {
+          this.studioJob.photo_path = '';
+        }
+        await this.renderHtmlPreview();
+        await this.loadJobFiles(this.studioJob.id);
+      } catch (err) {
+        console.warn('Error removing photo:', err);
+      }
+    },
+
     async renderHtmlPreview() {
       const endpoint = this.studioDocType === 'cv' ? '/api/render/html-cv' : '/api/render/html-letter';
       try {
@@ -505,6 +560,7 @@ function careerApp() {
             lang: this.studioLang,
             custom_summary: this.studioSummary,
             custom_letter_paragraphs: this.studioLetterParagraphs,
+            photo_src: this.jobPhotoSrc || null,
           }),
         });
         const data = await res.json();

@@ -16,6 +16,7 @@ def render_html_cv(
     job_data: Dict[str, Any],
     lang: str = "en",
     custom_summary: Optional[str] = None,
+    photo_src: Optional[str] = None,
 ) -> str:
     """Render a complete, self-contained HTML/CSS CV strictly sized for A4 in English (UK) or Deutsch."""
     is_de = (lang.lower() == "de")
@@ -28,6 +29,26 @@ def render_html_cv(
     linkedin = personal.get("linkedin_url", "")
     github = personal.get("github_url", "")
     work_auth = personal.get("residence_status", "")
+
+    # Check for photo source
+    resolved_photo = (
+        photo_src
+        or job_data.get("photo_src")
+        or job_data.get("photo_base64")
+        or job_data.get("photo_url")
+        or personal.get("photo_src")
+        or personal.get("photo_base64")
+        or personal.get("photo_url")
+        or personal.get("photo")
+    )
+
+    photo_box_html = ""
+    if resolved_photo and str(resolved_photo).strip():
+        photo_box_html = f"""
+        <div class="photo-box">
+          <img src="{resolved_photo}" alt="{full_name}">
+        </div>
+        """
 
     summary = custom_summary or profile.get("executive_summary", {}).get(lang, "")
     experiences = profile.get("experience", [])
@@ -147,10 +168,33 @@ def render_html_cv(
     .header {{
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       border-bottom: 2.5px solid #2563eb;
-      padding-bottom: 8px;
+      padding-bottom: 10px;
       margin-bottom: 12px;
+    }}
+    .header-left-wrap {{
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }}
+    .photo-box {{
+      width: 68px;
+      height: 68px;
+      min-width: 68px;
+      max-width: 68px;
+      aspect-ratio: 1 / 1;
+      border-radius: 6px;
+      border: 1.5px solid #2563eb;
+      overflow: hidden;
+      background: #f1f5f9;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }}
+    .photo-box img {{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }}
     .header-left .name {{
       font-size: 20pt;
@@ -267,9 +311,12 @@ def render_html_cv(
 <body>
   <div class="cv-page">
     <div class="header">
-      <div class="header-left">
-        <div class="name">{full_name}</div>
-        <div class="headline">{title}</div>
+      <div class="header-left-wrap">
+        {photo_box_html}
+        <div class="header-left">
+          <div class="name">{full_name}</div>
+          <div class="headline">{title}</div>
+        </div>
       </div>
       <div class="header-right">
         <div>{city} &bull; {phone}</div>
