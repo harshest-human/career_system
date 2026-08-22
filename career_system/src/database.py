@@ -16,15 +16,47 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 
-def get_job_prefix(job_data: Dict[str, Any], fallback_id: int | str = "") -> str:
-    """Generate systematic prefix: {jobposition}_{jobID}_{companyname}."""
-    role = re.sub(r"[^\w\-]", "_", str(job_data.get("role_title") or "Position"))
-    jid = re.sub(r"[^\w\-]", "_", str(job_data.get("job_id") or job_data.get("job_id_ref") or fallback_id or "job"))
-    comp = re.sub(r"[^\w\-]", "_", str(job_data.get("company") or "Company"))
+import os
 
-    slug = f"{role}_{jid}_{comp}"
+
+def sanitize_slug(text: Any, max_len: int = 35) -> str:
+    """Sanitize text to be safe across Windows/Linux filesystems."""
+    text = str(text or "").strip()
+    # Transliterate German umlauts and special characters
+    text = (
+        text.replace("ä", "ae")
+        .replace("ö", "oe")
+        .replace("ü", "ue")
+        .replace("ß", "ss")
+        .replace("Ä", "Ae")
+        .replace("Ö", "Oe")
+        .replace("Ü", "Ue")
+    )
+    # Strip gender annotations like (w/m/d), (m/w/d), (d/m/w)
+    text = re.sub(r"\([wmd/\s\-]+\)", "", text, flags=re.IGNORECASE)
+    # Replace non-alphanumeric with underscores
+    text = re.sub(r"[^\w\-]", "_", text)
+    text = re.sub(r"_+", "_", text).strip("_")
+    return text[:max_len].strip("_")
+
+
+def get_job_prefix(job_data: Dict[str, Any], fallback_id: int | str = "") -> str:
+    """Generate systematic prefix: {jobposition}_{jobID}_{companyname} with safe bounded lengths."""
+    role = sanitize_slug(job_data.get("role_title") or "Position", max_len=30)
+    jid = sanitize_slug(job_data.get("job_id") or job_data.get("job_id_ref") or fallback_id or "job", max_len=15)
+    comp = sanitize_slug(job_data.get("company") or "Company", max_len=25)
+
+    parts = []
+    if role:
+        parts.append(role)
+    if jid and (jid.lower() not in role.lower()):
+        parts.append(jid)
+    if comp and (comp.lower() not in role.lower()) and (not jid or comp.lower() not in jid.lower()):
+        parts.append(comp)
+
+    slug = "_".join(parts)
     slug = re.sub(r"_+", "_", slug).strip("_")
-    return slug or f"job_{fallback_id}"
+    return slug or f"job_{fallback_id or '1'}"
 
 
 class Database:
@@ -326,12 +358,13 @@ class Database:
             prefix = get_job_prefix(job_data, job_id)
             folder_name = prefix
             job_folder = self.db_path.parent / "jobs" / folder_name
-            job_folder.mkdir(parents=True, exist_ok=True)
-
-            # Save initial {jobposition}_{jobID}_{companyname}_meta_data.json
-            meta_filename = f"{prefix}_meta_data.json"
-            with open(job_folder / meta_filename, "w", encoding="utf-8") as f:
-                json.dump({**job_data, "id": job_id}, f, indent=2, ensure_ascii=False)
+            try:
+                os.makedirs(job_folder, exist_ok=True)
+                meta_filename = f"{prefix}_meta_data.json"
+                with open(job_folder / meta_filename, "w", encoding="utf-8") as f:
+                    json.dump({**job_data, "id": job_id}, f, indent=2, ensure_ascii=False)
+            except Exception as err:
+                print(f"[Database] Warning creating job metadata file: {err}")
 
             cursor.execute("UPDATE jobs SET folder_path = ? WHERE id = ?", (f"/jobs/{folder_name}", job_id))
             conn.commit()

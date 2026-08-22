@@ -218,10 +218,14 @@ async def scrape_job(req: ScrapeRequest):
         job_info = db.get_job(job_id)
         if job_info and job_info.get("folder_path"):
             job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+            os.makedirs(job_folder, exist_ok=True)
             prefix = get_job_prefix(breakdown, job_id)
             desc_name = f"{prefix}_description.pdf"
             if job_folder.exists() and pdf_path.exists():
-                shutil.copy2(pdf_path, job_folder / desc_name)
+                try:
+                    shutil.copy2(pdf_path, job_folder / desc_name)
+                except Exception as err:
+                    print(f"[Scrape] Warning copying PDF: {err}")
 
         return {"status": "success", "job_id": job_id, "data": breakdown}
     except Exception as e:
@@ -250,10 +254,14 @@ async def upload_job(
     job_info = db.get_job(job_id)
     if job_info and job_info.get("folder_path"):
         job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+        os.makedirs(job_folder, exist_ok=True)
         prefix = get_job_prefix(breakdown, job_id)
         desc_name = f"{prefix}_description.pdf"
         if job_folder.exists() and dest_path.exists():
-            shutil.copy2(dest_path, job_folder / desc_name)
+            try:
+                shutil.copy2(dest_path, job_folder / desc_name)
+            except Exception as err:
+                print(f"[Upload] Warning copying PDF: {err}")
 
     return {"status": "success", "job_id": job_id, "data": breakdown}
 
@@ -271,11 +279,15 @@ async def parse_job_text_endpoint(req: ParseTextRequest):
     job_info = db.get_job(job_id)
     if job_info and job_info.get("folder_path"):
         job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
+        os.makedirs(job_folder, exist_ok=True)
         prefix = get_job_prefix(breakdown, job_id)
         desc_name = f"{prefix}_description.txt"
         if job_folder.exists():
-            with open(job_folder / desc_name, "w", encoding="utf-8") as f:
-                f.write(req.raw_text)
+            try:
+                with open(job_folder / desc_name, "w", encoding="utf-8") as f:
+                    f.write(req.raw_text)
+            except Exception as err:
+                print(f"[ParseText] Warning writing description: {err}")
 
     return {"status": "success", "job_id": job_id, "data": breakdown}
 
