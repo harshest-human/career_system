@@ -18,7 +18,7 @@ def render_html_cv(
     custom_summary: Optional[str] = None,
     photo_src: Optional[str] = None,
 ) -> str:
-    """Render a complete, self-contained HTML/CSS CV strictly sized for A4 in English (UK) or Deutsch."""
+    """Render a complete, self-contained HTML/CSS CV strictly sized for 1 single A4 page in English (UK) or Deutsch."""
     is_de = (lang.lower() == "de")
     personal = profile.get("personal", {})
     full_name = personal.get("full_name", "Applicant Name")
@@ -70,16 +70,17 @@ def render_html_cv(
         "work_auth": "Work Authorisation" if not is_de else "Arbeitserlaubnis",
     }
 
-    # Format Experience Items
+    # Format Experience Items (calibrated for 1 page: max 4-5 roles, top bullets)
     exp_html = ""
-    for exp in experiences:
+    for exp in experiences[:5]:
         role = exp.get(f"role_{lang}", exp.get("role_en", ""))
         period = exp.get(f"period_{lang}", exp.get("period_en", ""))
         inst = exp.get(f"institution_{lang}", exp.get("institution_en", ""))
         aff = exp.get("affiliation", "")
 
         bullets_html = ""
-        for b in exp.get("bullets", []):
+        bullets = exp.get("bullets", [])
+        for b in bullets[:3]:
             bullets_html += f"<li>{b}</li>\n"
 
         exp_html += f"""
@@ -98,22 +99,24 @@ def render_html_cv(
         </div>
         """
 
-    # Format Education Items
+    # Format Education Items (max 2 degrees on 1 page)
     edu_html = ""
-    for edu in educations:
+    for edu in educations[:2]:
         degree = edu.get(f"degree_{lang}", edu.get("degree_en", ""))
         period = edu.get(f"period_{lang}", edu.get("period_en", ""))
         inst = edu.get("institution", "")
         notes = edu.get(f"notes_{lang}", edu.get("notes_en", ""))
 
         edu_html += f"""
-        <div class="entry">
+        <div class="entry" style="margin-bottom: 3px;">
           <div class="entry-header">
             <div class="entry-title">{degree}</div>
             <div class="entry-date">{period}</div>
           </div>
-          <div class="entry-sub">{inst}</div>
-          {f'<div class="entry-notes">{notes}</div>' if notes else ''}
+          <div class="entry-sub">
+            <span>{inst}</span>
+            {f'<span class="entry-notes"> &bull; {notes}</span>' if notes else ''}
+          </div>
         </div>
         """
 
@@ -133,11 +136,9 @@ def render_html_cv(
     else:
         langs_str = str(langs_raw or "")
 
-    # Format Leadership
-    lead_html = ""
+    # Format Leadership / Credentials (compact inline / bullets)
     leadership_raw = leadership if isinstance(leadership, list) else [l.strip() for l in str(leadership).split("\n") if l.strip()]
-    for item in leadership_raw:
-        lead_html += f"<li>{item}</li>"
+    lead_str = " &bull; ".join(leadership_raw[:4])
 
     html_doc = f"""<!DOCTYPE html>
 <html lang="{lang}">
@@ -156,50 +157,57 @@ def render_html_cv(
     }}
     html, body {{
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
+      max-height: 297mm;
       margin: 0 auto;
       background: #f8fafc;
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
-      font-size: 9.5pt;
-      line-height: 1.45;
+      font-size: 8.5pt;
+      line-height: 1.32;
       color: #1e293b;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      overflow: hidden;
     }}
     .cv-page {{
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
+      max-height: 297mm;
       box-sizing: border-box;
-      padding: 14mm 16mm 14mm 16mm;
-      margin: 0 auto 10mm auto;
+      padding: 10mm 13mm 10mm 13mm;
+      margin: 0 auto;
       background: #ffffff;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      overflow: hidden;
     }}
     /* Header */
     .header {{
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 2.5px solid #2563eb;
-      padding-bottom: 10px;
-      margin-bottom: 12px;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 7px;
+      margin-bottom: 8px;
     }}
     .header-left-wrap {{
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
     }}
     .photo-box {{
-      width: 68px;
-      height: 68px;
-      min-width: 68px;
-      max-width: 68px;
+      width: 54px;
+      height: 54px;
+      min-width: 54px;
+      max-width: 54px;
       aspect-ratio: 1 / 1;
       border-radius: 6px;
       border: 1.5px solid #2563eb;
       overflow: hidden;
       background: #f1f5f9;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }}
     .photo-box img {{
       width: 100%;
@@ -208,23 +216,23 @@ def render_html_cv(
       display: block;
     }}
     .header-left .name {{
-      font-size: 20pt;
+      font-size: 17pt;
       font-weight: 800;
       color: #1e3a8a;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.4px;
       line-height: 1.1;
     }}
     .header-left .headline {{
-      font-size: 10.5pt;
+      font-size: 9pt;
       font-weight: 600;
       color: #334155;
-      margin-top: 3px;
+      margin-top: 2px;
     }}
     .header-right {{
       text-align: right;
-      font-size: 8.5pt;
+      font-size: 7.8pt;
       color: #475569;
-      line-height: 1.45;
+      line-height: 1.35;
     }}
     .header-right a {{
       color: #2563eb;
@@ -233,27 +241,27 @@ def render_html_cv(
     }}
     /* Section */
     .section {{
-      margin-bottom: 11px;
+      margin-bottom: 6px;
     }}
     .section-title {{
-      font-size: 9.5pt;
+      font-size: 8.5pt;
       font-weight: 700;
       color: #1e3a8a;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
       border-bottom: 1px solid #cbd5e1;
-      padding-bottom: 2px;
-      margin-bottom: 6px;
+      padding-bottom: 1.5px;
+      margin-bottom: 4px;
     }}
     .summary-text {{
-      font-size: 9pt;
+      font-size: 8.2pt;
       color: #334155;
       text-align: justify;
-      line-height: 1.42;
+      line-height: 1.3;
     }}
     /* Entry */
     .entry {{
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }}
     .entry-header {{
       display: flex;
@@ -262,43 +270,43 @@ def render_html_cv(
     }}
     .entry-title {{
       font-weight: 700;
-      font-size: 9.5pt;
+      font-size: 8.5pt;
       color: #0f172a;
     }}
     .entry-date {{
-      font-size: 8.5pt;
+      font-size: 7.8pt;
       font-weight: 600;
       color: #475569;
     }}
     .entry-sub {{
-      font-size: 8.5pt;
+      font-size: 7.8pt;
       font-style: italic;
       color: #475569;
       display: flex;
       justify-content: space-between;
-      margin-bottom: 3px;
+      margin-bottom: 1.5px;
     }}
     .entry-notes {{
-      font-size: 8.5pt;
+      font-size: 7.8pt;
       color: #475569;
-      margin-top: 1px;
     }}
     /* Bullets */
     .cv-bullets {{
-      margin-left: 14px;
+      margin-left: 12px;
       padding-left: 0;
-      font-size: 8.5pt;
+      font-size: 7.8pt;
       color: #334155;
-      line-height: 1.35;
+      line-height: 1.26;
     }}
     .cv-bullets li {{
-      margin-bottom: 2.5px;
+      margin-bottom: 1px;
     }}
     /* Skills */
     .skill-line {{
-      font-size: 8.5pt;
+      font-size: 7.8pt;
       color: #334155;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
+      line-height: 1.25;
     }}
     .skill-line strong {{
       color: #0f172a;
@@ -309,12 +317,19 @@ def render_html_cv(
         margin: 0;
         padding: 0;
         width: 210mm;
+        height: 297mm;
+        max-height: 297mm;
+        overflow: hidden;
       }}
       .cv-page {{
         margin: 0;
-        padding: 14mm 16mm 14mm 16mm;
+        padding: 10mm 13mm 10mm 13mm;
         box-shadow: none;
-        page-break-after: always;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+        height: 297mm;
+        max-height: 297mm;
+        overflow: hidden;
       }}
     }}
   </style>
@@ -361,9 +376,9 @@ def render_html_cv(
 
     {f'''<div class="section">
       <div class="section-title">{labels['leadership']}</div>
-      <ul class="cv-bullets" style="margin-bottom: 4px;">{lead_html}</ul>
-      {f'<div class="skill-line"><strong>{labels["work_auth"]}:</strong> {work_auth}</div>' if work_auth else ''}
-    </div>''' if leadership or work_auth else ''}
+      <div class="skill-line">{lead_str}</div>
+      {f'<div class="skill-line" style="margin-top: 2px;"><strong>{labels["work_auth"]}:</strong> {work_auth}</div>' if work_auth else ''}
+    </div>''' if lead_str or work_auth else ''}
   </div>
 </body>
 </html>
@@ -439,82 +454,96 @@ def render_html_cover_letter(
     }}
     html, body {{
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
+      max-height: 297mm;
       margin: 0 auto;
       background: #f8fafc;
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
-      font-size: 10.5pt;
-      line-height: 1.55;
+      font-size: 8.8pt;
+      line-height: 1.38;
       color: #1e293b;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      overflow: hidden;
     }}
     .letter-page {{
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
+      max-height: 297mm;
       box-sizing: border-box;
-      padding: 20mm 20mm 20mm 20mm;
-      margin: 0 auto 10mm auto;
+      padding: 13mm 18mm 13mm 18mm;
+      margin: 0 auto;
       background: #ffffff;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      overflow: hidden;
     }}
     .header {{
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 2px solid #2563eb;
-      padding-bottom: 10px;
-      margin-bottom: 20px;
+      padding-bottom: 7px;
+      margin-bottom: 11px;
     }}
     .name {{
-      font-size: 19pt;
+      font-size: 16pt;
       font-weight: 800;
       color: #1e3a8a;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.4px;
+      line-height: 1.1;
     }}
     .contact-info {{
       text-align: right;
-      font-size: 9pt;
+      font-size: 8pt;
       color: #475569;
-      line-height: 1.4;
+      line-height: 1.35;
     }}
     .contact-info a {{
       color: #2563eb;
       text-decoration: none;
     }}
     .recipient {{
-      margin-bottom: 16px;
-      font-size: 10pt;
+      margin-bottom: 9px;
+      font-size: 8.8pt;
       color: #334155;
-      line-height: 1.4;
+      line-height: 1.35;
     }}
     .date-line {{
-      margin-bottom: 16px;
-      font-size: 10pt;
+      margin-bottom: 9px;
+      font-size: 8.5pt;
       color: #64748b;
     }}
     .subject-line {{
-      font-size: 11.5pt;
+      font-size: 10.2pt;
       font-weight: 700;
       color: #0f172a;
-      margin-bottom: 16px;
+      margin-bottom: 9px;
     }}
     .salutation {{
-      margin-bottom: 14px;
+      margin-bottom: 8px;
+      font-size: 8.8pt;
       font-weight: 600;
     }}
     .letter-para {{
-      margin-bottom: 14px;
+      margin-bottom: 7.5px;
       text-align: justify;
       color: #334155;
+      font-size: 8.8pt;
+      line-height: 1.36;
     }}
     .closing {{
-      margin-top: 22px;
-      margin-bottom: 26px;
+      margin-top: 10px;
+      margin-bottom: 4px;
+      font-size: 8.8pt;
+      color: #334155;
     }}
     .signature-name {{
       font-weight: 700;
       color: #0f172a;
+      font-size: 9pt;
     }}
     @media print {{
       html, body {{
@@ -522,12 +551,19 @@ def render_html_cover_letter(
         margin: 0;
         padding: 0;
         width: 210mm;
+        height: 297mm;
+        max-height: 297mm;
+        overflow: hidden;
       }}
       .letter-page {{
         margin: 0;
-        padding: 20mm 20mm 20mm 20mm;
+        padding: 13mm 18mm 13mm 18mm;
         box-shadow: none;
-        page-break-after: always;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+        height: 297mm;
+        max-height: 297mm;
+        overflow: hidden;
       }}
     }}
   </style>
@@ -553,7 +589,7 @@ def render_html_cover_letter(
 
     <div class="subject-line">
       {subject_prefix}{role}
-      {f'<span style="font-size: 9pt; font-weight: normal; color: #64748b; float: right;">Ref: {req_id}</span>' if req_id else ''}
+      {f'<span style="font-size: 8.5pt; font-weight: normal; color: #64748b; float: right;">Ref: {req_id}</span>' if req_id else ''}
     </div>
 
     <div class="salutation">{salutation}</div>

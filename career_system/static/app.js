@@ -243,6 +243,37 @@ function careerApp() {
       }
     },
 
+    handleProfilePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const b64 = e.target.result;
+        if (!this.profileData.personal) this.profileData.personal = {};
+        this.profileData.personal.photo_base64 = b64;
+        this.profileData.personal.photo_src = b64;
+        if (this.studioProfile) {
+          if (!this.studioProfile.personal) this.studioProfile.personal = {};
+          this.studioProfile.personal.photo_base64 = b64;
+          this.studioProfile.personal.photo_src = b64;
+        }
+        this.renderHtmlPreview();
+      };
+      reader.readAsDataURL(file);
+    },
+
+    removeProfilePhoto() {
+      if (this.profileData.personal) {
+        this.profileData.personal.photo_base64 = '';
+        this.profileData.personal.photo_src = '';
+      }
+      if (this.studioProfile && this.studioProfile.personal) {
+        this.studioProfile.personal.photo_base64 = '';
+        this.studioProfile.personal.photo_src = '';
+      }
+      this.renderHtmlPreview();
+    },
+
     syncMasterProfileToStrings() {
       const skills = this.profileData.skills || {};
       this.cvSkillsString = {

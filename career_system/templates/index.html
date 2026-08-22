@@ -209,11 +209,38 @@
 
       </div>
 
-      <!-- Master CV Section 1: Contact Information -->
+      <!-- Master CV Section 1: Contact Information & Profile Picture -->
       <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-4 shadow-md">
         <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800/80 pb-2 flex items-center gap-2">
-          <i class="fa-solid fa-address-card text-[#89CFF0]"></i> Master Contact Information
+          <i class="fa-solid fa-address-card text-[#89CFF0]"></i> Master Contact Information & Profile Photo
         </h3>
+
+        <!-- Photo Upload Box -->
+        <div class="flex items-center gap-4 p-3.5 bg-zinc-950/80 rounded-xl border border-zinc-800/80">
+          <div class="relative w-14 h-14 rounded-xl border border-zinc-700 overflow-hidden bg-zinc-900 flex items-center justify-center shrink-0">
+            <template x-if="profileData.personal?.photo_base64 || profileData.personal?.photo_src">
+              <img :src="profileData.personal.photo_base64 || profileData.personal.photo_src" alt="Profile" class="w-full h-full object-cover">
+            </template>
+            <template x-if="!(profileData.personal?.photo_base64 || profileData.personal?.photo_src)">
+              <i class="fa-solid fa-user text-zinc-600 text-lg"></i>
+            </template>
+          </div>
+          <div class="flex-1 space-y-1">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-white">Profile Picture (Bewerbungsfoto)</label>
+              <template x-if="profileData.personal?.photo_base64 || profileData.personal?.photo_src">
+                <button @click="removeProfilePhoto()" class="text-[11px] text-rose-400 hover:text-rose-300 font-medium transition">
+                  <i class="fa-solid fa-trash-can mr-1"></i> Remove Photo
+                </button>
+              </template>
+            </div>
+            <p class="text-[11px] text-zinc-400">Optional. When no photo is uploaded, your CV will seamlessly span full width without any empty frame or blank box.</p>
+            <div class="pt-0.5">
+              <input type="file" @change="handleProfilePhotoUpload($event)" accept="image/png, image/jpeg, image/jpg, image/webp" class="text-xs text-zinc-400 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 cursor-pointer">
+            </div>
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-xs font-medium text-zinc-400 mb-1">Full Name</label>
@@ -711,6 +738,23 @@
               <h3 class="font-bold text-white text-sm" x-text="studioJob.company + ' — ' + studioJob.role_title"></h3>
             </div>
             <div class="flex items-center gap-2">
+              <!-- Quick Photo Toggle in Studio -->
+              <div class="flex items-center gap-1.5 bg-zinc-950 px-2 py-1.5 rounded-lg border border-zinc-700 text-xs">
+                <template x-if="studioProfile?.personal?.photo_base64 || studioProfile?.personal?.photo_src || profileData.personal?.photo_base64">
+                  <div class="flex items-center gap-1.5">
+                    <img :src="studioProfile?.personal?.photo_base64 || studioProfile?.personal?.photo_src || profileData.personal?.photo_base64" class="w-4 h-4 rounded object-cover border border-zinc-600">
+                    <button @click="removeProfilePhoto()" class="text-rose-400 hover:text-rose-300 text-[10px]" title="Remove Photo from CV">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                </template>
+                <label class="cursor-pointer text-zinc-300 hover:text-white flex items-center gap-1 text-[11px] font-medium" title="Upload or Change Photo">
+                  <i class="fa-solid fa-camera text-[#89CFF0]"></i>
+                  <span x-text="(studioProfile?.personal?.photo_base64 || studioProfile?.personal?.photo_src || profileData.personal?.photo_base64) ? 'Photo' : '+ Photo'"></span>
+                  <input type="file" @change="handleProfilePhotoUpload($event)" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden">
+                </label>
+              </div>
+
               <select x-model="studioDocType" @change="renderHtmlPreview()" class="bg-zinc-950 text-xs rounded-lg border border-zinc-700 px-3 py-1.5 text-white font-semibold focus:outline-none">
                 <option value="cv">CV / Resume</option>
                 <option value="letter">Cover Letter</option>
