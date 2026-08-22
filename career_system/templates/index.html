@@ -609,13 +609,10 @@
                     </template>
                   </td>
                   <td class="p-3 text-right space-x-1.5">
-                    <button @click="selectJobForAnalysis(j)" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded border border-zinc-700 text-xs font-semibold" title="View Breakdown & Files">
-                      Folder
+                    <button @click="selectJobForAnalysis(j)" class="px-3 py-1 bg-white hover:bg-zinc-200 text-zinc-950 rounded text-xs font-bold shadow-sm" title="View Breakdown & Manage Job">
+                      Analyze
                     </button>
-                    <button @click="openJobLocalFolder(j.id)" class="p-1.5 text-[#89CFF0] hover:text-white" title="Open Folder in Windows Explorer">
-                      <i class="fa-solid fa-folder-open"></i>
-                    </button>
-                    <button @click="deleteJob(j.id)" class="p-1.5 text-zinc-500 hover:text-rose-400" title="Delete job">
+                    <button @click="deleteJob(j.id)" class="p-1.5 text-zinc-500 hover:text-rose-400 transition" title="Delete job">
                       <i class="fa-solid fa-trash text-xs"></i>
                     </button>
                   </td>
