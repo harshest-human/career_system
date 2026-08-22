@@ -1,0 +1,90 @@
+# Master Profile Configuration: Neha Sahu
+personal:
+  full_name: "Neha Sahu"
+  title_en: "Data Analyst | Business Intelligence Specialist | Systems Engineer"
+  title_de: "Datenanalystin | Business Intelligence Spezialistin | Systemingenieurin"
+  city_en: "Hamburg, Germany"
+  city_de: "Hamburg, Deutschland"
+  phone: "+49 123 4567890"
+  email: "neha.sahu@example.com"
+  linkedin: "linkedin.com/in/neha-sahu"
+  linkedin_url: "https://linkedin.com/in/neha-sahu"
+  github: "github.com/neha-sahu"
+  github_url: "https://github.com/neha-sahu"
+  residence_status: "Permanent residence / Valid Work Authorization in Germany"
+  driving_licence: "German / International Driving Licence (Class B)"
+
+executive_summary:
+  en: >-
+    Analytical and results-driven professional with proven expertise in data analytics, process automation,
+    and business intelligence reporting. Experienced in transforming raw datasets into actionable executive insights,
+    building scalable Power BI / Tableau dashboards, and automating recurring workflows in Python and SQL.
+    Passionate about bridging technical solutions with business strategy in agile, high-impact teams.
+  de: >-
+    Analytische und ergebnisorientierte Fachkraft mit fundierter Expertise in Datenanalyse, Prozessautomatisierung
+    und Business-Intelligence-Reporting. Erfahren in der Transformation komplexer Datensätze in handlungsrelevante
+    Management-Einblicke, dem Aufbau von Power-BI- und Tableau-Dashboards sowie der Automatisierung von Arbeitsabläufen mit Python und SQL.
+
+experience:
+  - role_en: "Senior Data & Business Analyst"
+    role_de: "Senior Daten- & Business-Analystin"
+    period_en: "2023 – present"
+    period_de: "2023 – heute"
+    institution_en: "Technology & Consulting Services"
+    institution_de: "Technologie- & Beratungsunternehmen"
+    affiliation: "Hamburg, Germany"
+    category: "senior_analyst"
+
+  - role_en: "Data Analyst & Operations Specialist"
+    role_de: "Datenanalystin & Operations-Spezialistin"
+    period_en: "2021 – 2023"
+    period_de: "2021 – 2023"
+    institution_en: "Analytics Solutions Group"
+    institution_de: "Analytics Solutions Group"
+    affiliation: ""
+    category: "analyst"
+
+education:
+  - degree_en: "Master of Science (M.Sc.)"
+    degree_de: "Master of Science (M.Sc.)"
+    period_en: "2019 – 2021"
+    period_de: "2019 – 2021"
+    institution: "University / Institution"
+    notes_en: "Focus on statistical modeling, data management, quantitative methods, and project execution."
+    notes_de: "Schwerpunkte: Statistische Modellierung, Datenmanagement und quantitatives Projektmanagement."
+
+  - degree_en: "Bachelor of Technology / Engineering"
+    degree_de: "Bachelor of Technology / Engineering"
+    period_en: "2015 – 2019"
+    period_de: "2015 – 2019"
+    institution: "University / College"
+    notes_en: "Computer Science, Information Technology, database systems, and algorithms."
+    notes_de: "Informatik, Datenbankmanagementsysteme und Algorithmen."
+
+skills:
+  domains:
+    - "Business Intelligence (BI) & Executive Reporting"
+    - "Exploratory Data Analysis & Statistical Modeling"
+    - "Process Automation & ETL Data Pipelines"
+    - "Agile Project Coordination (Scrum / Kanban)"
+    - "Stakeholder Management & Technical Documentation"
+  software_tools:
+    - "Python (pandas, numpy, seaborn, matplotlib, scikit-learn)"
+    - "SQL (PostgreSQL, MySQL, MS SQL Server)"
+    - "Power BI, Tableau, Advanced Excel (VBA, Power Query)"
+    - "Git / GitHub, JIRA, Confluence"
+  languages:
+    - language: "English"
+      level: "Fluent / Full Professional Proficiency"
+    - language: "German"
+      level: "B1 / B2 Professional Working Knowledge"
+    - language: "Hindi"
+      level: "Native"
+
+leadership_awards:
+  - "Certified Scrum Product Owner / Agile Practitioner"
+  - "Led cross-functional reporting automation saving 15+ hours of manual data handling per week"
+
+references:
+  - name: "Professional references"
+    role: "Available upon request"

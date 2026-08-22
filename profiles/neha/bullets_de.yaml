@@ -1,0 +1,18 @@
+# Neha Sahu - Deutsche Stichpunkte nach Themenschwerpunkten gegliedert
+senior_analyst:
+  default:
+    - "Leitung von End-to-End-Datenanalyseprojekten zur Überführung komplexer Unternehmensdaten in strategische Entscheidungsgrundlagen und KPI-Dashboards."
+    - "Entwicklung und Betreuung automatisierter Power-BI- und SQL-Dashboards zur kontinuierlichen Leistungsüberwachung für die Geschäftsführung."
+    - "Aufbau automatisierter ETL-Datenpipelines mit Python (pandas) und SQL, wodurch der wöchentliche Reportingaufwand um 40% gesenkt wurde."
+    - "Bereichsübergreifende Zusammenarbeit mit Produktmanagement, IT und operativen Teams zur Definition von Analytics-Anforderungen."
+  data_analysis_focus:
+    - "Durchführung fundierter statistischer Analysen und explorativer Datenprüfungen zur Identifikation von Prozessoptimierungspotenzialen."
+    - "Entwicklung prädiktiver Auswertungsmodelle zur Steigerung der Prognosegenauigkeit und operativen Effizienz."
+  automation_focus:
+    - "Automatisierung wiederkehrender Datenextraktions- und Validierungsprozesse mit Python-Skripten und SQL-Routinen."
+
+analyst:
+  default:
+    - "Durchführung von Datenbereinigung, statistischer Validierung und Auswertung umfangreicher relationaler Datenbanken."
+    - "Erstellung standardisierter monatlicher Reporting-Übersichten in Tableau und Excel mit höchster Datenqualität."
+    - "Aktive Mitarbeit in agilen Scrum-Sprints, Backlog-Refinements und regelmäßigen Entwicklungs-Reviews."

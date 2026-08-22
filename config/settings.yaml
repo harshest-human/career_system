@@ -26,6 +26,19 @@ profiles:
       - "Northern Germany"
       - "Remote / Hybrid"
 
+  - id: "neha"
+    name: "Neha Sahu"
+    default_lang: "en"
+    primary_fields:
+      - "Data Science & Analytics"
+      - "Business Intelligence & Reporting"
+      - "Software & Systems Engineering"
+      - "Process Automation"
+    target_locations:
+      - "Hamburg"
+      - "Northern Germany"
+      - "Remote / Hybrid"
+
   - id: "wife"
     name: "Candidate Profile (Wife)"
     default_lang: "en"
