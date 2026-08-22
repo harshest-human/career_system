@@ -805,13 +805,82 @@ async def render_cv_endpoint(req: CompileRequest):
     return {"status": "success", "html": html_content, "photo_src": photo_src}
 
 
+@app.post("/api/generate-html")
+async def generate_html_studio_endpoint(req: CompileRequest):
+    prof = db.get_profile(req.candidate_id)
+    profile_data = req.custom_profile if req.custom_profile else (prof["data"] if prof else {})
+    if not profile_data or not profile_data.get("personal"):
+        profile_data = {
+            "personal": {"full_name": req.candidate_id.replace("_", " ").title()},
+            "executive_summary": {"en": "", "de": ""},
+            "experience": [],
+            "education": [],
+            "skills": {},
+            "leadership_awards": [],
+        }
+
+    job_id = req.job_data.get("id")
+    photo_src = None
+    if job_id:
+        job = db.get_job(job_id)
+        if job and job.get("folder_path"):
+            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
+            if job_folder.exists():
+                prefix = get_job_prefix(job, job_id)
+                for ext in [".jpg", ".jpeg", ".png", ".webp"]:
+                    p = job_folder / f"{prefix}_photo{ext}"
+                    if p.exists():
+                        try:
+                            with open(p, "rb") as f:
+                                b64 = base64.b64encode(f.read()).decode("utf-8")
+                            mime = "image/png" if ext == ".png" else "image/webp" if ext == ".webp" else "image/jpeg"
+                            photo_src = f"data:{mime};base64,{b64}"
+                        except Exception:
+                            photo_src = f"/jobs/{job_folder.name}/{p.name}"
+                        break
+
+    cv_html = render_html_cv(
+        profile=profile_data,
+        job_data=req.job_data,
+        lang=req.lang,
+        custom_summary=req.custom_summary,
+        photo_src=photo_src,
+    )
+
+    cover_letter_html = render_html_cover_letter(
+        profile=profile_data,
+        job_data=req.job_data,
+        lang=req.lang,
+        custom_paragraphs=req.custom_letter_paragraphs,
+    )
+
+    # Save to job folder if job_id exists
+    if job_id:
+        job = db.get_job(job_id)
+        if job and job.get("folder_path"):
+            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
+            if job_folder.exists():
+                prefix = get_job_prefix(job, job_id)
+                with open(job_folder / f"{prefix}_cv_{req.lang}.html", "w", encoding="utf-8") as f:
+                    f.write(cv_html)
+                with open(job_folder / f"{prefix}_coverletter_{req.lang}.html", "w", encoding="utf-8") as f:
+                    f.write(cover_letter_html)
+
+    return {
+        "status": "success",
+        "cv_html": cv_html,
+        "cover_letter_html": cover_letter_html,
+        "html": cv_html,
+        "photo_src": photo_src,
+    }
+
+
 @app.post("/api/render/html-letter")
 async def render_letter_endpoint(req: CompileRequest):
     prof = db.get_profile(req.candidate_id)
-    if not prof:
-        raise HTTPException(status_code=404, detail="Profile not found")
+    profile_data = req.custom_profile if req.custom_profile else (prof["data"] if prof else {})
     html_content = render_html_cover_letter(
-        profile=prof["data"],
+        profile=profile_data,
         job_data=req.job_data,
         lang=req.lang,
         custom_paragraphs=req.custom_letter_paragraphs,

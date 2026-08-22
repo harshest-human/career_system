@@ -234,9 +234,9 @@ function careerApp() {
           if (!this.profileData.leadership_awards) this.profileData.leadership_awards = [];
 
           this.syncMasterProfileToStrings();
-          if (!this.studioProfile) {
-            this.studioProfile = JSON.parse(JSON.stringify(this.profileData));
-          }
+          this.studioProfile = JSON.parse(JSON.stringify(this.profileData));
+          this.onLanguageChange();
+          await this.renderHtmlPreview();
         }
       } catch (err) {
         console.error('Error loading active profile:', err);
@@ -364,6 +364,9 @@ function careerApp() {
         const res = await fetch(`${API_BASE}/api/jobs`);
         if (res.ok) {
           this.jobsList = await res.json();
+          if (this.jobsList.length > 0 && !this.studioJob.id) {
+            await this.selectJobForStudio(this.jobsList[0]);
+          }
         }
       } catch (err) {
         console.error('Error loading jobs:', err);
