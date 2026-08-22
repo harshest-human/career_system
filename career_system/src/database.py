@@ -1,7 +1,7 @@
 """
 SQLite Database Layer for Career System Local Web App
-Manages structured data for Profiles, Jobs, Contacts, and Outreach Logs,
-with bidirectional synchronization to YAML profile files and rich Job Metadata storage.
+Manages structured data for Profiles, Jobs, Portal Credentials, Contacts, and Outreach Logs,
+with bidirectional synchronization to YAML profile files.
 """
 
 from __future__ import annotations
@@ -16,8 +16,10 @@ import yaml
 
 
 class Database:
-    def __init__(self, db_path: Path = Path("career_system.db")):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[Path] = None):
+        if db_path is None:
+            db_path = Path(__file__).resolve().parent.parent / "career_system.db"
+        self.db_path = Path(db_path)
         self.init_db()
         self.sync_profiles_from_filesystem()
 
@@ -84,6 +86,19 @@ class Database:
                     except Exception:
                         pass
 
+            # Portal Credentials table (for automated scraper logins)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS portal_credentials (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    portal_name TEXT NOT NULL,
+                    portal_url TEXT NOT NULL,
+                    username TEXT NOT NULL,
+                    password TEXT NOT NULL,
+                    enabled INTEGER DEFAULT 1,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+
             # Contacts table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS contacts (
@@ -119,7 +134,7 @@ class Database:
 
     def sync_profiles_from_filesystem(self) -> None:
         """Scan profiles/ directory and sync into database."""
-        profiles_dir = Path("profiles")
+        profiles_dir = self.db_path.parent / "profiles"
         if not profiles_dir.exists():
             return
 
@@ -129,21 +144,24 @@ class Database:
                     prof_id = prof_dir.name
                     prof_file = prof_dir / "profile.yaml"
                     if prof_file.exists():
-                        with open(prof_file, "r", encoding="utf-8") as f:
-                            data = yaml.safe_load(f)
-                            if data and "personal" in data:
-                                name = data["personal"].get("full_name", prof_id.capitalize())
-                                conn.execute(
-                                    """
-                                    INSERT INTO profiles (id, name, default_lang, data_json, updated_at)
-                                    VALUES (?, ?, ?, ?, ?)
-                                    ON CONFLICT(id) DO UPDATE SET
-                                        name = excluded.name,
-                                        data_json = excluded.data_json,
-                                        updated_at = excluded.updated_at
-                                    """,
-                                    (prof_id, name, "en", json.dumps(data), datetime.now().isoformat()),
-                                )
+                        try:
+                            with open(prof_file, "r", encoding="utf-8") as f:
+                                data = yaml.safe_load(f)
+                                if data and "personal" in data:
+                                    name = data["personal"].get("full_name", prof_id.capitalize())
+                                    conn.execute(
+                                        """
+                                        INSERT INTO profiles (id, name, default_lang, data_json, updated_at)
+                                        VALUES (?, ?, ?, ?, ?)
+                                        ON CONFLICT(id) DO UPDATE SET
+                                            name = excluded.name,
+                                            data_json = excluded.data_json,
+                                            updated_at = excluded.updated_at
+                                        """,
+                                        (prof_id, name, "en", json.dumps(data), datetime.now().isoformat()),
+                                    )
+                        except Exception:
+                            pass
             conn.commit()
 
     # --- Profile Operations ---
@@ -179,10 +197,63 @@ class Database:
             conn.commit()
 
         # Sync back to profiles/<id>/profile.yaml
-        prof_dir = Path("profiles") / profile_id
+        prof_dir = self.db_path.parent / "profiles" / profile_id
         prof_dir.mkdir(parents=True, exist_ok=True)
         with open(prof_dir / "profile.yaml", "w", encoding="utf-8") as f:
             yaml.safe_dump(profile_data, f, sort_keys=False, allow_unicode=True)
+
+    # --- Portal Credentials Operations ---
+    def get_all_portals(self) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            rows = conn.execute("SELECT * FROM portal_credentials ORDER BY id DESC").fetchall()
+            return [dict(r) for r in rows]
+
+    def add_or_update_portal(self, portal_data: Dict[str, Any]) -> int:
+        now = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            portal_id = portal_data.get("id")
+            if portal_id:
+                cursor.execute(
+                    """
+                    UPDATE portal_credentials SET
+                        portal_name = ?, portal_url = ?, username = ?, password = ?, enabled = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        portal_data.get("portal_name", "Portal"),
+                        portal_data.get("portal_url", ""),
+                        portal_data.get("username", ""),
+                        portal_data.get("password", ""),
+                        portal_data.get("enabled", 1),
+                        now,
+                        portal_id,
+                    ),
+                )
+                conn.commit()
+                return portal_id
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO portal_credentials (portal_name, portal_url, username, password, enabled, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        portal_data.get("portal_name", "Portal"),
+                        portal_data.get("portal_url", ""),
+                        portal_data.get("username", ""),
+                        portal_data.get("password", ""),
+                        portal_data.get("enabled", 1),
+                        now,
+                    ),
+                )
+                conn.commit()
+                return cursor.lastrowid
+
+    def delete_portal(self, portal_id: int) -> None:
+        with self.get_connection() as conn:
+            conn.execute("DELETE FROM portal_credentials WHERE id = ?", (portal_id,))
+            conn.commit()
 
     # --- Job Operations ---
     def add_or_update_job(self, job_data: Dict[str, Any]) -> int:
@@ -191,7 +262,6 @@ class Database:
             cursor = conn.cursor()
             skills_json = json.dumps(job_data.get("extracted_skills", []))
             
-            # Pack detailed breakdown into metadata_json
             meta = {
                 "key_responsibilities": job_data.get("key_responsibilities", []),
                 "required_qualifications": job_data.get("required_qualifications", []),
@@ -214,13 +284,13 @@ class Database:
                 (
                     job_data.get("company", "Target Company"),
                     job_data.get("role_title", "Position"),
-                    job_data.get("location", "Hamburg, Germany"),
+                    job_data.get("location", "Location"),
                     job_data.get("employment_type", "Full-time"),
                     job_data.get("contract_type", "Permanent / Unlimited"),
                     job_data.get("seniority_level", "Mid-Level"),
                     job_data.get("job_id", job_data.get("job_id_ref", "")),
                     job_data.get("salary_range", "Not disclosed"),
-                    job_data.get("industry_sector", "Engineering & Technology"),
+                    job_data.get("industry_sector", "Technology / Engineering"),
                     job_data.get("application_deadline", job_data.get("deadline", "")),
                     job_data.get("start_date", ""),
                     job_data.get("source_file", ""),

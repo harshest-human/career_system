@@ -12,9 +12,18 @@ function careerApp() {
     currentStep: 1,
     serverConnected: false,
     profiles: [],
-    activeProfileId: 'harsh',
+    activeProfileId: 'default',
     profileData: { personal: {}, executive_summary: {}, experience: [], education: [], skills: {} },
     jobsList: [],
+
+    // Account Creation Modal
+    showNewAccountModal: false,
+    newAccountName: '',
+
+    // Portal Connectors
+    portalsList: [],
+    showPortalModal: false,
+    newPortalForm: { portal_name: '', portal_url: '', username: '', password: '' },
 
     // Ingestion state
     ingestMode: 'url',
@@ -34,7 +43,7 @@ function careerApp() {
     googleScriptCode: '',
 
     // Studio state
-    studioJob: { company: 'Target Company', role_title: 'Position', location: 'Hamburg, Germany', extracted_skills: [] },
+    studioJob: { company: 'Target Company', role_title: 'Position', location: 'Location', extracted_skills: [] },
     studioDocType: 'cv',
     studioLang: 'en',
     userFitNotes: '',
@@ -53,6 +62,7 @@ function careerApp() {
     async init() {
       await this.checkServer();
       await this.loadProfiles();
+      await this.loadPortals();
       await this.loadJobs();
       await this.loadGoogleScriptTemplate();
 
@@ -99,6 +109,31 @@ function careerApp() {
       }
     },
 
+    async createNewAccount() {
+      if (!this.newAccountName.trim()) {
+        alert('Please enter a candidate name.');
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/profiles/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: this.newAccountName }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.newAccountName = '';
+          this.showNewAccountModal = false;
+          await this.loadProfiles();
+          this.activeProfileId = data.profile_id;
+          await this.loadActiveProfile();
+          alert('New candidate account created!');
+        }
+      } catch (err) {
+        alert('Error creating account: ' + err.message);
+      }
+    },
+
     async loadActiveProfile() {
       try {
         const res = await fetch(`${API_BASE}/api/profiles/${this.activeProfileId}`);
@@ -133,6 +168,59 @@ function careerApp() {
       }
     },
 
+    // --- Portal Credential Methods ---
+    async loadPortals() {
+      try {
+        const res = await fetch(`${API_BASE}/api/portals`);
+        if (res.ok) {
+          this.portalsList = await res.json();
+        }
+      } catch (err) {
+        console.warn('Error loading portals:', err);
+      }
+    },
+
+    async savePortalCredential() {
+      if (!this.newPortalForm.portal_name || !this.newPortalForm.username) {
+        alert('Please provide portal name and login email/username.');
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/portals`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.newPortalForm),
+        });
+        if (res.ok) {
+          this.newPortalForm = { portal_name: '', portal_url: '', username: '', password: '' };
+          this.showPortalModal = false;
+          await this.loadPortals();
+          alert('Portal credentials saved locally in database!');
+        }
+      } catch (err) {
+        alert('Error saving portal: ' + err.message);
+      }
+    },
+
+    async deletePortal(portalId) {
+      if (!confirm('Are you sure you want to remove this portal connection?')) return;
+      try {
+        await fetch(`${API_BASE}/api/portals/${portalId}`, { method: 'DELETE' });
+        await this.loadPortals();
+      } catch (err) {
+        alert('Error removing portal: ' + err.message);
+      }
+    },
+
+    saveApiKey() {
+      if (!this.geminiApiKey) {
+        alert('Please enter a valid Gemini API key.');
+        return;
+      }
+      localStorage.setItem('gemini_api_key', this.geminiApiKey);
+      alert('Gemini API key saved!');
+    },
+
     async loadJobs() {
       try {
         const res = await fetch(`${API_BASE}/api/jobs`);
@@ -161,7 +249,7 @@ function careerApp() {
           this.scrapeUrlInput = '';
           await this.loadJobs();
           await this.selectJobForAnalysis(data.data);
-          alert('Job analyzed with Gemini & breakdown generated in table below!');
+          alert('Job analyzed with Gemini & pointwise breakdown ready below!');
         } else {
           alert('Scraping error: ' + (data.detail || 'Failed'));
         }
@@ -190,7 +278,7 @@ function careerApp() {
         if (res.ok && data.data) {
           await this.loadJobs();
           await this.selectJobForAnalysis(data.data);
-          alert('Job PDF parsed & breakdown generated in table below!');
+          alert('Job PDF parsed & pointwise breakdown ready below!');
         } else {
           alert('Upload error: ' + (data.detail || res.statusText));
         }
@@ -218,7 +306,7 @@ function careerApp() {
           this.rawJobTextInput = '';
           await this.loadJobs();
           await this.selectJobForAnalysis(data.data);
-          alert('Job description analyzed with Gemini & stored in database!');
+          alert('Job description analyzed with Gemini & breakdown ready below!');
         } else {
           alert('Parsing error: ' + (data.detail || 'Failed'));
         }
@@ -266,6 +354,11 @@ function careerApp() {
       }
     },
 
+    onLanguageChange() {
+      this.studioSummary = this.profileData.executive_summary?.[this.studioLang] || '';
+      this.selectJobForStudio(this.studioJob);
+    },
+
     selectJobForStudio(job) {
       this.studioJob = job;
       this.studioSummary = this.profileData.executive_summary?.[this.studioLang] || '';
@@ -275,15 +368,15 @@ function careerApp() {
 
       if (this.studioLang === 'en') {
         this.studioLetterParagraphs = [
-          `I am writing to express my strong interest in the ${job.role_title} position at ${job.company}. My technical background and practical execution directly match your team's objectives.`,
-          `In my previous projects, I have led key initiatives involving ${job.extracted_skills?.slice(0, 3).join(', ') || 'core engineering workflows'}, delivering measurable results and seamless collaboration.`,
-          `I hold valid work authorization in Germany and look forward to discussing how my experience will support ${job.company}.`,
+          `I am writing to express my strong interest in the ${job.role_title} position at ${job.company}. My professional background and proven technical execution directly align with your team's current operational goals.`,
+          `In my previous work, I have successfully led key initiatives, streamlined analytical workflows, and collaborated cross-functionally to achieve measurable results.`,
+          `I hold valid work authorization in Germany and look forward to discussing how my experience can support ${job.company}'s ongoing success.`,
         ];
       } else {
         this.studioLetterParagraphs = [
-          `mit großem Interesse bewerbe ich mich auf die Position als ${job.role_title} bei ${job.company}. Mein Profil verbindet fundierte Fachkenntnisse mit lösungsorientierter Praxis.`,
-          `In meiner bisherigen Tätigkeit habe ich Projekte mit Schwerpunkt auf ${job.extracted_skills?.slice(0, 3).join(', ') || 'Schlüsselbereichen'} erfolgreich geleitet.`,
-          `Ich verfüge über eine uneingeschränkte Arbeitserlaubnis und freue mich auf ein persönliches Kennenlernen.`,
+          `mit großem Interesse bewerbe ich mich auf die Position als ${job.role_title} bei ${job.company}. Mein Profil verbindet fundierte Fachkenntnisse mit einer lösungsorientierten und strukturierten Arbeitsweise.`,
+          `In meinen bisherigen Projekten und Verantwortungsbereichen habe ich maßgebliche Aufgaben erfolgreich gesteuert, datengestützte Prozesse optimiert und eng mit interdisziplinären Teams zusammengearbeitet.`,
+          `Ich verfüge über eine uneingeschränkte Arbeitserlaubnis in Deutschland und freue mich auf die Gelegenheit, mich Ihnen in einem persönlichen Gespräch vorzustellen.`,
         ];
       }
 
@@ -367,7 +460,7 @@ function careerApp() {
         const data = await res.json();
         if (data.text) {
           navigator.clipboard.writeText(data.text);
-          alert('Formatted CV copied to clipboard! You can now paste directly into Google Docs or Word (Ctrl+V).');
+          alert('Formatted document copied to clipboard! You can now paste directly into Google Docs or Microsoft Word (Ctrl+V).');
         }
       } catch (err) {
         alert('Error copying for Google Docs: ' + err.message);
@@ -376,7 +469,7 @@ function careerApp() {
 
     async exportToGoogleDriveDoc() {
       if (!this.googleWebhookUrl) {
-        alert('Google Webhook URL not set. Please configure it in Step 1 (Profile & Drive).');
+        alert('Google Webhook URL not configured. Please paste your Webhook URL in Step 1 (Account & Connectors).');
         this.currentStep = 1;
         return;
       }
@@ -404,7 +497,7 @@ function careerApp() {
 
     async syncActiveJobToGoogleSheet() {
       if (!this.googleWebhookUrl) {
-        alert('Google Webhook URL not set. Please configure it in Step 1 (Profile & Drive).');
+        alert('Google Webhook URL not configured. Please paste your Webhook URL in Step 1 (Account & Connectors).');
         this.currentStep = 1;
         return;
       }

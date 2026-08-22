@@ -1,0 +1,59 @@
+personal:
+  full_name: "Your Name"
+  title_en: "Professional Title"
+  title_de: "Berufsbezeichnung"
+  city_en: "City, Country"
+  city_de: "Stadt, Land"
+  phone: "+49 123 4567890"
+  email: "applicant@example.com"
+  linkedin_url: "https://linkedin.com/in/username"
+  github_url: "https://github.com/username"
+  residence_status: "Work Authorization Available"
+
+executive_summary:
+  en: "Experienced professional with a strong technical background, problem-solving skills, and a track record of delivering impactful results in collaborative environments."
+  de: "Erfahrener Fachspezialist mit fundiertem technischem Hintergrund, ausgeprägter Problemlösungskompetenz und nachweisbaren Erfolgen in interdisziplinären Projekten."
+
+experience:
+  - role_en: "Senior Specialist / Project Lead"
+    role_de: "Senior Spezialist / Projektleiter"
+    institution_en: "Current / Most Recent Organization"
+    institution_de: "Aktuelles / Letztes Unternehmen"
+    period_en: "2022 - Present"
+    period_de: "2022 - Heute"
+    bullets:
+      - "Led technical projects and cross-functional teams to achieve organizational goals."
+      - "Streamlined processes and implemented data-driven solutions to improve efficiency."
+      - "Collaborated with external stakeholders and prepared comprehensive technical reports."
+
+education:
+  - degree_en: "Master of Science (M.Sc.) in Applied Sciences / Engineering"
+    degree_de: "Master of Science (M.Sc.) in Angewandten Wissenschaften / Ingenieurwesen"
+    institution: "University / Institute"
+    period_en: "2018 - 2021"
+    period_de: "2018 - 2021"
+    notes_en: "Focus on technical modeling, data evaluation, and project execution."
+    notes_de: "Schwerpunkt auf technische Modellierung, Datenauswertung und Projektabwicklung."
+
+skills:
+  domains:
+    - "Project Management"
+    - "Data Analysis"
+    - "System Engineering"
+  software_tools:
+    - "Python"
+    - "SQL"
+    - "Excel"
+    - "Power BI"
+  hardware_instruments:
+    - "Measurement Systems"
+    - "Sensors"
+  languages:
+    - language: "English"
+      level: "Fluent (C1/Native)"
+    - language: "German"
+      level: "Professional (B2/C1)"
+
+leadership_awards:
+  - "Project Excellence Recognition"
+  - "Certified Professional Credentials"

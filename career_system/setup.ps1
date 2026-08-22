@@ -22,7 +22,7 @@ if (!(Test-Path ".venv")) {
 
 # 3. Install Dependencies
 Write-Host "[3/4] Installing dependencies..." -ForegroundColor Yellow
-uv pip install --python .venv\Scripts\python.exe fastapi uvicorn httpx python-multipart pdfplumber pypdf jinja2 pandas openpyxl pyyaml beautifulsoup4 requests reportlab
+uv pip install --python .venv\Scripts\python.exe fastapi uvicorn httpx python-multipart google-genai pdfplumber pypdf jinja2 pandas openpyxl pyyaml beautifulsoup4 requests reportlab
 
 # 4. Check MiKTeX / LaTeX
 Write-Host "[4/4] Verifying LaTeX installation..." -ForegroundColor Yellow

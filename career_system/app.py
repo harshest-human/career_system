@@ -138,6 +138,22 @@ async def get_profiles():
     return db.get_all_profiles()
 
 
+@app.post("/api/profiles/create")
+async def create_profile_endpoint(payload: Dict[str, Any] = Body(...)):
+    name = payload.get("name", "New Applicant").strip()
+    profile_id = payload.get("id") or re.sub(r"[^\w\-]", "_", name.lower())
+    default_data = {
+        "personal": {"full_name": name, "email": "", "phone": "", "city_en": "", "title_en": ""},
+        "executive_summary": {"en": "", "de": ""},
+        "experience": [],
+        "education": [],
+        "skills": {"domains": [], "software_tools": [], "hardware_instruments": [], "languages": []},
+        "leadership_awards": [],
+    }
+    db.save_profile(profile_id, default_data)
+    return {"status": "success", "profile_id": profile_id, "name": name}
+
+
 @app.get("/api/profiles/{profile_id}")
 async def get_profile_details(profile_id: str):
     prof = db.get_profile(profile_id)
@@ -151,6 +167,24 @@ async def get_profile_details(profile_id: str):
 async def save_profile(profile_id: str, payload: Dict[str, Any] = Body(...)):
     db.save_profile(profile_id, payload)
     return {"status": "success", "profile_id": profile_id}
+
+
+# --- Portal Credentials & Connector Endpoints ---
+@app.get("/api/portals")
+async def get_portals():
+    return db.get_all_portals()
+
+
+@app.post("/api/portals")
+async def save_portal(payload: Dict[str, Any] = Body(...)):
+    portal_id = db.add_or_update_portal(payload)
+    return {"status": "success", "portal_id": portal_id}
+
+
+@app.delete("/api/portals/{portal_id}")
+async def delete_portal(portal_id: int):
+    db.delete_portal(portal_id)
+    return {"status": "success"}
 
 
 # --- Job Endpoints ---

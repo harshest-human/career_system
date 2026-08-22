@@ -72,15 +72,18 @@ Return ONLY valid JSON adhering to this exact schema:
   "hiring_manager_contact": "Contact person name, email or department if mentioned"
 }}
 """
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=prompt,
-                )
-                text_out = response.text
-                json_match = re.search(r"\{.*\}", text_out, re.DOTALL)
-                if json_match:
-                    parsed = json.loads(json_match.group(0))
-                    return parsed
+                for model_name in ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"]:
+                    try:
+                        response = client.models.generate_content(
+                            model=model_name,
+                            contents=prompt,
+                        )
+                        text_out = response.text
+                        json_match = re.search(r"\{.*\}", text_out, re.DOTALL)
+                        if json_match:
+                            return json.loads(json_match.group(0))
+                    except Exception:
+                        continue
             except Exception as e:
                 print(f"[AI Assistant] Gemini Job Breakdown error: {e}. Falling back to NLP heuristics.")
 
@@ -215,14 +218,18 @@ Format your response as clean JSON with keys:
 "suggested_bullets" (list of strings),
 "interview_recommendations" (list of strings)
 """
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=prompt,
-                )
-                text_out = response.text
-                json_match = re.search(r"\{.*\}", text_out, re.DOTALL)
-                if json_match:
-                    return json.loads(json_match.group(0))
+                for model_name in ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"]:
+                    try:
+                        response = client.models.generate_content(
+                            model=model_name,
+                            contents=prompt,
+                        )
+                        text_out = response.text
+                        json_match = re.search(r"\{.*\}", text_out, re.DOTALL)
+                        if json_match:
+                            return json.loads(json_match.group(0))
+                    except Exception:
+                        continue
             except Exception as e:
                 print(f"[AI Assistant] Gemini API call note: {e}. Using rule-based synthesis.")
 

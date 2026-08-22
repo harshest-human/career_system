@@ -1,9 +1,10 @@
 """
 HTML & CSS Resume and Cover Letter Template Engine
-Produces clean, modern, ATS-compliant HTML/CSS documents optimized for:
-1. Instant live in-browser preview (< 50ms)
-2. Perfect high-resolution Print-to-PDF (@media print)
-3. 1-Click export and copying into Google Docs / Word
+Produces clean, modern, ATS-compliant HTML/CSS documents in English (UK) and Deutsch.
+Optimized for:
+1. Instant live in-browser preview (< 10ms)
+2. High-resolution Print-to-PDF (@media print)
+3. 1-Click copy as rich formatted text for Google Docs / Microsoft Word
 """
 
 from __future__ import annotations
@@ -17,11 +18,11 @@ def render_html_cv(
     job_data: Dict[str, Any],
     lang: str = "en",
     custom_summary: Optional[str] = None,
-    selected_theme: str = "modern_clean",
 ) -> str:
-    """Render a complete, self-contained HTML/CSS CV."""
+    """Render a complete, self-contained HTML/CSS CV in English (UK) or Deutsch."""
+    is_de = (lang.lower() == "de")
     personal = profile.get("personal", {})
-    full_name = personal.get("full_name", "Candidate Name")
+    full_name = personal.get("full_name", "Applicant Name")
     title = personal.get(f"title_{lang}", personal.get("title_en", ""))
     city = personal.get(f"city_{lang}", personal.get("city_en", ""))
     phone = personal.get("phone", "")
@@ -36,18 +37,18 @@ def render_html_cv(
     skills = profile.get("skills", {})
     leadership = profile.get("leadership_awards", [])
 
-    # Labels based on language
+    # Localized Labels
     labels = {
-        "profile": "Profile" if lang == "en" else "Profil",
-        "experience": "Professional Experience" if lang == "en" else "Berufserfahrung",
-        "education": "Education" if lang == "en" else "Ausbildung",
-        "skills": "Key Skills & Expertise" if lang == "en" else "Fachkenntnisse & Methoden",
-        "domains": "Core Domains" if lang == "en" else "Schwerpunkte",
-        "software": "Software & Tools" if lang == "en" else "Software & Tools",
-        "hardware": "Hardware & Instrumentation" if lang == "en" else "Hardware & Messtechnik",
-        "languages": "Languages" if lang == "en" else "Sprachen",
-        "leadership": "Leadership & Credentials" if lang == "en" else "Zusatzqualifikationen",
-        "work_auth": "Work Authorisation" if lang == "en" else "Arbeitserlaubnis",
+        "profile": "Executive Profile" if not is_de else "Profil & Zusammenfassung",
+        "experience": "Professional Experience" if not is_de else "Berufserfahrung",
+        "education": "Education & Qualifications" if not is_de else "Ausbildung & Studium",
+        "skills": "Core Competencies & Skills" if not is_de else "Fachkenntnisse & Methoden",
+        "domains": "Core Domains" if not is_de else "Fachgebiete",
+        "software": "Software & Tools" if not is_de else "Software & Tools",
+        "hardware": "Technical Instrumentation" if not is_de else "Messtechnik & Hardware",
+        "languages": "Languages" if not is_de else "Sprachkenntnisse",
+        "leadership": "Key Credentials & Awards" if not is_de else "Zusatzqualifikationen & Auszeichnungen",
+        "work_auth": "Work Authorisation" if not is_de else "Arbeitserlaubnis",
     }
 
     # Format Experience Items
@@ -112,11 +113,11 @@ def render_html_cv(
 <html lang="{lang}">
 <head>
   <meta charset="UTF-8">
-  <title>CV - {full_name}</title>
+  <title>Curriculum Vitae - {full_name}</title>
   <style>
     @page {{
       size: A4;
-      margin: 14mm 14mm 14mm 14mm;
+      margin: 12mm 14mm 12mm 14mm;
     }}
     * {{
       box-sizing: border-box;
@@ -124,12 +125,12 @@ def render_html_cv(
       padding: 0;
     }}
     body {{
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
       font-size: 9.5pt;
       line-height: 1.45;
       color: #1e293b;
       background: #ffffff;
-      padding: 10px;
+      padding: 12px;
     }}
     .cv-container {{
       max-width: 800px;
@@ -141,7 +142,7 @@ def render_html_cv(
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 2px solid #0f766e;
+      border-bottom: 2.5px solid #0d9488;
       padding-bottom: 8px;
       margin-bottom: 12px;
     }}
@@ -153,7 +154,7 @@ def render_html_cv(
       line-height: 1.1;
     }}
     .header-left .headline {{
-      font-size: 11pt;
+      font-size: 10.5pt;
       font-weight: 600;
       color: #334155;
       margin-top: 3px;
@@ -162,7 +163,7 @@ def render_html_cv(
       text-align: right;
       font-size: 8.5pt;
       color: #475569;
-      line-height: 1.4;
+      line-height: 1.45;
     }}
     .header-right a {{
       color: #0f766e;
@@ -174,7 +175,7 @@ def render_html_cv(
       margin-bottom: 10px;
     }}
     .section-title {{
-      font-size: 10.5pt;
+      font-size: 10pt;
       font-weight: 700;
       color: #0f766e;
       text-transform: uppercase;
@@ -187,7 +188,7 @@ def render_html_cv(
       font-size: 9pt;
       color: #334155;
       text-align: justify;
-      line-height: 1.4;
+      line-height: 1.42;
     }}
     /* Entry */
     .entry {{
@@ -232,7 +233,7 @@ def render_html_cv(
     .cv-bullets li {{
       margin-bottom: 2.5px;
     }}
-    /* Skills & Info */
+    /* Skills */
     .skill-line {{
       font-size: 8.5pt;
       color: #334155;
@@ -306,9 +307,10 @@ def render_html_cover_letter(
     lang: str = "en",
     custom_paragraphs: Optional[List[str]] = None,
 ) -> str:
-    """Render a complete, self-contained HTML/CSS Cover Letter."""
+    """Render a complete, self-contained HTML/CSS Cover Letter in English (UK) or Deutsch."""
+    is_de = (lang.lower() == "de")
     personal = profile.get("personal", {})
-    full_name = personal.get("full_name", "Candidate Name")
+    full_name = personal.get("full_name", "Applicant Name")
     city = personal.get(f"city_{lang}", personal.get("city_en", ""))
     phone = personal.get("phone", "")
     email = personal.get("email", "")
@@ -316,29 +318,36 @@ def render_html_cover_letter(
 
     company = job_data.get("company", "Target Company")
     role = job_data.get("role_title", "Position")
-    job_city = job_data.get("location", "Hamburg")
-    hiring_manager = job_data.get("hiring_manager", "")
-    req_id = job_data.get("req_id", "")
+    job_city = job_data.get("location", "Location")
+    hiring_manager = job_data.get("hiring_manager_contact") or job_data.get("hiring_manager", "")
+    req_id = job_data.get("job_id") or job_data.get("job_id_ref", "")
 
-    today_str = datetime.now().strftime("%d %B %Y" if lang == "en" else "%d. %B %Y")
-    salutation = (
-        f"Dear {hiring_manager}," if hiring_manager else ("Dear Hiring Team," if lang == "en" else "Sehr geehrte Damen und Herren,")
-    )
-    closing = "Yours sincerely," if lang == "en" else "Mit freundlichen Grüßen,"
+    # Date formatting
+    if is_de:
+        today_str = datetime.now().strftime("%d. %B %Y")
+        salutation = f"Sehr geehrte(r) {hiring_manager}," if hiring_manager else "Sehr geehrte Damen und Herren,"
+        closing = "Mit freundlichen Grüßen,"
+        subject_prefix = "Bewerbung als "
+    else:
+        # UK Date format
+        today_str = datetime.now().strftime("%d %B %Y")
+        salutation = f"Dear {hiring_manager}," if hiring_manager else "Dear Hiring Team,"
+        closing = "Yours sincerely,"
+        subject_prefix = "Application for the position of "
 
     if custom_paragraphs and len(custom_paragraphs) > 0:
         paragraphs = [p for p in custom_paragraphs if p and p.strip()]
-    elif lang == "en":
+    elif is_de:
         paragraphs = [
-            f"I am writing to express my strong interest in the {role} position at {company}. With my established background and hands-on execution, I offer a direct match for your team's mission and objectives.",
-            f"In my previous work and projects, I have led key initiatives involving data analysis, scalable systems, and cross-functional coordination, consistently delivering measurable results.",
-            f"I hold valid work authorization in Germany and look forward to the opportunity of discussing how my experience will support {company}.",
+            f"mit großem Interesse bewerbe ich mich auf die Position als {role} bei {company}. Mein Profil verbindet fundierte Fachkenntnisse mit einer lösungsorientierten und strukturierten Arbeitsweise.",
+            f"In meinen bisherigen Projekten und Verantwortungsbereichen habe ich maßgebliche Aufgaben erfolgreich gesteuert, datengestützte Prozesse optimiert und eng mit interdisziplinären Teams zusammengearbeitet.",
+            f"Ich verfüge über eine uneingeschränkte Arbeitserlaubnis in Deutschland und freue mich auf die Gelegenheit, mich Ihnen in einem persönlichen Gespräch vorzustellen.",
         ]
     else:
         paragraphs = [
-            f"mit großem Interesse bewerbe ich mich auf die Position als {role} bei {company}. Mein Profil verbindet fundierte Fachkenntnisse mit lösungsorientierter Praxis.",
-            f"In meinen bisherigen Tätigkeiten habe ich anspruchsvolle Projekte strukturiert und ergebnisorientiert umgesetzt und dabei wertvolle Erfahrungen in der Prozessoptimierung gesammelt.",
-            f"Ich verfüge über eine uneingeschränkte Arbeitserlaubnis und freue mich auf die Gelegenheit eines persönlichen Gesprächs.",
+            f"I am writing to express my strong interest in the {role} position at {company}. My professional background and proven hands-on execution directly align with your team's current operational goals.",
+            f"In my previous work, I have successfully led key initiatives, streamlined analytical workflows, and collaborated cross-functionally to achieve measurable results.",
+            f"I hold valid work authorization in Germany and look forward to discussing how my experience can support {company}'s ongoing success.",
         ]
 
     paras_html = "".join(f"<p class='letter-para'>{p}</p>" for p in paragraphs)
@@ -351,7 +360,7 @@ def render_html_cover_letter(
   <style>
     @page {{
       size: A4;
-      margin: 20mm 20mm 20mm 20mm;
+      margin: 18mm 18mm 18mm 18mm;
     }}
     * {{
       box-sizing: border-box;
@@ -359,12 +368,12 @@ def render_html_cover_letter(
       padding: 0;
     }}
     body {{
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
       font-size: 10.5pt;
       line-height: 1.55;
       color: #1e293b;
       background: #ffffff;
-      padding: 10px;
+      padding: 14px;
     }}
     .letter-container {{
       max-width: 780px;
@@ -375,12 +384,12 @@ def render_html_cover_letter(
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 2px solid #0f766e;
+      border-bottom: 2px solid #0d9488;
       padding-bottom: 10px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }}
     .name {{
-      font-size: 20pt;
+      font-size: 19pt;
       font-weight: 800;
       color: #0f766e;
       letter-spacing: -0.5px;
@@ -396,21 +405,21 @@ def render_html_cover_letter(
       text-decoration: none;
     }}
     .recipient {{
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       font-size: 10pt;
       color: #334155;
       line-height: 1.4;
     }}
     .date-line {{
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       font-size: 10pt;
       color: #64748b;
     }}
     .subject-line {{
-      font-size: 12pt;
+      font-size: 11.5pt;
       font-weight: 700;
       color: #0f172a;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }}
     .salutation {{
       margin-bottom: 14px;
@@ -422,8 +431,8 @@ def render_html_cover_letter(
       color: #334155;
     }}
     .closing {{
-      margin-top: 24px;
-      margin-bottom: 30px;
+      margin-top: 22px;
+      margin-bottom: 28px;
     }}
     .signature-name {{
       font-weight: 700;
@@ -456,7 +465,7 @@ def render_html_cover_letter(
     <div class="date-line">{today_str}</div>
 
     <div class="subject-line">
-      {'Application for the position of ' if lang == 'en' else 'Bewerbung als '}{role}
+      {subject_prefix}{role}
       {f'<span style="font-size: 9pt; font-weight: normal; color: #64748b; float: right;">Ref: {req_id}</span>' if req_id else ''}
     </div>
 

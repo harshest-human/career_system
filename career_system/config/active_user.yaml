@@ -1,4 +1,2 @@
-# Local Machine Active Candidate Configuration
-# Options: harsh | wife | ayush | custom
-active_profile: "harsh"
-default_language: "en"
+active_candidate: "default"
+last_updated: "2026-08-22"

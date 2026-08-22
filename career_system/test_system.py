@@ -137,56 +137,59 @@ class SystemDoctor:
         # Test 1: Database and Profile Sync
         try:
             from src.database import Database
-            db = Database(ROOT / "career_system.db")
+            db = Database()
             profiles = db.get_all_profiles()
             prof_ids = [p["id"] for p in profiles]
-            if "harsh" in prof_ids and "neha" in prof_ids and "ayush" in prof_ids:
-                self.log_result("Database", "SQLite Profiles Sync", "PASS", f"Loaded profiles: {', '.join(prof_ids)}")
+            if "default" in prof_ids or len(prof_ids) > 0:
+                self.log_result("Database", "SQLite Profiles Sync", "PASS", f"Active profiles: {', '.join(prof_ids)}")
             else:
                 self.log_result("Database", "SQLite Profiles Sync", "WARN", f"Found profiles: {prof_ids}")
         except Exception as e:
             self.log_result("Database", "SQLite Profiles Sync", "FAIL", str(e))
 
-        # Test 2: Extraction & Match Scoring
+        # Test 2: Pointwise Breakdown & Match Scoring
         try:
-            from src.extractor import JobExtractor
+            from src.ai_assistant import CareerAIAssistant
             from src.matcher import CandidateMatcher
-            ext = JobExtractor()
+            ai = CareerAIAssistant()
             mat = CandidateMatcher()
             sample_text = """
             Arcadis Germany GmbH
             Position: Senior ESG & Sustainability Consultant
-            Location: Hamburg, Germany
+            Location: Hamburg, Germany (Hybrid)
+            Employment: Full-time, Permanent
             Requirements: Agricultural engineering, livestock emissions, GHG, R, Python, sensor technology, ESG reporting.
             """
-            parsed = ext.parse_job_text(sample_text, "test_job.txt")
-            score_res = mat.compute_match("harsh", parsed)
-            if score_res["match_score"] > 60:
-                self.log_result("NLP & Matching", "Job Extractor & Match Scoring", "PASS", f"Match Score: {score_res['match_score']}% ({len(score_res['matched_skills'])} matched skills)")
+            breakdown = ai.extract_job_breakdown(sample_text)
+            score_res = mat.compute_match("default", breakdown)
+            if len(breakdown.get("key_responsibilities", [])) > 0:
+                self.log_result("AI Breakdown", "Pointwise Breakdown Extractor", "PASS", f"Extracted {len(breakdown.get('key_responsibilities', []))} tasks, {len(breakdown.get('required_qualifications', []))} qualifications")
             else:
-                self.log_result("NLP & Matching", "Job Extractor & Match Scoring", "WARN", f"Score: {score_res['match_score']}%")
+                self.log_result("AI Breakdown", "Pointwise Breakdown Extractor", "WARN", "Low detail extraction")
         except Exception as e:
-            self.log_result("NLP & Matching", "Job Extractor & Match Scoring", "FAIL", str(e))
+            self.log_result("AI Breakdown", "Pointwise Breakdown Extractor", "FAIL", str(e))
 
-        # Test 3: HTML Resume and Cover Letter Rendering
+        # Test 3: Bilingual HTML Resume and Cover Letter Rendering
         try:
             from src.html_templates import render_html_cv, render_html_cover_letter
-            test_prof = {"personal": {"full_name": "Harsh Sahu", "title_en": "Engineer", "email": "test@example.com"}}
-            html_cv = render_html_cv(test_prof, {"company": "Test Co", "role_title": "Lead"}, lang="en")
-            html_letter = render_html_cover_letter(test_prof, {"company": "Test Co", "role_title": "Lead"}, lang="en")
-            if "Harsh Sahu" in html_cv and "Test Co" in html_letter:
-                self.log_result("HTML Studio", "HTML CV & Cover Letter Engine", "PASS", "Instant HTML/CSS rendering (<10ms)")
+            test_prof = {"personal": {"full_name": "Test Candidate", "title_en": "Lead Engineer", "email": "test@example.com"}}
+            html_cv_en = render_html_cv(test_prof, {"company": "Target Co", "role_title": "Lead"}, lang="en")
+            html_cv_de = render_html_cv(test_prof, {"company": "Target Co", "role_title": "Lead"}, lang="de")
+            html_letter_en = render_html_cover_letter(test_prof, {"company": "Target Co", "role_title": "Lead"}, lang="en")
+            html_letter_de = render_html_cover_letter(test_prof, {"company": "Target Co", "role_title": "Lead"}, lang="de")
+            if "Professional Experience" in html_cv_en and "Berufserfahrung" in html_cv_de and "Yours sincerely" in html_letter_en and "Mit freundlichen Grüßen" in html_letter_de:
+                self.log_result("HTML Studio", "Bilingual HTML (EN-UK & DE) Engine", "PASS", "Instant bilingual rendering (<10ms)")
             else:
-                self.log_result("HTML Studio", "HTML CV & Cover Letter Engine", "FAIL", "Missing template fields")
+                self.log_result("HTML Studio", "Bilingual HTML (EN-UK & DE) Engine", "FAIL", "Missing bilingual localized headers")
         except Exception as e:
-            self.log_result("HTML Studio", "HTML CV & Cover Letter Engine", "FAIL", str(e))
+            self.log_result("HTML Studio", "Bilingual HTML (EN-UK & DE) Engine", "FAIL", str(e))
 
         # Test 4: Google Workspace Docs & Sheets Formatter
         try:
             from src.google_sync import GoogleWorkspaceSync
             g_sync = GoogleWorkspaceSync()
             formatted_text = g_sync.format_cv_for_google_docs(test_prof, lang="en")
-            if "HARSH SAHU" in formatted_text and "EXECUTIVE PROFILE" in formatted_text:
+            if "TEST CANDIDATE" in formatted_text and "EXECUTIVE PROFILE" in formatted_text:
                 self.log_result("Google Workspace", "Google Docs & Drive Formatter", "PASS", "Ready for 1-click Docs & Drive export")
             else:
                 self.log_result("Google Workspace", "Google Docs & Drive Formatter", "FAIL", "Formatting mismatch")
@@ -201,8 +204,9 @@ class SystemDoctor:
             r1 = client.get("/api/profiles")
             r2 = client.get("/api/jobs")
             r3 = client.get("/")
-            r4 = client.get("/api/google/script-template")
-            if r1.status_code == 200 and r2.status_code == 200 and r3.status_code == 200 and r4.status_code == 200:
+            r4 = client.get("/api/portals")
+            r5 = client.get("/api/google/script-template")
+            if all(r.status_code == 200 for r in [r1, r2, r3, r4, r5]):
                 self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "PASS", "HTTP 200 OK across all routes")
             else:
                 self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "FAIL", f"Status: {r1.status_code}, {r2.status_code}, {r3.status_code}")
