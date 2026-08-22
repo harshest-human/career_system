@@ -1,1 +1,0 @@
-Hi {{CONTACT_NAME}}, I follow {{COMPANY}}'s innovative work in {{CORE_DOMAIN}}. As a {{CANDIDATE_TITLE}} finishing my PhD at Leibniz ATB with hands-on experience in {{KEY_SKILL_1}} & {{KEY_SKILL_2}}, I'd love to connect and follow your team's developments. Best regards, {{CANDIDATE_NAME}}
