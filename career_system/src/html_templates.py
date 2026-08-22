@@ -2,10 +2,7 @@
 HTML & CSS Resume and Cover Letter Template Engine
 Produces clean, modern, ATS-compliant HTML/CSS documents in English (UK) and Deutsch.
 Strictly calibrated for standard ISO 216 A4 Paper dimensions (210mm x 297mm).
-Optimized for:
-1. Exact A4 screen and print-to-PDF rendering (@media print with size: A4 portrait)
-2. Instant live in-browser preview (< 10ms)
-3. 1-Click copy as rich formatted text for Google Docs / Microsoft Word
+Refined Blueish & Blue-Gray Accent Theme.
 """
 
 from __future__ import annotations
@@ -151,14 +148,14 @@ def render_html_cv(
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 2.5px solid #0d9488;
+      border-bottom: 2.5px solid #2563eb;
       padding-bottom: 8px;
       margin-bottom: 12px;
     }}
     .header-left .name {{
       font-size: 20pt;
       font-weight: 800;
-      color: #0f766e;
+      color: #1e3a8a;
       letter-spacing: -0.5px;
       line-height: 1.1;
     }}
@@ -175,7 +172,7 @@ def render_html_cv(
       line-height: 1.45;
     }}
     .header-right a {{
-      color: #0f766e;
+      color: #2563eb;
       text-decoration: none;
       font-weight: 500;
     }}
@@ -186,7 +183,7 @@ def render_html_cv(
     .section-title {{
       font-size: 9.5pt;
       font-weight: 700;
-      color: #0f766e;
+      color: #1e3a8a;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       border-bottom: 1px solid #cbd5e1;
@@ -407,14 +404,14 @@ def render_html_cover_letter(
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 2px solid #0d9488;
+      border-bottom: 2px solid #2563eb;
       padding-bottom: 10px;
       margin-bottom: 20px;
     }}
     .name {{
       font-size: 19pt;
       font-weight: 800;
-      color: #0f766e;
+      color: #1e3a8a;
       letter-spacing: -0.5px;
     }}
     .contact-info {{
@@ -424,7 +421,7 @@ def render_html_cover_letter(
       line-height: 1.4;
     }}
     .contact-info a {{
-      color: #0f766e;
+      color: #2563eb;
       text-decoration: none;
     }}
     .recipient {{
