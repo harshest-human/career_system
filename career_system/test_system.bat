@@ -1,7 +1,7 @@
 @echo off
-title Career System - Diagnostic Doctor & System Self-Test
+title Career System - Diagnostic Doctor ^& System Self-Test
 echo ========================================================
-echo   Running Career System Diagnostics & Self-Test Suite
+echo   Running Career System Diagnostics ^& Self-Test Suite
 echo ========================================================
 echo.
 

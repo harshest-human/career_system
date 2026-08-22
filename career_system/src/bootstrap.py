@@ -13,15 +13,15 @@ import sys
 from pathlib import Path
 
 REQUIRED_PACKAGES = [
-    "pdfplumber",
-    "pypdf",
-    "jinja2",
-    "pandas",
-    "openpyxl",
-    "pyyaml",
-    "beautifulsoup4",
-    "requests",
-    "reportlab",
+    ("pdfplumber", "pdfplumber"),
+    ("pypdf", "pypdf"),
+    ("jinja2", "jinja2"),
+    ("pandas", "pandas"),
+    ("openpyxl", "openpyxl"),
+    ("yaml", "pyyaml"),
+    ("bs4", "beautifulsoup4"),
+    ("requests", "requests"),
+    ("reportlab", "reportlab"),
 ]
 
 
@@ -39,9 +39,9 @@ def check_and_bootstrap_environment() -> bool:
 
     # If running outside venv and venv exists, warn or switch
     missing_packages = []
-    for pkg in REQUIRED_PACKAGES:
+    for mod, pkg in REQUIRED_PACKAGES:
         try:
-            __import__(pkg)
+            __import__(mod)
         except ImportError:
             missing_packages.append(pkg)
 

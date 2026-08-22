@@ -45,10 +45,13 @@ class SystemDoctor:
         if not uv_bin and os.name == "nt":
             user_uv = Path.home() / ".cargo" / "bin" / "uv.exe"
             local_uv = Path.home() / "AppData" / "Roaming" / "Python" / "Scripts" / "uv.exe"
+            dot_local_uv = Path.home() / ".local" / "bin" / "uv.exe"
             if user_uv.exists():
                 uv_bin = str(user_uv)
             elif local_uv.exists():
                 uv_bin = str(local_uv)
+            elif dot_local_uv.exists():
+                uv_bin = str(dot_local_uv)
 
         if uv_bin:
             self.log_result("Tooling", "Fast Package Manager (uv)", "PASS", "Installed and ready")

@@ -1,5 +1,5 @@
 @echo off
-title Career System - 1-Click Update & Sync
+title Career System - 1-Click Update ^& Sync
 echo ========================================================
 echo   Updating Career System to Latest GitHub Version
 echo ========================================================
@@ -24,7 +24,7 @@ if exist "%PYTHON_EXE%" (
 
 echo.
 echo ========================================================
-echo   Update Complete! All new features & fixes are active.
+echo   Update Complete! All new features ^& fixes are active.
 echo   You can now run start_career_system.bat
 echo ========================================================
 pause
