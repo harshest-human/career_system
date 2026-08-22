@@ -109,6 +109,7 @@ class CompileRequest(BaseModel):
     custom_summary: Optional[str] = None
     custom_bullets: Optional[List[str]] = None
     custom_letter_paragraphs: Optional[List[str]] = None
+    custom_profile: Optional[Dict[str, Any]] = None
     photo_src: Optional[str] = None
     photo_base64: Optional[str] = None
 
@@ -559,8 +560,10 @@ async def render_cv_endpoint(req: CompileRequest):
                             photo_src = f"/jobs/{job_folder.name}/{p.name}"
                         break
 
+    profile_data = req.custom_profile if req.custom_profile else prof["data"]
+
     html_content = render_html_cv(
-        profile=prof["data"],
+        profile=profile_data,
         job_data=req.job_data,
         lang=req.lang,
         custom_summary=req.custom_summary,

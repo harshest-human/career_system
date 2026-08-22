@@ -118,14 +118,25 @@ def render_html_cv(
         """
 
     # Format Skills
-    domains_str = ", ".join(skills.get("domains", []))
-    software_str = ", ".join(skills.get("software_tools", []))
-    hardware_str = ", ".join(skills.get("hardware_instruments", []))
-    langs_str = ", ".join(f"{l.get('language')} ({l.get('level')})" for l in skills.get("languages", []))
+    domains_raw = skills.get("domains", [])
+    domains_str = ", ".join(domains_raw) if isinstance(domains_raw, list) else str(domains_raw or "")
+
+    software_raw = skills.get("software_tools", [])
+    software_str = ", ".join(software_raw) if isinstance(software_raw, list) else str(software_raw or "")
+
+    hardware_raw = skills.get("hardware_instruments", [])
+    hardware_str = ", ".join(hardware_raw) if isinstance(hardware_raw, list) else str(hardware_raw or "")
+
+    langs_raw = skills.get("languages", [])
+    if isinstance(langs_raw, list):
+        langs_str = ", ".join(f"{l.get('language')} ({l.get('level')})" if isinstance(l, dict) else str(l) for l in langs_raw)
+    else:
+        langs_str = str(langs_raw or "")
 
     # Format Leadership
     lead_html = ""
-    for item in leadership:
+    leadership_raw = leadership if isinstance(leadership, list) else [l.strip() for l in str(leadership).split("\n") if l.strip()]
+    for item in leadership_raw:
         lead_html += f"<li>{item}</li>"
 
     html_doc = f"""<!DOCTYPE html>

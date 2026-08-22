@@ -747,18 +747,191 @@
             <textarea rows="3" x-model="userFitNotes" placeholder="Write project highlights or motivation. AI will adapt your letter and bullets in English or German..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none"></textarea>
           </div>
 
-          <!-- Editable Summary & Paragraphs -->
-          <div class="bg-[#121215] p-4 rounded-xl border border-zinc-800 space-y-3 shadow-md">
-            <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
-              <span>Live Editable Content</span>
-              <span class="text-[11px] text-zinc-500 font-normal" x-text="studioLang === 'en' ? 'English (UK) Mode' : 'Deutsch Modus'"></span>
-            </h4>
+          <!-- =============================================================== -->
+          <!-- FULL MULTI-BOX CV & COVER LETTER LIVE EDITOR -->
+          <!-- =============================================================== -->
+          <div class="bg-[#121215] p-4 rounded-xl border border-zinc-800 space-y-3.5 shadow-md">
             
-            <div x-show="studioDocType === 'cv'" class="space-y-2">
-              <label class="block text-xs text-zinc-400">Executive Summary</label>
-              <textarea rows="4" x-model="studioSummary" @input="renderHtmlPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none"></textarea>
+            <div class="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
+              <div>
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">
+                  Live Multi-Box CV Editor
+                </h4>
+                <span class="text-[11px] text-zinc-500" x-text="studioDocType === 'cv' ? 'Edit any section of your CV in real-time' : 'Edit cover letter paragraphs'"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button @click="saveProfile()" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-[#89CFF0] border border-zinc-700 rounded text-xs font-semibold transition" title="Permanently save all edited boxes into your profile database">
+                  <i class="fa-solid fa-floppy-disk mr-1"></i> Save to Profile
+                </button>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono" x-text="studioLang === 'en' ? 'EN (UK)' : 'DE'"></span>
+              </div>
             </div>
 
+            <!-- CV MODE MULTI-BOX TABS -->
+            <div x-show="studioDocType === 'cv'" class="space-y-3">
+              
+              <!-- Editor Sub-Navigation Tabs -->
+              <div class="grid grid-cols-5 gap-1 text-[11px] font-semibold bg-zinc-950 p-1 rounded-lg border border-zinc-800">
+                <button @click="cvEditorTab = 'summary'" :class="cvEditorTab === 'summary' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
+                  Summary
+                </button>
+                <button @click="cvEditorTab = 'experience'" :class="cvEditorTab === 'experience' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
+                  Experience
+                </button>
+                <button @click="cvEditorTab = 'education'" :class="cvEditorTab === 'education' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
+                  Education
+                </button>
+                <button @click="cvEditorTab = 'skills'" :class="cvEditorTab === 'skills' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
+                  Skills
+                </button>
+                <button @click="cvEditorTab = 'header'" :class="cvEditorTab === 'header' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
+                  Contact
+                </button>
+              </div>
+
+              <!-- 1. Executive Summary Box -->
+              <div x-show="cvEditorTab === 'summary'" class="space-y-2 pt-1">
+                <label class="block text-xs font-semibold text-zinc-300">Executive Profile / Zusammenfassung</label>
+                <textarea rows="5" x-model="studioSummary" @input="renderHtmlPreview()" placeholder="Write your executive profile..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none"></textarea>
+                <p class="text-[10px] text-zinc-500">Live preview updates instantly on the right as you type.</p>
+              </div>
+
+              <!-- 2. Experience Multi-Box List -->
+              <div x-show="cvEditorTab === 'experience'" class="space-y-3 pt-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-semibold text-zinc-300">Professional Experience Entries</span>
+                  <button @click="addExperience()" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-[#89CFF0] text-[11px] font-bold rounded border border-zinc-700 transition">
+                    + Add Role
+                  </button>
+                </div>
+
+                <div class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                  <template x-for="(exp, expIdx) in profileData.experience" :key="expIdx">
+                    <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-800 space-y-2.5">
+                      
+                      <!-- Role Title & Delete -->
+                      <div class="flex justify-between items-center gap-2">
+                        <input type="text" x-model="exp[studioLang === 'en' ? 'role_en' : 'role_de']" @input="renderHtmlPreview()" placeholder="Job Title / Role" class="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs font-bold text-white focus:outline-none">
+                        <button @click="removeExperience(expIdx)" class="text-zinc-500 hover:text-rose-400 p-1" title="Delete role"><i class="fa-solid fa-trash text-xs"></i></button>
+                      </div>
+
+                      <!-- Company & Dates -->
+                      <div class="grid grid-cols-2 gap-2">
+                        <input type="text" x-model="exp[studioLang === 'en' ? 'institution_en' : 'institution_de']" @input="renderHtmlPreview()" placeholder="Company / Institution" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 focus:outline-none">
+                        <input type="text" x-model="exp[studioLang === 'en' ? 'period_en' : 'period_de']" @input="renderHtmlPreview()" placeholder="Dates (e.g. 2022 - Present)" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 focus:outline-none">
+                      </div>
+
+                      <!-- Bullets List -->
+                      <div class="space-y-1.5 pt-1">
+                        <div class="flex justify-between items-center">
+                          <label class="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Accomplishment Bullets</label>
+                          <button @click="addExperienceBullet(expIdx)" class="text-[10px] text-[#89CFF0] hover:underline">+ Add Bullet</button>
+                        </div>
+                        <template x-for="(b, bIdx) in exp.bullets" :key="bIdx">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-zinc-600 text-xs">•</span>
+                            <input type="text" x-model="exp.bullets[bIdx]" @input="renderHtmlPreview()" class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 focus:border-zinc-500 focus:outline-none">
+                            <button @click="removeExperienceBullet(expIdx, bIdx)" class="text-zinc-600 hover:text-rose-400 text-xs px-1">&times;</button>
+                          </div>
+                        </template>
+                      </div>
+
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- 3. Education Multi-Box List -->
+              <div x-show="cvEditorTab === 'education'" class="space-y-3 pt-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-semibold text-zinc-300">Education & Qualifications</span>
+                  <button @click="addEducation()" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-[#89CFF0] text-[11px] font-bold rounded border border-zinc-700 transition">
+                    + Add Degree
+                  </button>
+                </div>
+
+                <div class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                  <template x-for="(edu, eduIdx) in profileData.education" :key="eduIdx">
+                    <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-800 space-y-2">
+                      <div class="flex justify-between items-center gap-2">
+                        <input type="text" x-model="edu[studioLang === 'en' ? 'degree_en' : 'degree_de']" @input="renderHtmlPreview()" placeholder="Degree / Qualification" class="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs font-bold text-white focus:outline-none">
+                        <button @click="removeEducation(eduIdx)" class="text-zinc-500 hover:text-rose-400 p-1" title="Delete degree"><i class="fa-solid fa-trash text-xs"></i></button>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <input type="text" x-model="edu.institution" @input="renderHtmlPreview()" placeholder="University / Institute" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 focus:outline-none">
+                        <input type="text" x-model="edu[studioLang === 'en' ? 'period_en' : 'period_de']" @input="renderHtmlPreview()" placeholder="Years (e.g. 2018 - 2022)" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 focus:outline-none">
+                      </div>
+                      <input type="text" x-model="edu[studioLang === 'en' ? 'notes_en' : 'notes_de']" @input="renderHtmlPreview()" placeholder="Grade / Key coursework (optional)" class="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-[11px] text-zinc-400 focus:outline-none">
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- 4. Skills & Tools Multi-Box -->
+              <div x-show="cvEditorTab === 'skills'" class="space-y-3 pt-1 max-h-[380px] overflow-y-auto pr-1">
+                <div>
+                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Core Domains (comma separated)</label>
+                  <input type="text" x-model="cvSkillsString.domains" @input="updateSkillsInProfile()" placeholder="e.g. Machine Learning, Cloud Architecture, Renewable Energy" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Software & Tools (comma separated)</label>
+                  <input type="text" x-model="cvSkillsString.software" @input="updateSkillsInProfile()" placeholder="e.g. Python, FastAPI, Docker, Git, Linux, React" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Technical Instrumentation / Hardware (optional)</label>
+                  <input type="text" x-model="cvSkillsString.hardware" @input="updateSkillsInProfile()" placeholder="e.g. Sensor Calibration, HPLC, Microcontrollers" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Languages (comma separated)</label>
+                  <input type="text" x-model="cvSkillsString.languages" @input="updateSkillsInProfile()" placeholder="e.g. English (Fluent / C1), German (Professional / B2)" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Key Credentials & Awards (one per line)</label>
+                  <textarea rows="3" x-model="cvCredentialsString" @input="updateSkillsInProfile()" placeholder="e.g. Certified AWS Solutions Architect&#10;Excellence in Engineering Award" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none"></textarea>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Work Authorisation Note</label>
+                  <input type="text" x-model="profileData.personal.residence_status" @input="renderHtmlPreview()" placeholder="e.g. Full Work Authorisation in Germany / EU" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
+                </div>
+              </div>
+
+              <!-- 5. Header & Contact Multi-Box -->
+              <div x-show="cvEditorTab === 'header'" class="space-y-2.5 pt-1">
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] text-zinc-400 mb-0.5">Full Name</label>
+                    <input type="text" x-model="profileData.personal.full_name" @input="renderHtmlPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-zinc-400 mb-0.5">Professional Title</label>
+                    <input type="text" x-model="profileData.personal[studioLang === 'en' ? 'title_en' : 'title_de']" @input="renderHtmlPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] text-zinc-400 mb-0.5">Email</label>
+                    <input type="email" x-model="profileData.personal.email" @input="renderHtmlPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-zinc-400 mb-0.5">Phone</label>
+                    <input type="text" x-model="profileData.personal.phone" @input="renderHtmlPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] text-zinc-400 mb-0.5">City & Country</label>
+                    <input type="text" x-model="profileData.personal[studioLang === 'en' ? 'city_en' : 'city_de']" @input="renderHtmlPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-zinc-400 mb-0.5">LinkedIn URL</label>
+                    <input type="text" x-model="profileData.personal.linkedin_url" @input="renderHtmlPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-white focus:outline-none">
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- COVER LETTER MODE -->
             <div x-show="studioDocType === 'letter'" class="space-y-3">
               <template x-for="(para, idx) in studioLetterParagraphs" :key="idx">
                 <div>
@@ -767,6 +940,7 @@
                 </div>
               </template>
             </div>
+
           </div>
 
           <!-- Bottom Navigation -->

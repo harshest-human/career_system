@@ -53,6 +53,9 @@ function careerApp() {
     currentHtmlContent: '',
     jobPhotoSrc: null,
     isUploadingPhoto: false,
+    cvEditorTab: 'summary',
+    cvSkillsString: { domains: '', software: '', hardware: '', languages: '' },
+    cvCredentialsString: '',
 
     // Outreach state
     outreachForm: { company: '', contact_name: 'Hiring Team', role_title: '', outreach_type: 'connection' },
@@ -471,6 +474,87 @@ function careerApp() {
       this.selectJobForStudio(this.studioJob);
     },
 
+    syncSkillsFromProfile() {
+      if (!this.profileData.skills) this.profileData.skills = {};
+      this.cvSkillsString.domains = (this.profileData.skills.domains || []).join(', ');
+      this.cvSkillsString.software = (this.profileData.skills.software_tools || []).join(', ');
+      this.cvSkillsString.hardware = (this.profileData.skills.hardware_instruments || []).join(', ');
+      this.cvSkillsString.languages = (this.profileData.skills.languages || []).map(l => typeof l === 'object' ? `${l.language} (${l.level})` : l).join(', ');
+      this.cvCredentialsString = (this.profileData.leadership_awards || []).join('\n');
+    },
+
+    updateSkillsInProfile() {
+      if (!this.profileData.skills) this.profileData.skills = {};
+      this.profileData.skills.domains = this.cvSkillsString.domains.split(',').map(s => s.trim()).filter(Boolean);
+      this.profileData.skills.software_tools = this.cvSkillsString.software.split(',').map(s => s.trim()).filter(Boolean);
+      this.profileData.skills.hardware_instruments = this.cvSkillsString.hardware.split(',').map(s => s.trim()).filter(Boolean);
+      this.profileData.skills.languages = this.cvSkillsString.languages.split(',').map(s => {
+        s = s.trim();
+        if (!s) return null;
+        const match = s.match(/^(.*?)\s*\((.*?)\)$/);
+        if (match) return { language: match[1].trim(), level: match[2].trim() };
+        return { language: s, level: 'Fluent' };
+      }).filter(Boolean);
+      this.profileData.leadership_awards = this.cvCredentialsString.split('\n').map(s => s.trim()).filter(Boolean);
+      this.renderHtmlPreview();
+    },
+
+    addExperience() {
+      if (!this.profileData.experience) this.profileData.experience = [];
+      this.profileData.experience.unshift({
+        role_en: 'New Position',
+        role_de: 'Neue Position',
+        institution_en: 'Company / Organization',
+        institution_de: 'Unternehmen / Organisation',
+        period_en: '2024 - Present',
+        period_de: '2024 - Heute',
+        affiliation: '',
+        bullets: ['Key contribution or responsibility achieving measurable result.'],
+      });
+      this.renderHtmlPreview();
+    },
+
+    removeExperience(idx) {
+      if (confirm('Delete this experience entry?')) {
+        this.profileData.experience.splice(idx, 1);
+        this.renderHtmlPreview();
+      }
+    },
+
+    addExperienceBullet(expIdx) {
+      if (!this.profileData.experience[expIdx].bullets) {
+        this.profileData.experience[expIdx].bullets = [];
+      }
+      this.profileData.experience[expIdx].bullets.push('New key accomplishment or technical deliverable.');
+      this.renderHtmlPreview();
+    },
+
+    removeExperienceBullet(expIdx, bulletIdx) {
+      this.profileData.experience[expIdx].bullets.splice(bulletIdx, 1);
+      this.renderHtmlPreview();
+    },
+
+    addEducation() {
+      if (!this.profileData.education) this.profileData.education = [];
+      this.profileData.education.unshift({
+        degree_en: 'Degree / Certificate',
+        degree_de: 'Abschluss / Zertifikat',
+        institution: 'University / Institute',
+        period_en: '2020 - 2024',
+        period_de: '2020 - 2024',
+        notes_en: 'Grade / Focus area',
+        notes_de: 'Abschlussnote / Schwerpunkte',
+      });
+      this.renderHtmlPreview();
+    },
+
+    removeEducation(idx) {
+      if (confirm('Delete this education entry?')) {
+        this.profileData.education.splice(idx, 1);
+        this.renderHtmlPreview();
+      }
+    },
+
     selectJobForStudio(job) {
       this.studioJob = job;
       this.studioSummary = this.profileData.executive_summary?.[this.studioLang] || '';
@@ -478,6 +562,7 @@ function careerApp() {
       this.outreachForm.role_title = job.role_title || '';
       this.outreachForm.contact_name = job.metadata?.hiring_manager_contact || job.hiring_manager_contact || 'Hiring Team';
       this.jobPhotoSrc = job.photo_path ? ((API_BASE ? API_BASE : '') + job.photo_path) : null;
+      this.syncSkillsFromProfile();
 
       if (this.studioLang === 'en') {
         this.studioLetterParagraphs = [
@@ -551,6 +636,10 @@ function careerApp() {
     async renderHtmlPreview() {
       const endpoint = this.studioDocType === 'cv' ? '/api/render/html-cv' : '/api/render/html-letter';
       try {
+        if (!this.profileData.personal) this.profileData.personal = {};
+        if (!this.profileData.executive_summary) this.profileData.executive_summary = {};
+        this.profileData.executive_summary[this.studioLang] = this.studioSummary;
+
         const res = await fetch(`${API_BASE}${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -560,6 +649,7 @@ function careerApp() {
             lang: this.studioLang,
             custom_summary: this.studioSummary,
             custom_letter_paragraphs: this.studioLetterParagraphs,
+            custom_profile: this.profileData,
             photo_src: this.jobPhotoSrc || null,
           }),
         });
