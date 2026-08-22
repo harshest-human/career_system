@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Auto Setup Pipeline Environment",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy ByPass -File ./setup.ps1",
+      "windows": {
+        "command": "powershell -ExecutionPolicy ByPass -File ./setup.ps1"
+      },
+      "linux": {
+        "command": "bash ./setup.sh"
+      },
+      "osx": {
+        "command": "bash ./setup.sh"
+      },
+      "group": "none",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

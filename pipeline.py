@@ -13,12 +13,16 @@ from pathlib import Path
 # Add workspace root to python path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from src.bootstrap import check_and_bootstrap_environment
 from src.extractor import JobExtractor
 from src.generator import DocumentGenerator
 from src.matcher import CandidateMatcher
 from src.scraper import JobScraper
 from src.tracker import NetworkTracker
 import yaml
+
+# Self-heal dependencies on startup
+check_and_bootstrap_environment()
 
 
 def get_active_profile() -> str:
