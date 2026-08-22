@@ -1,0 +1,124 @@
+# Master Profile Configuration: Harsh Sahu
+personal:
+  full_name: "Harsh Sahu"
+  title_en: "Agricultural Engineer | Dairy Scientist | Applied Livestock Researcher"
+  title_de: "Agraringenieur | Milchwissenschaftler | Angewandte Nutztierforschung"
+  city_en: "Hamburg, Germany"
+  city_de: "Hamburg, Deutschland"
+  phone: "+49 176 34306490"
+  email: "harshsahu.8085@gmail.com"
+  linkedin: "linkedin.com/in/atb-harshsahu"
+  linkedin_url: "https://linkedin.com/in/atb-harshsahu"
+  github: "github.com/harshest-human"
+  github_url: "https://github.com/harshest-human"
+  residence_status: "Permanent residence in Germany (no sponsorship required)"
+  driving_licence: "Indian Category B, IDP; German Class B practical in progress"
+
+executive_summary:
+  en: >-
+    Agricultural engineer and dairy scientist with 4+ years of experience in applied livestock research,
+    experimental design, project coordination and statistical analysis. Doctoral research at Leibniz ATB
+    and FU Berlin develops scalable, low-cost gas-sensing systems for livestock emissions monitoring.
+    Experienced in commercial dairy-farm studies, integration of herd-management and environmental data,
+    and communication of scientific results to industry and academic stakeholders.
+  de: >-
+    Agraringenieur und Milchwissenschaftler mit mehr als 4 Jahren Erfahrung in angewandter Nutztierforschung,
+    Versuchsplanung, Projektkoordination und statistischer Datenanalyse. Doktorarbeit am Leibniz-ATB
+    und der FU Berlin zur Entwicklung skalierbarer, kostengünstiger Gassensorsysteme für das Emissionsmonitoring.
+    Erfahren in Praxisstudien auf Milchviehbetrieben, Datenintegration und wissenschaftlicher Kommunikation.
+
+experience:
+  - role_en: "Doctoral Researcher (PhD Candidate)"
+    role_de: "Doktorand / Wissenschaftlicher Mitarbeiter"
+    period_en: "Mar 2023 – present"
+    period_de: "Mär 2023 – heute"
+    institution_en: "Leibniz Institute for Agricultural Engineering and Bioeconomy (ATB), Potsdam"
+    institution_de: "Leibniz-Institut für Agrartechnik und Bioökonomie (ATB), Potsdam"
+    affiliation: "Freie Universität Berlin"
+    category: "doctoral"
+
+  - role_en: "Scientist (full-time)"
+    role_de: "Wissenschaftler (Vollzeit)"
+    period_en: "Feb 2022 – Feb 2023"
+    period_de: "Feb 2022 – Feb 2023"
+    institution_en: "Leibniz Institute for Agricultural Engineering and Bioeconomy (ATB), Potsdam"
+    institution_de: "Leibniz-Institut für Agrartechnik und Bioökonomie (ATB), Potsdam"
+    affiliation: ""
+    category: "scientist"
+
+  - role_en: "Research Assistant / Master's Thesis"
+    role_de: "Wissenschaftliche Hilfskraft / Masterarbeit"
+    period_en: "Apr 2021 – Jan 2022"
+    period_de: "Apr 2021 – Jan 2022"
+    institution_en: "Leibniz Institute for Agricultural Engineering and Bioeconomy (ATB), Potsdam"
+    institution_de: "Leibniz-Institut für Agrartechnik und Bioökonomie (ATB), Potsdam"
+    affiliation: ""
+    category: "thesis"
+
+education:
+  - degree_en: "PhD in Agricultural Engineering (ongoing)"
+    degree_de: "Promotion in Agrartechnik (laufend)"
+    period_en: "2023 – present"
+    period_de: "2023 – heute"
+    institution: "Freie Universität Berlin"
+    notes_en: "Focus on scalable gas-sensing and spatio-temporal emissions modeling in livestock housing."
+    notes_de: "Schwerpunkt: Skalierbare Gassensorik und räumlich-zeitliche Emissionsmodellierung."
+
+  - degree_en: "M.Sc. Dairy Science (Grade 1.6)"
+    degree_de: "M.Sc. Dairy Science (Note 1,6)"
+    period_en: "2019 – 2022"
+    period_de: "2019 – 2022"
+    institution: "Christian-Albrechts-Universität zu Kiel"
+    notes_en: "Ruminant nutrition, herd health, precision livestock farming, forage quality, eco-efficiency, dairy economics."
+    notes_de: "Wiederkäuerernährung, Herdengesundheit, Precision Livestock Farming, Futterqualität, Ökoeffizienz."
+
+  - degree_en: "B.Tech. Dairy Technology"
+    degree_de: "B.Tech. Milchtechnologie"
+    period_en: "2015 – 2019"
+    period_de: "2015 – 2019"
+    institution: "College of Dairy Science and Food Technology, India"
+    notes_en: "Dairy processing, quality control, food engineering, dairy microbiology and chemistry."
+    notes_de: "Milchverarbeitung, Qualitätskontrolle, Lebensmitteltechnik, Milchmikrobiologie."
+
+skills:
+  domains:
+    - "Precision Livestock Farming (PLF)"
+    - "Livestock Housing Technology & Barn Climate"
+    - "Gaseous Emissions (CH4, NH3, CO2, N2O)"
+    - "Field Application Science & Technical Support"
+    - "Environmental Consulting & ESG Reporting"
+    - "Ruminant Nutrition & Herd Health Analytics"
+  hardware_instruments:
+    - "GreenFeed Systems"
+    - "Gasmet FTIR Analyzers"
+    - "NDIR & Electrochemical Gas Sensors"
+    - "CRDS (Picarro)"
+    - "TDLAS & PAS Systems"
+    - "GC-MS"
+    - "Climate & Airflow Measurement Instrumentation"
+  software_tools:
+    - "R (tidyverse, lme4, spatstat, ggplot2)"
+    - "Python (pandas, numpy, scikit-learn, beautifulsoup4)"
+    - "MATLAB"
+    - "LaTeX / XeLaTeX"
+    - "Git / GitHub"
+    - "Microsoft Excel / Office"
+  languages:
+    - language: "English"
+      level: "B2 (Professional Working Proficiency)"
+    - language: "German"
+      level: "B2 (Professional Working Proficiency)"
+    - language: "Hindi"
+      level: "Native"
+
+leadership_awards:
+  - "Co-Chair, EurAgEng Young Professionals Network"
+  - "PhD Representative, Leibniz ATB"
+  - "Communication Manager, Leibniz PhD Network"
+  - "1 First-author peer-reviewed paper, 1 manuscript under review, 8 conference presentations across 9 scientific events"
+
+references:
+  - name: "Prof. Dr. Thomas Amon"
+    role: "Head of Department Sensing and Modelling, ATB Potsdam / Freie Universität Berlin"
+  - name: "Dr.-Ing. David Janke"
+    role: "Senior Scientist & Working Group Leader, ATB Potsdam"

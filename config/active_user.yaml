@@ -1,0 +1,4 @@
+# Local Machine Active Candidate Configuration
+# Options: harsh | wife | ayush | custom
+active_profile: "harsh"
+default_language: "en"

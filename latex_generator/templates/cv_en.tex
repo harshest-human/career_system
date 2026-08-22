@@ -1,0 +1,52 @@
+\documentclass[10pt,a4paper]{article}
+\input{style}
+
+\begin{document}
+
+\cvheader{<< personal.full_name >>}{<< personal.title_en >>}{<< personal.city_en >>}{<< personal.phone >>}{<< personal.email >>}{<< personal.linkedin_url >>}
+
+\section*{Profile}
+<< executive_summary >>
+
+\section*{Professional Experience}
+<% for exp in experience %>
+\entry{<< exp.role >>}{<< exp.period >>}{<< exp.institution >>}{<< exp.affiliation >>}
+\begin{cvitems}
+<% for bullet in exp.bullets %>
+  \item << bullet >>
+<% endfor %>
+\end{cvitems}
+\vspace{2pt}
+<% endfor %>
+
+\section*{Education}
+<% for edu in education %>
+\entry{<< edu.degree >>}{<< edu.period >>}{<< edu.institution >>}{}
+<% if edu.notes %>
+{\small << edu.notes >>}\par
+<% endif %>
+<% endfor %>
+
+\section*{Key Skills \& Expertise}
+\textbf{Core Domains:} << skills.domains >>\par
+<% if skills.hardware %>
+\textbf{Hardware \& Instrumentation:} << skills.hardware >>\par
+<% endif %>
+\textbf{Software \& Tools:} << skills.software >>\par
+\textbf{Languages:} << skills.languages >>
+
+<% if leadership %>
+\section*{Leadership, Credentials \& Practical Information}
+<% for lead in leadership %>
+\textbullet\ << lead >>\par
+<% endfor %>
+\textbf{Work Authorisation:} << personal.residence_status >>\par
+<% if personal.driving_licence %>
+\textbf{Driving Licence:} << personal.driving_licence >>\par
+<% endif %>
+<% if references %>
+\textbf{References:} << references >>
+<% endif %>
+<% endif %>
+
+\end{document}

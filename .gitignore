@@ -1,0 +1,28 @@
+# Python & Virtual Environments
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# TeX & LaTeX Intermediate Files
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.xdv
+
+# Temporary files & caches
+tmp/
+.cache/
+.DS_Store
+Thumbs.db
+
+# Sensitive local configurations (optional override)
+local_settings.yaml

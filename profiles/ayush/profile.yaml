@@ -1,0 +1,78 @@
+# Master Profile Configuration: Ayush
+personal:
+  full_name: "Ayush Sahu"
+  title_en: "Software & Technology Specialist | Systems Engineer | Data Solutions"
+  title_de: "Software- & Technologie-Spezialist | Systemingenieur | Datenlösungen"
+  city_en: "Hamburg, Germany"
+  city_de: "Hamburg, Deutschland"
+  phone: "+49 123 9876543"
+  email: "ayush.sahu@example.com"
+  linkedin: "linkedin.com/in/ayush-sahu"
+  linkedin_url: "https://linkedin.com/in/ayush-sahu"
+  github: "github.com/ayush-sahu"
+  github_url: "https://github.com/ayush-sahu"
+  residence_status: "Work Authorization in Germany"
+  driving_licence: "Driving Licence Class B"
+
+executive_summary:
+  en: >-
+    Results-driven technology and engineering professional skilled in software development, data pipelines,
+    and systems engineering. Experienced in full-cycle project implementation, technical troubleshooting,
+    and designing robust, scalable digital solutions. Eager to contribute technical excellence to progressive engineering teams.
+  de: >-
+    Ergebnisorientierte Fachkraft für Technologie und Software-Engineering mit fundierter Erfahrung in Datenpipelines,
+    Systemarchitektur und digitaler Implementierung. Erfahren in der termingerechten Projektumsetzung,
+    technischer Fehleranalyse und Entwicklung skalierbarer IT-Lösungen.
+
+experience:
+  - role_en: "Software & Systems Engineer"
+    role_de: "Software- & Systemingenieur"
+    period_en: "2022 – present"
+    period_de: "2022 – heute"
+    institution_en: "Technology Solutions Group"
+    institution_de: "Technologieunternehmen"
+    affiliation: "Germany"
+    category: "engineer"
+
+  - role_en: "Junior Technical Analyst"
+    role_de: "Junior Technischer Analyst"
+    period_en: "2020 – 2022"
+    period_de: "2020 – 2022"
+    institution_en: "Engineering & IT Services"
+    institution_de: "Ingenieur- & IT-Dienstleister"
+    affiliation: ""
+    category: "junior"
+
+education:
+  - degree_en: "Bachelor of Engineering (B.E. / B.Tech.)"
+    degree_de: "Bachelor of Engineering (B.E. / B.Tech.)"
+    period_en: "2016 – 2020"
+    period_de: "2016 – 2020"
+    institution: "Technical University / College"
+    notes_en: "Computer Science / Electronics / Mechanical Systems."
+    notes_de: "Informatik / Elektrotechnik / Systemtechnik."
+
+skills:
+  domains:
+    - "Software Development & Architecture"
+    - "System Integration & API Engineering"
+    - "Data Engineering & Database Management"
+    - "Cloud Infrastructure & DevOps Basics"
+  software_tools:
+    - "Python, JavaScript / TypeScript, SQL"
+    - "Docker, Git, Linux / Bash"
+    - "PostgreSQL, MongoDB, REST APIs"
+  languages:
+    - language: "English"
+      level: "Professional Proficiency"
+    - language: "German"
+      level: "Working Knowledge (B1/B2)"
+    - language: "Hindi"
+      level: "Native"
+
+leadership_awards:
+  - "Proven track record in agile software delivery and system reliability engineering"
+
+references:
+  - name: "Available upon request"
+    role: "Professional references ready upon request"

@@ -1,0 +1,13 @@
+# Ayush Profile - English Bullet Repository
+engineer:
+  default:
+    - "Develop, test, and maintain robust software modules and backend REST APIs using Python and modern frameworks."
+    - "Build automated ETL and data ingestion pipelines connecting relational databases and third-party APIs."
+    - "Containerize microservices using Docker and establish CI/CD workflows for reliable and reproducible deployments."
+    - "Participate in agile sprint ceremonies, code reviews, and architecture planning sessions to deliver high-quality software."
+
+junior:
+  default:
+    - "Supported software debugging, system integration testing, and performance optimization for client applications."
+    - "Created automated test suites and comprehensive technical documentation for internal developer handoffs."
+    - "Assisted in database schema migrations and SQL query optimization for high-throughput transactional systems."

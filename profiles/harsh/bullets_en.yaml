@@ -1,0 +1,31 @@
+# Harsh Sahu - English Bullet Repository Categorized by Technical Theme
+doctoral:
+  default:
+    - "Plan and conduct interdisciplinary field research in commercial dairy housing; coordinate experimental workflows with scientists, technicians, and interns."
+    - "Develop and validate scalable low-cost gas-sensing systems using NDIR and electrochemical sensors against reference-grade analytical instruments."
+    - "Analyse long-term sensor data in R/Python and integrate continuous emissions and barn-climate measurements with herd records (yield, reproduction, health)."
+    - "Prepare peer-reviewed publications, technical documentation, and conference presentations; supervise research assistants and manage field campaigns."
+  data_analysis_focus:
+    - "Model spatio-temporal dynamics of gaseous emissions in naturally ventilated barns using generalized linear mixed models (GLMM) and time-series analysis in R."
+    - "Architect automated data cleaning, sensor calibration curves, and feature extraction pipelines for continuous high-frequency environmental sensors."
+    - "Integrate heterogeneous herd datasets (milking robots, transponders, feed intake) with greenhouse gas emission metrics to quantify eco-efficiency."
+  hardware_field_focus:
+    - "Engineered and deployed low-cost sensor nodes (NDIR, electrochemical) in harsh barn environments; benchmarked against Gasmet FTIR and Picarro CRDS analyzers."
+    - "Led on-site field installations, routine calibration, sensor troubleshooting, and data retrieval protocols across multi-site commercial dairy farms."
+    - "Evaluated sensor drift, temperature/humidity cross-sensitivity, and response dynamics for real-time barn air quality monitoring."
+  esg_sustainability_focus:
+    - "Quantified enteric methane and ammonia mitigation potentials to support ESG compliance and carbon footprint accounting under EU agricultural directives."
+    - "Delivered technical assessments and scientific reports on emission factors and decarbonization strategies for ruminant housing."
+
+scientist:
+  default:
+    - "Planned and executed applied research projects on barn climate, air exchange rates, and gaseous emissions under commercial dairy-farm conditions."
+    - "Installed, calibrated, operated, and validated advanced analytical systems including FTIR (Gasmet), CRDS, GC-MS, TDLAS, and PAS."
+    - "Evaluated large-scale multi-sensor experimental datasets, prepared technical reports, and presented findings to industrial and academic partners."
+  hardware_focus:
+    - "Maintained and calibrated analytical optical spectrometers (Gasmet FTIR, Picarro CRDS) and continuous sampling manifolds across field campaigns."
+
+thesis:
+  default:
+    - "Investigated the spatial and temporal distribution of methane, ammonia, and carbon dioxide in a naturally ventilated dairy barn from setup through statistical modeling."
+    - "Evaluated sensor placement strategies to optimize emission quantification and ventilation rate estimations."

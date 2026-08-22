@@ -1,0 +1,39 @@
+\documentclass[10pt,a4paper]{article}
+\input{style}
+
+\begin{document}
+
+\letterheader{<< personal.full_name >>}{<< personal.city_en >>}{<< personal.phone >>}{<< personal.email >>}{<< personal.linkedin_url >>}
+
+<< job.company >>\\
+<% if job.hiring_manager %>
+<< job.hiring_manager >>\\
+<% else %>
+Hiring \& Recruitment Team\\
+<% endif %>
+<< job.city >>
+
+\vspace{10pt}
+<< date >>
+
+\vspace{10pt}
+\textbf{Application for the position of << job.role_title >>}
+<% if job.req_id %>
+\hfill \small{Reference: << job.req_id >>}
+<% endif %>
+
+\vspace{8pt}
+<< salutation >>
+
+<% for paragraph in letter_body %>
+<< paragraph >>
+
+\vspace{4pt}
+<% endfor %>
+
+Yours sincerely,
+
+\vspace{14pt}
+<< personal.full_name >>
+
+\end{document}

@@ -1,0 +1,13 @@
+# Ayush Profile - Deutsche Stichpunkte
+engineer:
+  default:
+    - "Entwicklung, Testen und Wartung robuster Softwaremodule und REST-APIs mit Python und modernen Frameworks."
+    - "Aufbau automatisierter ETL- und Datenpipelines zur Anbindung relationaler Datenbanken und Drittanbieter-Schnittstellen."
+    - "Containerisierung von Microservices mit Docker und Etablierung von CI/CD-Pipelines für zuverlässige Deployments."
+    - "Aktive Teilnahme an agilen Sprint-Zeremonien, Code-Reviews und Architektur-Diskussionen zur Sicherstellung hoher Codequalität."
+
+junior:
+  default:
+    - "Unterstützung bei Fehleranalyse, Systemintegrationstests und Performance-Optimierung für Kundenanwendungen."
+    - "Erstellung automatisierter Test-Suiten und technischer Dokumentationen für Entwicklerteams."
+    - "Mitarbeit bei Datenbankschema-Migrationen und SQL-Abfrageoptimierung für transaktionsstarke Systeme."

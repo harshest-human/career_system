@@ -1,0 +1,12 @@
+# Network & Outreach Interaction History Log
+outreach_history:
+  - id: "log_001"
+    timestamp: "2026-08-22T13:00:00"
+    candidate: "harsh"
+    company: "C-Lock Inc"
+    contact_name: "Dr. John Miller"
+    channel: "LinkedIn"
+    message_type: "connection_request"
+    status: "Sent"
+    notes: "Sent personalized connection note highlighting GreenFeed research experience at Leibniz ATB."
+    next_action_date: "2026-08-29"

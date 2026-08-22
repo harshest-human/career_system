@@ -1,0 +1,64 @@
+# Anti-Gravity Job Application & Networking Pipeline Configuration
+
+workspace:
+  root: "d:/Job Application"
+  job_ads_manual: "job_ads_manual"
+  job_ads_auto: "job_ads_auto"
+  job_analysis: "job_analysis"
+  latex_generator: "latex_generator"
+  network_tracker: "network_tracker"
+  outputs: "outputs"
+  profiles: "profiles"
+
+profiles:
+  - id: "harsh"
+    name: "Harsh Sahu"
+    default_lang: "en"
+    primary_fields:
+      - "Agricultural Engineering"
+      - "Dairy Science"
+      - "Field Application Science"
+      - "Environmental Consulting & ESG"
+      - "Livestock Housing & Sensor Systems"
+    target_locations:
+      - "Hamburg"
+      - "Bergedorf"
+      - "Northern Germany"
+      - "Remote / Hybrid"
+
+  - id: "wife"
+    name: "Candidate Profile (Wife)"
+    default_lang: "en"
+    primary_fields:
+      - "Data Science / Analytics"
+      - "Software Engineering"
+      - "Business Consulting"
+    target_locations:
+      - "Hamburg"
+      - "Northern Germany"
+      - "Remote"
+
+  - id: "ayush"
+    name: "Ayush"
+    default_lang: "en"
+    primary_fields:
+      - "Technology & Engineering"
+      - "Data Analysis"
+      - "Operations"
+    target_locations:
+      - "Hamburg"
+      - "Germany"
+      - "Remote"
+
+scraping:
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  target_portals:
+    - name: "stellenanzeigen.de"
+      base_url: "https://www.stellenanzeigen.de/suche"
+    - name: "riebensahm-recruiting.de"
+      base_url: "https://www.riebensahm-recruiting.de/jobs"
+
+latex:
+  compiler: "xelatex"
+  runs: 2
+  timeout_seconds: 90

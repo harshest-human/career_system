@@ -1,0 +1,25 @@
+Subject: Application / Technical Inquiry: {{ROLE_TITLE}} – {{CANDIDATE_NAME}}
+
+Dear {{CONTACT_NAME}},
+
+I hope this email finds you well.
+
+I am writing to express my interest in {{COMPANY}}'s open position for {{ROLE_TITLE}}. My background combines {{CANDIDATE_TITLE}} expertise with over 4 years of applied research, field engineering, and data analysis.
+
+At {{INSTITUTION}}, I have led projects focusing on {{KEY_SKILL_1}}, {{KEY_SKILL_2}}, and {{KEY_SKILL_3}}. My work bridges experimental design, precision instrumentation, and statistical modeling in R/Python.
+
+Given {{COMPANY}}'s focus on innovative and sustainable solutions, I believe my interdisciplinary background and practical experience in commercial field trials would add immediate value to your team.
+
+I hold permanent residency in Germany with full work authorization and no visa requirements.
+
+I have attached my CV and Cover Letter for your review. I would welcome the opportunity to discuss how my skillset aligns with your goals in a brief call.
+
+Thank you for your time and consideration.
+
+Warm regards,
+
+{{CANDIDATE_NAME}}
+{{CANDIDATE_TITLE}}
+Phone: {{CANDIDATE_PHONE}}
+Email: {{CANDIDATE_EMAIL}}
+LinkedIn: {{CANDIDATE_LINKEDIN}}

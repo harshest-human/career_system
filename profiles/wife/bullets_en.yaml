@@ -1,0 +1,13 @@
+# Wife Profile - English Bullet Repository
+senior_role:
+  default:
+    - "Spearhead data analytics initiatives to uncover trends, optimize business processes, and enhance decision-making."
+    - "Design and maintain interactive Power BI and SQL dashboards tracking KPIs for cross-functional management teams."
+    - "Automate periodic data reporting pipelines using Python and SQL, reducing manual data processing overhead by 40%."
+    - "Collaborate with cross-functional stakeholders (engineering, product, operations) to translate requirements into technical deliverables."
+
+analyst:
+  default:
+    - "Conducted exploratory data analysis, data cleaning, and statistical validation across diverse enterprise datasets."
+    - "Developed automated reporting templates in Excel and Python, ensuring high data accuracy and integrity."
+    - "Supported sprint planning, documentation, and backlog management in an Agile / Scrum development environment."

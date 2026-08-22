@@ -1,0 +1,18 @@
+Subject: Connecting regarding {{ROLE_TITLE}} / R&D at {{COMPANY}}
+
+Dear {{CONTACT_NAME}},
+
+I hope you are having a productive week.
+
+I have been following {{COMPANY}}'s leadership in {{CORE_DOMAIN}} with great interest. With my background as a {{CANDIDATE_TITLE}} and doctoral researcher at {{INSTITUTION}}, I specialize in {{KEY_SKILL_1}}, {{KEY_SKILL_2}}, and {{KEY_SKILL_3}}.
+
+I noticed the open {{ROLE_TITLE}} position on your team (Ref: {{REQ_ID}}). Given my hands-on experience bridging scientific field trials with scalable data analytics and sensor systems, I would welcome the opportunity to briefly introduce myself and learn more about your team's current priorities.
+
+Would you be open to a brief 10-minute virtual coffee in the coming days?
+
+Thank you for your time, and I look forward to connecting.
+
+Best regards,
+{{CANDIDATE_NAME}}
+{{CANDIDATE_EMAIL}} | {{CANDIDATE_PHONE}}
+{{CANDIDATE_LINKEDIN}}
