@@ -155,7 +155,7 @@
                 <th class="p-2.5 text-right">Action</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-800/80">
+            <tbody class="divide-y border-zinc-800/80">
               <template x-for="portal in portalsList" :key="portal.id">
                 <tr class="hover:bg-zinc-900/40">
                   <td class="p-2.5 font-semibold text-white" x-text="portal.portal_name"></td>
@@ -274,9 +274,6 @@
             <button @click="ingestMode = 'text'" :class="ingestMode === 'text' ? 'bg-white text-zinc-950 font-bold' : 'bg-zinc-900 text-zinc-400 hover:text-white'" class="px-3.5 py-1.5 rounded-lg text-xs transition">
               Paste Text
             </button>
-            <button @click="ingestMode = 'zip'" :class="ingestMode === 'zip' ? 'bg-white text-zinc-950 font-bold' : 'bg-zinc-900 text-zinc-400 hover:text-white'" class="px-3.5 py-1.5 rounded-lg text-xs transition">
-              Import Package (.zip)
-            </button>
           </div>
           <span class="text-xs text-zinc-400 font-medium">
             Pointwise Gemini Analysis
@@ -312,12 +309,6 @@
             </button>
           </div>
         </div>
-
-        <!-- Mode 4: Import Zip Package -->
-        <div x-show="ingestMode === 'zip'" class="space-y-2">
-          <p class="text-xs text-zinc-400">Upload an archived Job Package (.zip) to restore its data, files, and breakdown:</p>
-          <input type="file" @change="importJobPackage($event)" accept=".zip" class="block w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-900 file:text-white hover:file:bg-zinc-800 cursor-pointer">
-        </div>
       </div>
 
       <!-- POINTWISE BREAKDOWN & EDITABLE MATRIX -->
@@ -328,7 +319,7 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-800/80 pb-4">
             <div class="flex-1 space-y-1">
               <div class="flex items-center gap-2">
-                <span class="text-[11px] font-bold text-[#89CFF0] uppercase tracking-wider">Pointwise Breakdown & Job Folder</span>
+                <span class="text-[11px] font-bold text-[#89CFF0] uppercase tracking-wider">Pointwise Breakdown & Local Folder</span>
                 <span x-show="analysisResult.job.job_id_ref || analysisResult.job.job_id" class="bg-zinc-900 text-zinc-300 text-[10px] px-2 py-0.5 rounded border border-zinc-800" x-text="'Ref: ' + (analysisResult.job.job_id_ref || analysisResult.job.job_id)"></span>
               </div>
               <!-- Editable Company & Role Title -->
@@ -346,9 +337,9 @@
                 <i class="fa-solid fa-floppy-disk"></i> Save Details
               </button>
 
-              <!-- Download Job Package Zip -->
-              <button @click="downloadJobZip(analysisResult.job.id)" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-medium rounded-lg text-xs border border-zinc-700 flex items-center gap-1.5 transition" title="Download all files as .zip to backup in Google Drive or PC">
-                <i class="fa-solid fa-file-zipper text-[#89CFF0]"></i> Download .zip
+              <!-- Open Folder in Windows Explorer -->
+              <button @click="openJobLocalFolder(analysisResult.job.id)" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-medium rounded-lg text-xs border border-zinc-700 flex items-center gap-1.5 transition" title="Open this job's dedicated local folder in Windows File Explorer">
+                <i class="fa-solid fa-folder-open text-[#89CFF0]"></i> Open Folder
               </button>
 
               <!-- Delete Job Button -->
@@ -423,13 +414,15 @@
           <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80 space-y-3">
             <div class="flex justify-between items-center border-b border-zinc-900 pb-2">
               <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <i class="fa-solid fa-folder-tree text-[#89CFF0]"></i> Job Folder Assets & Created Files
+                <i class="fa-solid fa-folder-tree text-[#89CFF0]"></i> Job Folder Assets & Saved Files
               </h4>
-              <span class="text-[11px] text-zinc-400 font-mono" x-text="jobFilesList.length + ' files in /jobs/' + (analysisResult.job.folder_path ? analysisResult.job.folder_path.replace('/jobs/', '') : '')"></span>
+              <button @click="openJobLocalFolder(analysisResult.job.id)" class="text-[11px] text-[#89CFF0] hover:underline font-mono">
+                Open in Windows Explorer &rarr;
+              </button>
             </div>
 
             <!-- File Grid / List -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
               <template x-for="file in jobFilesList" :key="file.name">
                 <div class="bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 flex flex-col justify-between hover:border-zinc-700 transition">
                   <div class="flex items-start justify-between">
@@ -442,12 +435,12 @@
                     <span class="text-zinc-500" x-text="file.size_kb + ' KB'"></span>
                     <div class="space-x-2">
                       <button @click="openFileViewer(file.path, file.name)" class="text-[#89CFF0] hover:underline font-semibold">View</button>
-                      <a :href="file.path" :download="file.name" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-download"></i></a>
+                      <a :href="file.path" :download="file.name" class="text-zinc-400 hover:text-white" title="Download direct file"><i class="fa-solid fa-download"></i></a>
                     </div>
                   </div>
                 </div>
               </template>
-              <div x-show="jobFilesList.length === 0" class="col-span-4 p-3 text-center text-xs text-zinc-500 italic">
+              <div x-show="jobFilesList.length === 0" class="col-span-3 p-3 text-center text-xs text-zinc-500 italic">
                 No extra files generated yet. Head to Step 3 (CV Builder) to create A4 CV & Cover Letter for this role.
               </div>
             </div>
@@ -583,7 +576,7 @@
                 <th class="p-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-800/80">
+            <tbody class="divide-y border-zinc-800/80">
               <template x-for="j in jobsList" :key="j.id">
                 <tr class="hover:bg-zinc-900/40 transition">
                   <td class="p-3 cursor-pointer" @click="selectJobForAnalysis(j)">
@@ -619,8 +612,8 @@
                     <button @click="selectJobForAnalysis(j)" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded border border-zinc-700 text-xs font-semibold" title="View Breakdown & Files">
                       Folder
                     </button>
-                    <button @click="downloadJobZip(j.id)" class="p-1.5 text-[#89CFF0] hover:text-white" title="Download .zip package">
-                      <i class="fa-solid fa-file-zipper"></i>
+                    <button @click="openJobLocalFolder(j.id)" class="p-1.5 text-[#89CFF0] hover:text-white" title="Open Folder in Windows Explorer">
+                      <i class="fa-solid fa-folder-open"></i>
                     </button>
                     <button @click="deleteJob(j.id)" class="p-1.5 text-zinc-500 hover:text-rose-400" title="Delete job">
                       <i class="fa-solid fa-trash text-xs"></i>
@@ -629,7 +622,7 @@
                 </tr>
               </template>
               <tr x-show="jobsList.length === 0">
-                <td colspan="6" class="p-4 text-center text-zinc-600 italic">No job descriptions stored yet. Ingest a job from URL, PDF, text, or import .zip above!</td>
+                <td colspan="6" class="p-4 text-center text-zinc-600 italic">No job descriptions stored yet. Ingest a job from URL, PDF, or text above!</td>
               </tr>
             </tbody>
           </table>
@@ -721,8 +714,8 @@
             <button @click="printHtmlDocument()" class="px-4 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition">
               <i class="fa-solid fa-print mr-1"></i> Print / Save PDF
             </button>
-            <button @click="exportToGoogleDriveDoc()" class="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold rounded-lg text-xs border border-zinc-700 transition">
-              <i class="fa-brands fa-google-drive mr-1"></i> Save to Google Drive
+            <button @click="openJobLocalFolder(studioJob.id)" class="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold rounded-lg text-xs border border-zinc-700 transition">
+              <i class="fa-solid fa-folder-open text-[#89CFF0] mr-1"></i> Open Local Folder
             </button>
           </div>
 
@@ -789,8 +782,8 @@
             <button @click="currentStep = 3" class="text-xs text-zinc-400 hover:text-white">
               &larr; Back to Step 3 (CV Builder)
             </button>
-            <button @click="syncActiveJobToGoogleSheet()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold rounded-lg text-xs border border-zinc-700 transition">
-              Log in Google Sheets
+            <button @click="openJobLocalFolder(studioJob.id)" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold rounded-lg text-xs border border-zinc-700 transition">
+              <i class="fa-solid fa-folder-open text-[#89CFF0] mr-1"></i> Open Local Folder
             </button>
           </div>
         </div>

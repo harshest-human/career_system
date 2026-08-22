@@ -389,6 +389,21 @@ function careerApp() {
       }
     },
 
+    async openJobLocalFolder(jobId) {
+      if (!jobId) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/jobs/${jobId}/open-folder`, { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'success') {
+          console.log('Opened folder:', data.path);
+        } else {
+          alert('Folder path: ' + data.path);
+        }
+      } catch (err) {
+        alert('Could not open folder automatically: ' + err.message);
+      }
+    },
+
     downloadJobZip(jobId) {
       window.location.href = `${API_BASE}/api/jobs/${jobId}/export-zip`;
     },

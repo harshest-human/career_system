@@ -329,6 +329,28 @@ async def get_job_files(job_id: int):
     return {"status": "success", "folder": folder_rel, "files": files}
 
 
+@app.post("/api/jobs/{job_id}/open-folder")
+async def open_job_folder(job_id: int):
+    job = db.get_job(job_id)
+    if not job or not job.get("folder_path"):
+        raise HTTPException(status_code=404, detail="Job folder not found")
+
+    folder = ROOT_DIR / job["folder_path"].lstrip("/")
+    if not folder.exists():
+        folder.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if os.name == "nt":
+            os.startfile(str(folder))
+        elif sys.platform == "darwin":
+            subprocess.run(["open", str(folder)])
+        else:
+            subprocess.run(["xdg-open", str(folder)])
+        return {"status": "success", "path": str(folder)}
+    except Exception as e:
+        return {"status": "error", "message": str(e), "path": str(folder)}
+
+
 @app.get("/api/jobs/{job_id}/export-zip")
 async def export_job_zip(job_id: int):
     job = db.get_job(job_id)
