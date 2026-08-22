@@ -685,6 +685,17 @@ function careerApp() {
             gemini_api_key: this.geminiApiKey || null,
           }),
         });
+        if (!res.ok) {
+          const errText = await res.text();
+          let msg = `Server returned ${res.status}`;
+          try {
+            const errJson = JSON.parse(errText);
+            if (errJson.detail) msg = errJson.detail;
+          } catch (_) {
+            if (errText) msg = errText;
+          }
+          throw new Error(msg);
+        }
         const data = await res.json();
         if (data.cover_letter_paragraphs) {
           this.studioLetterParagraphs = data.cover_letter_paragraphs;

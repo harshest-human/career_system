@@ -30,7 +30,7 @@ ISF_Schaumann_Junior_Product_Manager/
 Websites.txt
 *.docx
 
-# Local Database & Personal Job Folders
+# Local Database & Personal Job Folders & Candidate Profiles
 career_system/*.db
 career_system/job_ads_manual/*.pdf
 career_system/job_ads_auto/*.pdf
@@ -39,6 +39,9 @@ career_system/jobs/*
 !career_system/job_ads_manual/.gitkeep
 !career_system/job_ads_auto/.gitkeep
 !career_system/jobs/.gitkeep
+career_system/profiles/*
+!career_system/profiles/default/
+!career_system/profiles/default/**
 
 # Sensitive local configurations
 local_settings.yaml

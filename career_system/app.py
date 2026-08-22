@@ -479,6 +479,7 @@ async def ai_suggest(req: SuggestRequest):
         job_data=req.job_data,
         user_notes=req.user_notes,
         lang=req.lang,
+        custom_api_key=req.gemini_api_key,
     )
     return result
 

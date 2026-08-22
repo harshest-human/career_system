@@ -204,10 +204,19 @@ class SystemDoctor:
             r3 = client.get("/")
             r4 = client.get("/api/portals")
             r5 = client.get("/api/google/script-template")
-            if all(r.status_code == 200 for r in [r1, r2, r3, r4, r5]):
-                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "PASS", "HTTP 200 OK across all routes")
+            r6 = client.post(
+                "/api/ai/suggest",
+                json={
+                    "candidate_id": "default",
+                    "job_data": {"company": "Test Co", "role_title": "Engineer", "extracted_skills": ["Python"]},
+                    "user_notes": "Strong background in systems.",
+                    "lang": "en",
+                },
+            )
+            if all(r.status_code == 200 for r in [r1, r2, r3, r4, r5, r6]):
+                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "PASS", "HTTP 200 OK across all routes including AI suggest")
             else:
-                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "FAIL", f"Status: {r1.status_code}, {r2.status_code}, {r3.status_code}")
+                self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "FAIL", f"Status: {r1.status_code}, {r2.status_code}, {r3.status_code}, r6: {r6.status_code}")
         except Exception as e:
             self.log_result("Web Application", "FastAPI Server & 4-Step Wizard UI", "FAIL", str(e))
 

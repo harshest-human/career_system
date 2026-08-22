@@ -234,9 +234,13 @@ Format your response as clean JSON with keys:
                 print(f"[AI Assistant] Gemini API call note: {e}. Using rule-based synthesis.")
 
         # Offline Fallback
+        domains_list = candidate_profile.get("skills", {}).get("domains", []) or []
+        primary_domain_en = domains_list[0] if len(domains_list) > 0 else "applied engineering and technical operations"
+        primary_domain_de = domains_list[0] if len(domains_list) > 0 else "angewandte Technik und operative Prozesse"
+
         if lang == "en":
             paragraphs = [
-                f"I am writing to express my enthusiastic application for the {role} position at {company}. With my established background in {candidate_profile.get('skills', {}).get('domains', ['applied engineering'])[0]} and proven hands-on execution, I offer a direct match for your team's current operational and innovation objectives.",
+                f"I am writing to express my enthusiastic application for the {role} position at {company}. With my established background in {primary_domain_en} and proven hands-on execution, I offer a direct match for your team's current operational and innovation objectives.",
                 f"Regarding your specific requirements: {user_notes if user_notes else f'My background spans core areas including ' + ', '.join(skills[:4])}. I have consistently demonstrated the ability to bridge complex analytical workflows with reliable execution, delivering measurable impact and streamlined collaboration.",
                 f"I am particularly drawn to {company} because of your commitment to excellence and technical innovation. I hold valid work authorization in Germany and am available to start in accordance with your timeline. I look forward to discussing how my experience will support {company}'s continued success.",
             ]
@@ -251,7 +255,7 @@ Format your response as clean JSON with keys:
             ]
         else:
             paragraphs = [
-                f"mit großem Interesse bewerbe ich mich auf die Position als {role} bei {company}. Mein Profil verbindet fundierte Fachkenntnisse in {candidate_profile.get('skills', {}).get('domains', ['Agrartechnik & Datenanalyse'])[0]} mit zielgerichteter Praxis.",
+                f"mit großem Interesse bewerbe ich mich auf die Position als {role} bei {company}. Mein Profil verbindet fundierte Fachkenntnisse in {primary_domain_de} mit zielgerichteter Praxis.",
                 f"Bezugnehmend auf Ihre Anforderungen: {user_notes if user_notes else 'Meine Schwerpunkte liegen in der praktischen Umsetzung und datengestützten Analyse.'} In meinen Projekten habe ich stets gezeigt, wie anspruchsvolle Aufgaben strukturiert und termingerecht gelöst werden.",
                 f"Ich freue mich darauf, meine Erfahrung bei {company} einzubringen. Ich verfüge über eine uneingeschränkte Arbeitserlaubnis in Deutschland und freue mich auf ein persönliches Kennenlernen.",
             ]
