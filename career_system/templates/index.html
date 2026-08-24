@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Career System — 100% Local Autonomous Career Studio</title>
+  <title>Career System — Autonomous Career Studio</title>
   <link rel="icon" href="/static/icon.png" type="image/png">
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -56,7 +56,6 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="font-black text-xl text-white tracking-tight">Career<span class="text-blue-400">System</span></span>
-            <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 font-semibold border border-blue-500/20">100% Offline Local</span>
           </div>
           <p class="text-xs text-zinc-400">Autonomous Job Ingestion, In-Document A4 Builders & Tailored Outreach</p>
         </div>
@@ -218,8 +217,8 @@
 
                     <!-- Snapshot PDF Link -->
                     {% if job.pdf_path %}
-                    <a href="{{ job.pdf_path }}" target="_blank" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-amber-300 rounded-lg font-medium text-[11px] border border-zinc-800 transition flex items-center gap-1" title="View original Job Ad PDF">
-                      <i class="fa-solid fa-camera"></i> Ad
+                    <a href="{{ job.pdf_path }}" target="_blank" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-rose-300 hover:text-rose-200 rounded-lg font-medium text-[11px] border border-zinc-800 transition flex items-center gap-1" title="View original Job Ad PDF">
+                      <i class="fa-solid fa-file-pdf text-rose-400"></i> Ad
                     </a>
                     {% endif %}
                   </div>

@@ -231,10 +231,10 @@
       <div class="card-bg p-6 rounded-2xl shadow-xl space-y-4">
         <h2 class="font-bold text-base text-white flex items-center justify-between border-b border-zinc-800 pb-3">
           <span class="flex items-center gap-2">
-            <i class="fa-solid fa-camera text-amber-400"></i> Original Job Ad Snapshot
+            <i class="fa-solid fa-file-pdf text-rose-400"></i> Original Job Ad Snapshot
           </span>
           {% if job.pdf_path %}
-          <a href="{{ job.pdf_path }}" target="_blank" class="text-xs text-blue-400 hover:underline flex items-center gap-1">
+          <a href="{{ job.pdf_path }}" target="_blank" class="text-xs text-rose-400 hover:underline flex items-center gap-1">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Open PDF
           </a>
           {% endif %}
