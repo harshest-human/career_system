@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cover Letter Editor — {{ job.role_title }} at {{ job.company }}</title>
+  <title>Cover Letter Studio — {{ job.role_title }} at {{ job.company }}</title>
   <link rel="icon" href="/static/icon.png" type="image/png">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -16,14 +16,18 @@
       box-sizing: border-box;
     }
     body {
-      background-color: #0f172a;
+      background-color: #0b0f19;
       color: #334155;
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
     }
     .top-toolbar {
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid #334155;
+      background: rgba(11, 15, 25, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #1e293b;
+    }
+    .sub-toolbar {
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
     }
     .a4-container {
       display: flex;
@@ -34,33 +38,48 @@
       width: 210mm;
       min-height: 297mm;
       max-height: 297mm;
-      padding: 14mm 18mm;
       background: #ffffff;
       color: #1e293b;
       font-size: 8.8pt;
       line-height: 1.38;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
       border-radius: 4px;
       outline: none;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
     }
     .letter-page:focus-within {
-      box-shadow: 0 0 0 2px #3b82f6, 0 10px 30px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 0 0 2px #3b82f6, 0 12px 36px rgba(0, 0, 0, 0.55);
     }
     [contenteditable="true"] {
       outline: none;
       cursor: text;
     }
     [contenteditable="true"]:hover {
-      background-color: rgba(59, 130, 246, 0.03);
-      border-radius: 2px;
+      background-color: rgba(59, 130, 246, 0.02);
     }
     [contenteditable="true"]:focus {
-      background-color: rgba(59, 130, 246, 0.06);
-      border-radius: 2px;
+      background-color: rgba(59, 130, 246, 0.04);
+    }
+    .fmt-btn {
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 6px;
+      background: #1f2937;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .fmt-btn:hover {
+      background: #374151;
+      color: #ffffff;
+      border-color: #4b5563;
+    }
+    .fmt-btn:active {
+      transform: translateY(1px);
     }
     @media print {
       body {
@@ -79,7 +98,6 @@
         box-shadow: none !important;
         border-radius: 0 !important;
         margin: 0 !important;
-        padding: 14mm 18mm !important;
         width: 210mm !important;
         height: 297mm !important;
         max-height: 297mm !important;
@@ -99,73 +117,115 @@
   <header class="no-print top-toolbar sticky top-0 z-50 px-4 sm:px-6 h-16 flex items-center justify-between text-white">
     <!-- Left: Back & Job Info -->
     <div class="flex items-center space-x-3 sm:space-x-4">
-      <a href="/" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1.5">
-        <i class="fa-solid fa-arrow-left"></i> Dashboard
+      <a href="/" class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold rounded-lg border border-zinc-700 transition flex items-center gap-1.5 shadow-sm">
+        <i class="fa-solid fa-arrow-left text-blue-400"></i> Dashboard
       </a>
       <div class="hidden md:block">
         <div class="font-bold text-sm text-white flex items-center gap-2">
           <span>Cover Letter Builder</span>
-          <span class="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">Job #{{ job_id }}</span>
+          <span class="text-[11px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 font-semibold border border-indigo-500/20">Tool by Harsh</span>
+          <span class="text-[11px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">Job #{{ job_id }}</span>
         </div>
-        <div class="text-xs text-slate-400 truncate max-w-sm">{{ job.role_title }} &bull; {{ job.company }}</div>
+        <div class="text-xs text-zinc-400 truncate max-w-sm">{{ job.role_title }} &bull; {{ job.company }}</div>
       </div>
     </div>
 
-    <!-- Center: Milestone Progress Links -->
-    <div class="hidden lg:flex items-center space-x-1 bg-slate-900/80 px-2 py-1 rounded-xl border border-slate-700/80 text-xs">
-      <a href="/job/{{ job_id }}" class="px-2.5 py-1 text-slate-400 hover:text-slate-200 rounded-lg transition font-medium">
+    <!-- Center: Milestone Links -->
+    <div class="hidden lg:flex items-center space-x-1 bg-zinc-950/80 px-2 py-1 rounded-xl border border-zinc-800 text-xs">
+      <a href="/job/{{ job_id }}" class="px-2.5 py-1 text-zinc-400 hover:text-zinc-200 rounded-lg transition font-medium">
         <i class="fa-solid fa-file-lines text-slate-400 mr-1"></i> Details
       </a>
-      <a href="/job/{{ job_id }}/cv?lang={{ lang }}" class="px-2.5 py-1 text-slate-400 hover:text-slate-200 rounded-lg transition font-medium">
+      <a href="/job/{{ job_id }}/cv?lang={{ lang }}&design={{ design }}" class="px-2.5 py-1 text-zinc-400 hover:text-zinc-200 rounded-lg transition font-medium">
         <i class="fa-solid fa-id-card mr-1"></i> CV
       </a>
-      <a href="/job/{{ job_id }}/coverletter?lang={{ lang }}" class="px-2.5 py-1 bg-blue-600 text-white rounded-lg font-bold shadow-sm">
+      <a href="/job/{{ job_id }}/coverletter?lang={{ lang }}&design={{ design }}" class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg font-bold shadow-sm">
         <i class="fa-solid fa-envelope mr-1"></i> Cover Letter
       </a>
-      <a href="/job/{{ job_id }}/outreach?lang={{ lang }}" class="px-2.5 py-1 text-slate-400 hover:text-slate-200 rounded-lg transition font-medium">
+      <a href="/job/{{ job_id }}/outreach?lang={{ lang }}" class="px-2.5 py-1 text-zinc-400 hover:text-zinc-200 rounded-lg transition font-medium">
         <i class="fa-solid fa-paper-plane mr-1"></i> Outreach
       </a>
     </div>
 
-    <!-- Right: Language toggle, Save & Download -->
+    <!-- Right: Language & Print -->
     <div class="flex items-center space-x-2 sm:space-x-3">
-      <!-- Language Switch -->
-      <div class="flex items-center bg-slate-900 rounded-lg border border-slate-700 p-0.5 text-xs font-semibold">
-        <a href="/job/{{ job_id }}/coverletter?lang=en" class="px-2.5 py-1 rounded-md transition {% if lang == 'en' %}bg-blue-600 text-white{% else %}text-slate-400 hover:text-white{% endif %}">
+      <div class="flex items-center bg-zinc-950 rounded-lg border border-zinc-800 p-0.5 text-xs font-semibold">
+        <button onclick="switchLanguage('en')" class="px-2.5 py-1 rounded-md transition {% if lang == 'en' %}bg-indigo-600 text-white font-bold{% else %}text-zinc-400 hover:text-white{% endif %}">
           🇬🇧 EN
-        </a>
-        <a href="/job/{{ job_id }}/coverletter?lang=de" class="px-2.5 py-1 rounded-md transition {% if lang == 'de' %}bg-blue-600 text-white{% else %}text-slate-400 hover:text-white{% endif %}">
+        </button>
+        <button onclick="switchLanguage('de')" class="px-2.5 py-1 rounded-md transition {% if lang == 'de' %}bg-indigo-600 text-white font-bold{% else %}text-zinc-400 hover:text-white{% endif %}">
           🇩🇪 DE
-        </a>
+        </button>
       </div>
 
-      <!-- Auto-Save Status Badge -->
       <div id="save-status" class="hidden sm:flex items-center text-[11px] text-emerald-400 font-medium">
         <i class="fa-solid fa-check-circle mr-1 text-xs"></i> Saved
       </div>
 
-      <!-- Explicit Save Button -->
-      <button onclick="saveDocumentNow()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1.5">
-        <i class="fa-solid fa-floppy-disk text-blue-400"></i> Save
+      <button onclick="saveDocumentNow()" id="save-btn" class="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold rounded-lg border border-zinc-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-floppy-disk text-indigo-400"></i> Save
       </button>
 
-      <!-- Print / Download PDF -->
-      <button onclick="window.print()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-md transition flex items-center gap-1.5">
+      <button onclick="window.print()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-md transition flex items-center gap-1.5">
         <i class="fa-solid fa-file-pdf"></i> Download PDF
       </button>
     </div>
   </header>
 
-  <!-- Document Canvas -->
+  <!-- Sub-Toolbar: 3 European Cover Letter Designs + Formatting Tools -->
+  <div class="no-print sub-toolbar px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-3 text-xs sticky top-16 z-40">
+    
+    <!-- 1. Design Selector -->
+    <div class="flex items-center space-x-1.5">
+      <span class="text-zinc-400 font-semibold mr-1 flex items-center gap-1">
+        <i class="fa-solid fa-palette text-amber-400"></i> Design:
+      </span>
+      <button onclick="switchDesign('zurich')" id="btn-design-zurich" class="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 {% if design == 'zurich' %}bg-indigo-600 text-white shadow{% else %}bg-zinc-800 text-zinc-300 hover:bg-zinc-700{% endif %}" title="Swiss Classic: Structured formal letterhead">
+        🇨🇭 Zurich Minimal
+      </button>
+      <button onclick="switchDesign('berlin')" id="btn-design-berlin" class="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 {% if design == 'berlin' %}bg-indigo-600 text-white shadow{% else %}bg-zinc-800 text-zinc-300 hover:bg-zinc-700{% endif %}" title="German Executive: Bold left sidebar layout">
+        🇩🇪 Berlin Executive
+      </button>
+      <button onclick="switchDesign('stockholm')" id="btn-design-stockholm" class="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 {% if design == 'stockholm' %}bg-indigo-600 text-white shadow{% else %}bg-zinc-800 text-zinc-300 hover:bg-zinc-700{% endif %}" title="Nordic Tech: Modern header with accent badge">
+        🇸🇪 Stockholm Tech
+      </button>
+    </div>
+
+    <!-- 2. Text Formatting Tools -->
+    <div class="flex flex-wrap items-center gap-1.5">
+      <button onclick="formatDoc('bold')" class="fmt-btn font-black px-2.5" title="Bold (Ctrl+B)">B</button>
+      <button onclick="formatDoc('italic')" class="fmt-btn italic px-2.5" title="Italic (Ctrl+I)">I</button>
+      <button onclick="formatDoc('underline')" class="fmt-btn underline px-2.5" title="Underline (Ctrl+U)">U</button>
+
+      <span class="w-[1px] h-5 bg-zinc-700 mx-1"></span>
+
+      <button onclick="formatDoc('justifyLeft')" class="fmt-btn" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+      <button onclick="formatDoc('justifyCenter')" class="fmt-btn" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+      <button onclick="formatDoc('justifyFull')" class="fmt-btn" title="Justify"><i class="fa-solid fa-align-justify"></i></button>
+
+      <span class="w-[1px] h-5 bg-zinc-700 mx-1"></span>
+
+      <select onchange="changeFontFamily(this.value)" class="bg-zinc-800 border border-zinc-700 text-zinc-200 rounded px-2 py-1 text-xs focus:outline-none">
+        <option value="'Segoe UI', sans-serif">Segoe UI</option>
+        <option value="'Inter', sans-serif">Inter</option>
+        <option value="'Helvetica Neue', Arial, sans-serif">Helvetica</option>
+        <option value="'Georgia', serif">Georgia (Editorial)</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- Document Editing Canvas -->
   <main class="flex-1 a4-container">
     <div id="document-canvas" class="letter-page" contenteditable="true" spellcheck="false">
+      <!-- The rendered HTML Cover Letter is injected directly here for in-place editing -->
       {{ doc_html | safe }}
     </div>
   </main>
 
   <script>
     const jobId = {{ job_id }};
-    const docLang = '{{ lang }}';
+    let docLang = '{{ lang }}';
+    let currentDesign = '{{ design }}' || 'zurich';
     let saveTimeout = null;
     const canvas = document.getElementById('document-canvas');
     const statusEl = document.getElementById('save-status');
@@ -177,6 +237,65 @@
       }
     }
     sanitizeCanvas();
+
+    function formatDoc(cmd, value = null) {
+      document.execCommand(cmd, false, value);
+      canvas.focus();
+    }
+
+    function changeFontFamily(font) {
+      canvas.style.fontFamily = font;
+    }
+
+    async function switchDesign(designName) {
+      currentDesign = designName;
+      statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1 text-xs text-indigo-400"></i> Loading ' + designName + ' design...';
+      statusEl.className = 'hidden sm:flex items-center text-[11px] text-indigo-400 font-medium';
+
+      ['zurich', 'berlin', 'stockholm'].forEach(d => {
+        const btn = document.getElementById('btn-design-' + d);
+        if (btn) {
+          if (d === designName) {
+            btn.className = 'px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 bg-indigo-600 text-white shadow';
+          } else {
+            btn.className = 'px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 bg-zinc-800 text-zinc-300 hover:bg-zinc-700';
+          }
+        }
+      });
+
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/render-template`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            doc_type: 'coverletter',
+            lang: docLang,
+            design: designName,
+            candidate_id: 'default'
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.html) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(data.html, 'text/html');
+          const pageDiv = doc.querySelector('.letter-page');
+          if (pageDiv) {
+            canvas.className = pageDiv.className;
+            canvas.innerHTML = pageDiv.innerHTML;
+          } else {
+            canvas.innerHTML = data.html;
+          }
+          statusEl.innerHTML = '<i class="fa-solid fa-check-circle mr-1 text-xs"></i> Switched to ' + designName;
+          statusEl.className = 'hidden sm:flex items-center text-[11px] text-emerald-400 font-medium';
+        }
+      } catch (err) {
+        console.error('Design switch error:', err);
+      }
+    }
+
+    function switchLanguage(targetLang) {
+      window.location.href = `/job/${jobId}/coverletter?lang=${targetLang}&design=${currentDesign}`;
+    }
 
     canvas.addEventListener('input', () => {
       statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1 text-xs text-amber-400"></i> Saving...';
@@ -196,26 +315,9 @@
 <head>
   <meta charset="UTF-8">
   <title>Cover Letter</title>
-  <style>
-    @page { size: A4 portrait; margin: 0; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 210mm; height: 297mm; max-height: 297mm; margin: 0 auto; background: #ffffff; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 8.8pt; line-height: 1.38; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; overflow: hidden; }
-    .letter-page { width: 210mm; height: 297mm; max-height: 297mm; box-sizing: border-box; padding: 14mm 18mm; margin: 0 auto; background: #ffffff; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2563eb; padding-bottom: 7px; margin-bottom: 11px; }
-    .name { font-size: 16pt; font-weight: 800; color: #1e3a8a; letter-spacing: -0.4px; line-height: 1.1; }
-    .contact-info { text-align: right; font-size: 8pt; color: #475569; line-height: 1.35; }
-    .contact-info a { color: #2563eb; text-decoration: none; }
-    .recipient { margin-bottom: 9px; font-size: 8.8pt; color: #334155; line-height: 1.35; }
-    .date-line { margin-bottom: 9px; font-size: 8.5pt; color: #64748b; }
-    .subject-line { font-size: 10.2pt; font-weight: 700; color: #0f172a; margin-bottom: 9px; }
-    .salutation { margin-bottom: 8px; font-size: 8.8pt; font-weight: 600; }
-    .letter-para { margin-bottom: 7.5px; text-align: justify; color: #334155; font-size: 8.8pt; line-height: 1.36; }
-    .closing { margin-top: 10px; margin-bottom: 4px; font-size: 8.8pt; color: #334155; }
-    .signature-name { font-weight: 700; color: #0f172a; font-size: 9pt; }
-  </style>
 </head>
 <body>
-  <div class="letter-page">
+  <div class="${canvas.className}">
     ${content}
   </div>
 </body>

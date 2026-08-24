@@ -139,8 +139,8 @@ async def page_job_details(request: Request, job_id: int):
 
 
 @app.get("/job/{job_id}/cv", response_class=HTMLResponse)
-async def page_cv_editor(request: Request, job_id: int, lang: str = "en"):
-    """Dedicated Direct In-Document A4 CV Builder."""
+async def page_cv_editor(request: Request, job_id: int, lang: str = "en", design: str = "zurich"):
+    """Dedicated Direct In-Document A4 CV Builder with 3 European ATS Designs."""
     job = db.get_job(job_id)
     if not job:
         return RedirectResponse("/")
@@ -150,20 +150,21 @@ async def page_cv_editor(request: Request, job_id: int, lang: str = "en"):
         prof = db.get_profile("default")
         profile_data = prof.get("data", {}) if prof else {}
         tailored_sum = tailor.tailor_summary(profile_data, job, lang)
-        saved_html = render_html_cv(profile=profile_data, job_data=job, lang=lang, custom_summary=tailored_sum)
+        saved_html = render_html_cv(profile=profile_data, job_data=job, lang=lang, design=design, custom_summary=tailored_sum)
         db.save_job_doc(job_id, "cv", lang, saved_html)
 
     return templates.TemplateResponse(request=request, name="cv_editor.html", context={
         "job": job,
         "job_id": job_id,
         "lang": lang.lower(),
+        "design": design.lower(),
         "doc_html": saved_html,
     })
 
 
 @app.get("/job/{job_id}/coverletter", response_class=HTMLResponse)
-async def page_coverletter_editor(request: Request, job_id: int, lang: str = "en"):
-    """Dedicated Direct In-Document A4 Cover Letter Builder."""
+async def page_coverletter_editor(request: Request, job_id: int, lang: str = "en", design: str = "zurich"):
+    """Dedicated Direct In-Document A4 Cover Letter Builder with 3 European ATS Designs."""
     job = db.get_job(job_id)
     if not job:
         return RedirectResponse("/")
@@ -173,13 +174,14 @@ async def page_coverletter_editor(request: Request, job_id: int, lang: str = "en
         prof = db.get_profile("default")
         profile_data = prof.get("data", {}) if prof else {}
         paras = tailor.tailor_cover_letter_paragraphs(profile_data, job, lang)
-        saved_html = render_html_cover_letter(profile=profile_data, job_data=job, lang=lang, custom_paragraphs=paras)
+        saved_html = render_html_cover_letter(profile=profile_data, job_data=job, lang=lang, design=design, custom_paragraphs=paras)
         db.save_job_doc(job_id, "coverletter", lang, saved_html)
 
     return templates.TemplateResponse(request=request, name="coverletter_editor.html", context={
         "job": job,
         "job_id": job_id,
         "lang": lang.lower(),
+        "design": design.lower(),
         "doc_html": saved_html,
     })
 
@@ -364,6 +366,57 @@ async def delete_job_api(job_id: int):
 
 class SaveDocRequest(BaseModel):
     html_content: str
+
+
+class RenderTemplateRequest(BaseModel):
+    doc_type: str = "cv"  # "cv" or "coverletter"
+    lang: str = "en"  # "en" or "de"
+    design: str = "zurich"  # "zurich", "berlin", "stockholm"
+    photo_src: Optional[str] = None
+    custom_summary: Optional[str] = None
+    custom_paragraphs: Optional[List[str]] = None
+    candidate_id: str = "default"
+
+
+@app.post("/api/jobs/{job_id}/render-template")
+async def render_template_api(job_id: int, payload: RenderTemplateRequest):
+    """Render and return HTML for a selected European design template."""
+    job = db.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    prof = db.get_profile(payload.candidate_id) or db.get_profile("default")
+    profile_data = prof.get("data", {}) if prof else {}
+
+    if payload.doc_type == "cv":
+        summary = payload.custom_summary or tailor.tailor_summary(profile_data, job, payload.lang)
+        html = render_html_cv(
+            profile=profile_data,
+            job_data=job,
+            lang=payload.lang,
+            design=payload.design,
+            custom_summary=summary,
+            photo_src=payload.photo_src,
+        )
+    else:
+        paras = payload.custom_paragraphs or tailor.tailor_cover_letter_paragraphs(profile_data, job, payload.lang)
+        html = render_html_cover_letter(
+            profile=profile_data,
+            job_data=job,
+            lang=payload.lang,
+            design=payload.design,
+            custom_paragraphs=paras,
+        )
+
+    # Automatically save as current active version for this doc & lang
+    db.save_job_doc(job_id, payload.doc_type, payload.lang, html)
+
+    return {
+        "status": "success",
+        "html": html,
+        "design": payload.design,
+        "doc_type": payload.doc_type,
+        "lang": payload.lang,
+    }
 
 
 @app.get("/api/jobs/{job_id}/doc/{doc_type}/{lang}")

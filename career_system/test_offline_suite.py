@@ -108,7 +108,36 @@ def test_system():
     print(" [PASS] Successfully retrieved customized CV from local job folder!")
 
     print("\n=======================================================")
-    print(" [6/6] Testing Drag-and-Drop Priority Reordering...")
+    print(" [6/7] Testing 3 European Designs (Zurich, Berlin, Stockholm)...")
+    print("=======================================================")
+    for design_name in ["zurich", "berlin", "stockholm"]:
+        # Test CV template rendering
+        res = client.post(f"/api/jobs/{job_id}/render-template", json={
+            "doc_type": "cv",
+            "lang": "en",
+            "design": design_name,
+            "photo_src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "candidate_id": "default"
+        })
+        assert res.status_code == 200
+        cv_data = res.json()
+        assert f"cv-design-{design_name}" in cv_data["html"]
+        print(f" [PASS] Rendered CV in European '{design_name}' design with photo space!")
+
+        # Test Cover Letter template rendering
+        res = client.post(f"/api/jobs/{job_id}/render-template", json={
+            "doc_type": "coverletter",
+            "lang": "de",
+            "design": design_name,
+            "candidate_id": "default"
+        })
+        assert res.status_code == 200
+        cl_data = res.json()
+        assert f"letter-design-{design_name}" in cl_data["html"]
+        print(f" [PASS] Rendered Cover Letter in European '{design_name}' design (DE)!")
+
+    print("\n=======================================================")
+    print(" [7/7] Testing Drag-and-Drop Priority Reordering...")
     print("=======================================================")
     # Get all jobs
     res = client.get("/api/jobs")
@@ -129,9 +158,10 @@ def test_system():
     print(f" [PASS] Jobs successfully reordered by priority: {reversed_ids}")
 
     print("\n=======================================================")
-    print(" ALL 6 TEST STAGES PASSED PERFECTLY!")
+    print(" ALL 7 TEST STAGES PASSED PERFECTLY!")
     print("=======================================================\n")
 
 if __name__ == "__main__":
     test_system()
+
 
