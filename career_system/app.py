@@ -1,7 +1,7 @@
 """
-Career System - Central FastAPI Server & REST API
-Manages Profiles, Job Parsing, AI Matrix Breakdown, Bilingual HTML CV/Letter Generation,
-Dedicated Local Job Folders with Systematic Nomenclature: {jobposition}_{jobID}_{companyname}_{suffix}
+Career System — Local Offline Career Studio & Document Engine
+FastAPI application managing Jobs Hub, Master Profiles, Offline Parsing,
+Direct In-Document A4 Editing (CV & Cover Letter), and Tailored Bilingual Outreach.
 """
 
 from __future__ import annotations
@@ -12,44 +12,37 @@ import json
 import os
 import re
 import shutil
+import sys
 import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import uvicorn
-from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-# Initialize App and Root Paths
 ROOT_DIR = Path(__file__).resolve().parent
 
-from src.ai_assistant import CareerAIAssistant
 from src.bootstrap import bootstrap_environment
 from src.database import Database, get_job_prefix
 from src.extractor import JobExtractor
-from src.generator import LatexPipeline
-from src.google_sync import GOOGLE_APPS_SCRIPT_TEMPLATE, GoogleWorkspaceSync
 from src.html_templates import render_html_cover_letter, render_html_cv
-from src.matcher import CandidateMatcher
 from src.scraper import JobScraper
-from src.tracker import NetworkTracker
+from src.tailor import OfflineTailor
 
 # Initialize core services
 bootstrap_environment()
 db = Database(ROOT_DIR / "career_system.db")
 extractor = JobExtractor()
-matcher = CandidateMatcher()
-generator = LatexPipeline()
-scraper = JobScraper()
-tracker = NetworkTracker()
-ai_assistant = CareerAIAssistant()
-google_sync = GoogleWorkspaceSync()
+scraper = JobScraper(output_dir=ROOT_DIR / "job_ads_auto")
+tailor = OfflineTailor()
 
-app = FastAPI(title="Career System AI Studio", version="3.2.0")
+app = FastAPI(title="Career System Local Studio", version="4.0.0")
 
 # CORS middleware
 app.add_middleware(
@@ -60,362 +53,298 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure directories exist
-for folder in ["static", "templates", "job_ads_manual", "job_ads_auto", "jobs"]:
+# Ensure required directories exist
+for folder in ["static", "templates", "job_ads_manual", "job_ads_auto", "jobs", "profiles"]:
     (ROOT_DIR / folder).mkdir(parents=True, exist_ok=True)
 
-# Mount static asset folders
+# Mount static directories
 app.mount("/static", StaticFiles(directory=str(ROOT_DIR / "static")), name="static")
 app.mount("/jobs", StaticFiles(directory=str(ROOT_DIR / "jobs")), name="jobs")
 app.mount("/job_ads_manual", StaticFiles(directory=str(ROOT_DIR / "job_ads_manual")), name="job_ads_manual")
 app.mount("/job_ads_auto", StaticFiles(directory=str(ROOT_DIR / "job_ads_auto")), name="job_ads_auto")
 
+templates = Jinja2Templates(directory=str(ROOT_DIR / "templates"))
 
-def generate_and_save_application_package(
-    job_id: int,
-    breakdown: Dict[str, Any],
-    candidate_id: str = "default",
-    gemini_key: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Automatically tailor Master CV, generate bilingual HTML CVs/Letters/Outreach, and save to the dedicated job folder."""
+
+def seed_job_application_package(job_id: int, job_data: Dict[str, Any], candidate_id: str = "default") -> None:
+    """Initialize and save tailored bilingual CVs, Cover Letters, and Outreach into the job's local folder."""
     prof = db.get_profile(candidate_id) or db.get_profile("default")
     if not prof:
-        return {}
+        return
 
-    tailored_res = ai_assistant.tailor_application(
-        master_profile=prof["data"],
-        job_data=breakdown,
-        user_notes="",
+    profile_data = prof.get("data", {})
+    tailored_res = tailor.tailor_application(
+        master_profile=profile_data,
+        job_data=job_data,
         lang="en",
-        custom_api_key=gemini_key,
     )
 
-    job_info = db.get_job(job_id)
-    if job_info and job_info.get("folder_path"):
-        job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
-        job_folder.mkdir(parents=True, exist_ok=True)
-        prefix = get_job_prefix(breakdown, job_id)
+    prefix = get_job_prefix(job_data, job_id)
+    folder_path = ROOT_DIR / "jobs" / prefix
+    folder_path.mkdir(parents=True, exist_ok=True)
 
-        tailored_profile = tailored_res.get("tailored_profile", prof["data"])
-        paragraphs = tailored_res.get("cover_letter_paragraphs", {})
-        outreach = tailored_res.get("outreach", {})
+    # 1. Render & save CVs (EN & DE)
+    cv_en = render_html_cv(profile=profile_data, job_data=job_data, lang="en", custom_summary=tailored_res["executive_summary"]["en"])
+    with open(folder_path / f"{prefix}_cv_en.html", "w", encoding="utf-8") as f:
+        f.write(cv_en)
 
-        # 1. Render & save English (UK) CV
-        cv_en = render_html_cv(profile=tailored_profile, job_data=breakdown, lang="en")
-        with open(job_folder / f"{prefix}_cv_en.html", "w", encoding="utf-8") as f:
-            f.write(cv_en)
+    cv_de = render_html_cv(profile=profile_data, job_data=job_data, lang="de", custom_summary=tailored_res["executive_summary"]["de"])
+    with open(folder_path / f"{prefix}_cv_de.html", "w", encoding="utf-8") as f:
+        f.write(cv_de)
 
-        # 2. Render & save German (DE) CV
-        cv_de = render_html_cv(profile=tailored_profile, job_data=breakdown, lang="de")
-        with open(job_folder / f"{prefix}_cv_de.html", "w", encoding="utf-8") as f:
-            f.write(cv_de)
+    # 2. Render & save Cover Letters (EN & DE)
+    cl_en = render_html_cover_letter(profile=profile_data, job_data=job_data, lang="en", custom_paragraphs=tailored_res["cover_letter_paragraphs"]["en"])
+    with open(folder_path / f"{prefix}_coverletter_en.html", "w", encoding="utf-8") as f:
+        f.write(cl_en)
 
-        # 3. Render & save English Cover Letter
-        cl_en = render_html_cover_letter(
-            profile=tailored_profile,
-            job_data=breakdown,
-            lang="en",
-            custom_paragraphs=paragraphs.get("en"),
-        )
-        with open(job_folder / f"{prefix}_coverletter_en.html", "w", encoding="utf-8") as f:
-            f.write(cl_en)
+    cl_de = render_html_cover_letter(profile=profile_data, job_data=job_data, lang="de", custom_paragraphs=tailored_res["cover_letter_paragraphs"]["de"])
+    with open(folder_path / f"{prefix}_coverletter_de.html", "w", encoding="utf-8") as f:
+        f.write(cl_de)
 
-        # 4. Render & save German Cover Letter
-        cl_de = render_html_cover_letter(
-            profile=tailored_profile,
-            job_data=breakdown,
-            lang="de",
-            custom_paragraphs=paragraphs.get("de"),
-        )
-        with open(job_folder / f"{prefix}_coverletter_de.html", "w", encoding="utf-8") as f:
-            f.write(cl_de)
-
-        # 5. Save outreach pitches
-        outreach_text = f"""=======================================================
-CAREER SYSTEM — TAILORED OUTREACH PITCHES
-Target: {breakdown.get('role_title', '')} at {breakdown.get('company', '')}
-Generated with: {tailored_res.get('ai_model_used', 'Gemini AI')}
-=======================================================
-
-1. LINKEDIN CONNECTION NOTE (<300 characters):
--------------------------------------------------------
-{outreach.get('linkedin_connection', '')}
-
-2. LINKEDIN INMAIL PITCH:
--------------------------------------------------------
-{outreach.get('linkedin_inmail', '')}
-
-3. COLD EMAIL:
--------------------------------------------------------
-Subject: {outreach.get('cold_email_subject', '')}
-
-{outreach.get('cold_email_body', '')}
-"""
-        with open(job_folder / f"{prefix}_outreach.txt", "w", encoding="utf-8") as f:
-            f.write(outreach_text)
-
-    return tailored_res
+    # 3. Save Outreach pitches (JSON & TXT)
+    outreach_data = {
+        "en": tailored_res["outreach_en"],
+        "de": tailored_res["outreach_de"],
+        "updated_at": datetime.now().isoformat(),
+    }
+    with open(folder_path / f"{prefix}_outreach.json", "w", encoding="utf-8") as f:
+        json.dump(outreach_data, f, indent=2, ensure_ascii=False)
 
 
-# --- Pydantic Request Models ---
+# --- Multi-Page UI Routes ---
+
+@app.get("/", response_class=HTMLResponse)
+async def page_dashboard(request: Request):
+    """Main Jobs Dashboard & Priority Manager."""
+    jobs = db.get_all_jobs()
+    profiles = db.get_all_profiles()
+    return templates.TemplateResponse(request=request, name="index.html", context={"jobs": jobs, "profiles": profiles})
+
+
+@app.get("/profile", response_class=HTMLResponse)
+async def page_profile(request: Request, id: str = "default"):
+    """Master Profile & Master Templates Editor."""
+    profiles = db.get_all_profiles()
+    active_profile = db.get_profile(id) or db.get_profile("default")
+    return templates.TemplateResponse(request=request, name="profile.html", context={"profiles": profiles, "active_profile": active_profile, "profile_id": id})
+
+
+@app.get("/job/{job_id}", response_class=HTMLResponse)
+async def page_job_details(request: Request, job_id: int):
+    """Job Overview, Snapshot Viewer & Extracted Details Rectifier."""
+    job = db.get_job(job_id)
+    if not job:
+        return RedirectResponse("/")
+    return templates.TemplateResponse(request=request, name="job_details.html", context={"job": job, "job_id": job_id})
+
+
+@app.get("/job/{job_id}/cv", response_class=HTMLResponse)
+async def page_cv_editor(request: Request, job_id: int, lang: str = "en"):
+    """Dedicated Direct In-Document A4 CV Builder."""
+    job = db.get_job(job_id)
+    if not job:
+        return RedirectResponse("/")
+    
+    saved_html = db.get_job_doc(job_id, "cv", lang)
+    if not saved_html:
+        prof = db.get_profile("default")
+        profile_data = prof.get("data", {}) if prof else {}
+        tailored_sum = tailor.tailor_summary(profile_data, job, lang)
+        saved_html = render_html_cv(profile=profile_data, job_data=job, lang=lang, custom_summary=tailored_sum)
+        db.save_job_doc(job_id, "cv", lang, saved_html)
+
+    return templates.TemplateResponse(request=request, name="cv_editor.html", context={
+        "job": job,
+        "job_id": job_id,
+        "lang": lang.lower(),
+        "doc_html": saved_html,
+    })
+
+
+@app.get("/job/{job_id}/coverletter", response_class=HTMLResponse)
+async def page_coverletter_editor(request: Request, job_id: int, lang: str = "en"):
+    """Dedicated Direct In-Document A4 Cover Letter Builder."""
+    job = db.get_job(job_id)
+    if not job:
+        return RedirectResponse("/")
+    
+    saved_html = db.get_job_doc(job_id, "coverletter", lang)
+    if not saved_html:
+        prof = db.get_profile("default")
+        profile_data = prof.get("data", {}) if prof else {}
+        paras = tailor.tailor_cover_letter_paragraphs(profile_data, job, lang)
+        saved_html = render_html_cover_letter(profile=profile_data, job_data=job, lang=lang, custom_paragraphs=paras)
+        db.save_job_doc(job_id, "coverletter", lang, saved_html)
+
+    return templates.TemplateResponse(request=request, name="coverletter_editor.html", context={
+        "job": job,
+        "job_id": job_id,
+        "lang": lang.lower(),
+        "doc_html": saved_html,
+    })
+
+
+@app.get("/job/{job_id}/outreach", response_class=HTMLResponse)
+async def page_outreach_editor(request: Request, job_id: int, lang: str = "en"):
+    """Dedicated Outreach Messages Builder (LinkedIn Note, InMail, Cold Email)."""
+    job = db.get_job(job_id)
+    if not job:
+        return RedirectResponse("/")
+    
+    outreach_data = db.get_job_outreach(job_id)
+    if not outreach_data:
+        prof = db.get_profile("default")
+        profile_data = prof.get("data", {}) if prof else {}
+        tailored_pkg = tailor.tailor_application(profile_data, job, lang="en")
+        outreach_data = {
+            "en": tailored_pkg["outreach_en"],
+            "de": tailored_pkg["outreach_de"],
+        }
+        db.save_job_outreach(job_id, outreach_data)
+
+    return templates.TemplateResponse(request=request, name="outreach_editor.html", context={
+        "job": job,
+        "job_id": job_id,
+        "lang": lang.lower(),
+        "outreach": outreach_data,
+    })
+
+
+# --- REST API Endpoints ---
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "mode": "100% Offline Local Studio"}
+
+
+@app.get("/api/jobs")
+async def get_jobs_api():
+    return db.get_all_jobs()
+
+
+class ReorderRequest(BaseModel):
+    job_ids: List[int]
+
+
+@app.post("/api/jobs/reorder")
+async def reorder_jobs_api(payload: ReorderRequest):
+    """Persist drag-and-drop song-style priority ordering."""
+    db.reorder_jobs(payload.job_ids)
+    return {"status": "success", "reordered": len(payload.job_ids)}
+
+
 class ScrapeRequest(BaseModel):
     url: str
     custom_name: Optional[str] = None
     candidate_id: Optional[str] = "default"
-    gemini_api_key: Optional[str] = None
-
-
-class ParseTextRequest(BaseModel):
-    raw_text: str
-    candidate_id: Optional[str] = "default"
-    gemini_api_key: Optional[str] = None
-
-
-class TailorRequest(BaseModel):
-    candidate_id: str = "default"
-    job_data: Dict[str, Any]
-    user_notes: Optional[str] = ""
-    lang: Optional[str] = "en"
-    gemini_api_key: Optional[str] = None
-
-
-class JobStatusUpdate(BaseModel):
-    status: str
-
-
-class AnalyzeRequest(BaseModel):
-    candidate_id: str
-    job_id: Optional[int] = None
-    raw_text: Optional[str] = None
-    gemini_api_key: Optional[str] = None
-
-
-class SuggestRequest(BaseModel):
-    candidate_id: str
-    job_data: Dict[str, Any]
-    user_notes: str
-    lang: str = "en"
-    gemini_api_key: Optional[str] = None
-
-
-class CompileRequest(BaseModel):
-    candidate_id: str
-    job_data: Dict[str, Any]
-    lang: str = "en"
-    custom_summary: Optional[str] = None
-    custom_bullets: Optional[List[str]] = None
-    custom_letter_paragraphs: Optional[List[str]] = None
-    custom_profile: Optional[Dict[str, Any]] = None
-    photo_src: Optional[str] = None
-    photo_base64: Optional[str] = None
-
-
-class OutreachRequest(BaseModel):
-    candidate_id: str
-    company: str
-    contact_name: str
-    role_title: str
-    outreach_type: str = "connection"
-    job_id: Optional[int] = None
-
-
-# --- HTML Frontend Route ---
-@app.get("/", response_class=HTMLResponse)
-async def serve_index():
-    index_file = ROOT_DIR / "templates" / "index.html"
-    if not index_file.exists():
-        return "<h1>Career System UI is being configured...</h1>"
-    with open(index_file, "r", encoding="utf-8") as f:
-        return f.read()
-
-
-# --- Health Endpoint ---
-@app.get("/api/health")
-async def health_check():
-    return {"status": "ok", "message": "Career System Server is running"}
-
-
-# --- Profile Endpoints ---
-@app.get("/api/profiles")
-async def get_profiles():
-    return db.get_all_profiles()
-
-
-@app.post("/api/profiles/create")
-async def create_profile_endpoint(payload: Dict[str, Any] = Body(...)):
-    name = payload.get("name", "New Applicant").strip()
-    profile_id = payload.get("id") or re.sub(r"[^\w\-]", "_", name.lower())
-    default_data = {
-        "personal": {"full_name": name, "email": "", "phone": "", "city_en": "", "title_en": ""},
-        "executive_summary": {"en": "", "de": ""},
-        "experience": [],
-        "education": [],
-        "skills": {"domains": [], "software_tools": [], "hardware_instruments": [], "languages": []},
-        "leadership_awards": [],
-    }
-    db.save_profile(profile_id, default_data)
-    return {"status": "success", "profile_id": profile_id, "name": name}
-
-
-@app.get("/api/profiles/{profile_id}")
-async def get_profile_details(profile_id: str):
-    prof = db.get_profile(profile_id)
-    if not prof:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    return prof
-
-
-@app.post("/api/profiles/{profile_id}")
-@app.put("/api/profiles/{profile_id}")
-async def save_profile(profile_id: str, payload: Dict[str, Any] = Body(...)):
-    db.save_profile(profile_id, payload)
-    return {"status": "success", "profile_id": profile_id}
-
-
-# --- Portal Credentials & Connector Endpoints ---
-@app.get("/api/portals")
-async def get_portals():
-    return db.get_all_portals()
-
-
-@app.post("/api/portals")
-async def save_portal(payload: Dict[str, Any] = Body(...)):
-    portal_id = db.add_or_update_portal(payload)
-    return {"status": "success", "portal_id": portal_id}
-
-
-@app.delete("/api/portals/{portal_id}")
-async def delete_portal(portal_id: int):
-    db.delete_portal(portal_id)
-    return {"status": "success"}
-
-
-# --- Job Endpoints with Systematic Nomenclature ---
-@app.get("/api/jobs")
-async def get_jobs():
-    return db.get_all_jobs()
 
 
 @app.post("/api/jobs/scrape")
-async def scrape_job(req: ScrapeRequest):
+async def scrape_job_api(req: ScrapeRequest):
+    """Scrape job URL, generate clean print-preview snapshot, parse offline, seed documents."""
     try:
-        pdf_path = scraper.scrape_url(req.url, req.custom_name)
-        raw_text = extractor.extract_text_from_pdf(pdf_path)
-        gemini_key = req.gemini_api_key or os.getenv("GEMINI_API_KEY")
-        breakdown = ai_assistant.extract_job_breakdown(raw_text, custom_api_key=gemini_key)
-        breakdown["source_url"] = req.url
-        breakdown["source_file"] = pdf_path.name
-        breakdown["pdf_path"] = f"/job_ads_auto/{pdf_path.name}"
-        breakdown["full_text"] = raw_text
-        job_id = db.add_or_update_job(breakdown)
-        breakdown["id"] = job_id
+        job_archive = scraper.scrape_url(req.url, req.custom_name)
+        extracted = extractor.parse_job_text(job_archive.get("full_text", ""), job_archive.get("title", ""))
+        extracted["source_url"] = req.url
+        extracted["pdf_path"] = f"/job_ads_auto/{Path(job_archive['pdf_path']).name}"
+        extracted["full_text"] = job_archive.get("full_text", "")
+        
+        job_id = db.add_or_update_job(extracted)
+        extracted["id"] = job_id
 
-        # Copy original PDF with systematic naming: {jobposition}_{jobID}_{companyname}_description.pdf
-        job_info = db.get_job(job_id)
-        if job_info and job_info.get("folder_path"):
-            job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
-            os.makedirs(job_folder, exist_ok=True)
-            prefix = get_job_prefix(breakdown, job_id)
-            desc_name = f"{prefix}_description.pdf"
-            if job_folder.exists() and pdf_path.exists():
-                try:
-                    shutil.copy2(pdf_path, job_folder / desc_name)
-                except Exception as err:
-                    print(f"[Scrape] Warning copying PDF: {err}")
+        # Copy original snapshot PDF to dedicated job folder
+        prefix = get_job_prefix(extracted, job_id)
+        job_folder = ROOT_DIR / "jobs" / prefix
+        job_folder.mkdir(parents=True, exist_ok=True)
+        if Path(job_archive["pdf_path"]).exists():
+            try:
+                shutil.copy2(job_archive["pdf_path"], job_folder / f"{prefix}_description.pdf")
+            except Exception:
+                pass
+        if Path(job_archive.get("html_path", "")).exists():
+            try:
+                shutil.copy2(job_archive["html_path"], job_folder / f"{prefix}_description.html")
+            except Exception:
+                pass
 
-        # Automatically tailor Master CV & generate A4 assets
-        tailored = generate_and_save_application_package(
-            job_id=job_id,
-            breakdown=breakdown,
-            candidate_id=req.candidate_id or "default",
-            gemini_key=gemini_key,
-        )
+        # Seed tailored documents
+        seed_job_application_package(job_id, extracted, req.candidate_id or "default")
 
-        return {"status": "success", "job_id": job_id, "data": breakdown, "tailored": tailored}
+        return {"status": "success", "job_id": job_id, "data": extracted}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class ManualJobRequest(BaseModel):
+    company: str
+    role_title: str
+    job_id_ref: Optional[str] = ""
+    location: Optional[str] = "Hamburg, Germany"
+    deadline: Optional[str] = ""
+    employment_type: Optional[str] = "Full-time"
+    contract_type: Optional[str] = "Permanent / Unbefristet"
+    raw_text: Optional[str] = ""
+    candidate_id: Optional[str] = "default"
+
+
+@app.post("/api/jobs/manual")
+async def manual_job_api(req: ManualJobRequest):
+    """Manually add a job posting, run offline extraction, and seed application files."""
+    extracted = extractor.parse_job_text(req.raw_text or f"{req.role_title} at {req.company}")
+    extracted["company"] = req.company or extracted["company"]
+    extracted["role_title"] = req.role_title or extracted["role_title"]
+    extracted["job_id_ref"] = req.job_id_ref or extracted["job_id_ref"]
+    extracted["location"] = req.location or extracted["location"]
+    extracted["deadline"] = req.deadline or extracted["deadline"]
+    extracted["employment_type"] = req.employment_type or extracted["employment_type"]
+    extracted["contract_type"] = req.contract_type or extracted["contract_type"]
+    extracted["full_text"] = req.raw_text
+
+    job_id = db.add_or_update_job(extracted)
+    extracted["id"] = job_id
+
+    seed_job_application_package(job_id, extracted, req.candidate_id or "default")
+    return {"status": "success", "job_id": job_id, "data": extracted}
+
+
 @app.post("/api/jobs/upload")
-async def upload_job(
-    file: UploadFile = File(...),
-    gemini_api_key: Optional[str] = Form(None),
-    candidate_id: Optional[str] = Form("default"),
-):
+async def upload_job_pdf_api(file: UploadFile = File(...), candidate_id: Optional[str] = Form("default")):
+    """Upload a job posting PDF file, parse offline, and create job workspace."""
     dest_path = ROOT_DIR / "job_ads_manual" / file.filename
     with open(dest_path, "wb") as f:
         content = await file.read()
         f.write(content)
 
-    raw_text = extractor.extract_text_from_pdf(dest_path)
-    gemini_key = gemini_api_key or os.getenv("GEMINI_API_KEY")
-    breakdown = ai_assistant.extract_job_breakdown(raw_text, custom_api_key=gemini_key)
-    breakdown["source_file"] = file.filename
-    breakdown["pdf_path"] = f"/job_ads_manual/{file.filename}"
-    breakdown["full_text"] = raw_text
-    job_id = db.add_or_update_job(breakdown)
-    breakdown["id"] = job_id
+    extracted = extractor.process_pdf(dest_path)
+    extracted["source_file"] = file.filename
+    extracted["pdf_path"] = f"/job_ads_manual/{file.filename}"
 
-    # Copy PDF with systematic naming: {jobposition}_{jobID}_{companyname}_description.pdf
-    job_info = db.get_job(job_id)
-    if job_info and job_info.get("folder_path"):
-        job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
-        os.makedirs(job_folder, exist_ok=True)
-        prefix = get_job_prefix(breakdown, job_id)
-        desc_name = f"{prefix}_description.pdf"
-        if job_folder.exists() and dest_path.exists():
-            try:
-                shutil.copy2(dest_path, job_folder / desc_name)
-            except Exception as err:
-                print(f"[Upload] Warning copying PDF: {err}")
+    job_id = db.add_or_update_job(extracted)
+    extracted["id"] = job_id
 
-    # Automatically tailor Master CV & generate A4 assets
-    tailored = generate_and_save_application_package(
-        job_id=job_id,
-        breakdown=breakdown,
-        candidate_id=candidate_id or "default",
-        gemini_key=gemini_key,
-    )
+    # Copy to dedicated folder
+    prefix = get_job_prefix(extracted, job_id)
+    job_folder = ROOT_DIR / "jobs" / prefix
+    job_folder.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.copy2(dest_path, job_folder / f"{prefix}_description.pdf")
+    except Exception:
+        pass
 
-    return {"status": "success", "job_id": job_id, "data": breakdown, "tailored": tailored}
+    seed_job_application_package(job_id, extracted, candidate_id or "default")
+    return {"status": "success", "job_id": job_id, "data": extracted}
 
 
-@app.post("/api/jobs/parse-text")
-async def parse_job_text_endpoint(req: ParseTextRequest):
-    gemini_key = req.gemini_api_key or os.getenv("GEMINI_API_KEY")
-    breakdown = ai_assistant.extract_job_breakdown(req.raw_text, custom_api_key=gemini_key)
-    breakdown["source_file"] = "manual_text_input"
-    breakdown["full_text"] = req.raw_text
-    job_id = db.add_or_update_job(breakdown)
-    breakdown["id"] = job_id
-
-    # Save description text file with systematic naming: {jobposition}_{jobID}_{companyname}_description.txt
-    job_info = db.get_job(job_id)
-    if job_info and job_info.get("folder_path"):
-        job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
-        os.makedirs(job_folder, exist_ok=True)
-        prefix = get_job_prefix(breakdown, job_id)
-        desc_name = f"{prefix}_description.txt"
-        if job_folder.exists():
-            try:
-                with open(job_folder / desc_name, "w", encoding="utf-8") as f:
-                    f.write(req.raw_text)
-            except Exception as err:
-                print(f"[ParseText] Warning writing description: {err}")
-
-    # Automatically tailor Master CV & generate A4 assets
-    tailored = generate_and_save_application_package(
-        job_id=job_id,
-        breakdown=breakdown,
-        candidate_id=req.candidate_id or "default",
-        gemini_key=gemini_key,
-    )
-
-    return {"status": "success", "job_id": job_id, "data": breakdown, "tailored": tailored}
+@app.get("/api/jobs/{job_id}")
+async def get_job_api(job_id: int):
+    job = db.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
 
 
 @app.put("/api/jobs/{job_id}")
-async def update_job_endpoint(job_id: int, payload: Dict[str, Any] = Body(...)):
+async def update_job_api(job_id: int, payload: Dict[str, Any] = Body(...)):
     job = db.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -424,73 +353,96 @@ async def update_job_endpoint(job_id: int, payload: Dict[str, Any] = Body(...)):
 
 
 @app.delete("/api/jobs/{job_id}")
-async def delete_job_endpoint(job_id: int):
-    job = db.get_job(job_id)
-    if not job:
+async def delete_job_api(job_id: int):
+    deleted = db.delete_job(job_id)
+    if not deleted:
         raise HTTPException(status_code=404, detail="Job not found")
-    db.delete_job(job_id)
-
-    # Clean up local folder if it exists
-    if job.get("folder_path"):
-        folder_path = ROOT_DIR / job["folder_path"].lstrip("/")
-        if folder_path.exists():
-            shutil.rmtree(folder_path, ignore_errors=True)
-
-    return {"status": "success", "deleted_job_id": job_id}
+    return {"status": "success", "deleted_id": job_id}
 
 
-@app.get("/api/jobs/{job_id}/files")
-async def get_job_files(job_id: int):
-    job = db.get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+# --- Document Saving & Loading API ---
 
-    folder_rel = job.get("folder_path")
-    if not folder_rel:
-        return {"files": []}
-
-    job_folder = ROOT_DIR / folder_rel.lstrip("/")
-    if not job_folder.exists():
-        return {"files": []}
-
-    files = []
-    for f in sorted(job_folder.iterdir(), key=lambda x: x.name):
-        if f.is_file():
-            size_kb = round(f.stat().st_size / 1024, 1)
-            files.append({
-                "name": f.name,
-                "path": f"{folder_rel}/{f.name}",
-                "size_kb": size_kb,
-                "modified": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
-            })
-
-    return {"status": "success", "folder": folder_rel, "files": files}
+class SaveDocRequest(BaseModel):
+    html_content: str
 
 
-@app.post("/api/jobs/{job_id}/open-folder")
-async def open_job_folder(job_id: int):
-    job = db.get_job(job_id)
-    if not job or not job.get("folder_path"):
-        raise HTTPException(status_code=404, detail="Job folder not found")
-
-    folder = ROOT_DIR / job["folder_path"].lstrip("/")
-    if not folder.exists():
-        folder.mkdir(parents=True, exist_ok=True)
-
-    try:
-        if os.name == "nt":
-            os.startfile(str(folder))
-        elif sys.platform == "darwin":
-            subprocess.run(["open", str(folder)])
+@app.get("/api/jobs/{job_id}/doc/{doc_type}/{lang}")
+async def get_job_doc_api(job_id: int, doc_type: str, lang: str):
+    """Retrieve saved HTML document for in-place editor."""
+    doc_html = db.get_job_doc(job_id, doc_type, lang)
+    if not doc_html:
+        job = db.get_job(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        prof = db.get_profile("default")
+        profile_data = prof.get("data", {}) if prof else {}
+        if doc_type == "cv":
+            tailored_sum = tailor.tailor_summary(profile_data, job, lang)
+            doc_html = render_html_cv(profile=profile_data, job_data=job, lang=lang, custom_summary=tailored_sum)
         else:
-            subprocess.run(["xdg-open", str(folder)])
-        return {"status": "success", "path": str(folder)}
-    except Exception as e:
-        return {"status": "error", "message": str(e), "path": str(folder)}
+            paras = tailor.tailor_cover_letter_paragraphs(profile_data, job, lang)
+            doc_html = render_html_cover_letter(profile=profile_data, job_data=job, lang=lang, custom_paragraphs=paras)
+        db.save_job_doc(job_id, doc_type, lang, doc_html)
+
+    return {"status": "success", "html": doc_html, "doc_type": doc_type, "lang": lang}
 
 
+@app.post("/api/jobs/{job_id}/doc/{doc_type}/{lang}")
+async def save_job_doc_api(job_id: int, doc_type: str, lang: str, payload: SaveDocRequest):
+    """Directly save in-place edited HTML to local folder and database."""
+    saved_path = db.save_job_doc(job_id, doc_type, lang, payload.html_content)
+    return {"status": "success", "saved_path": saved_path, "updated_at": datetime.now().isoformat()}
+
+
+@app.get("/api/jobs/{job_id}/outreach")
+async def get_job_outreach_api(job_id: int):
+    outreach = db.get_job_outreach(job_id)
+    if not outreach:
+        job = db.get_job(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        prof = db.get_profile("default")
+        profile_data = prof.get("data", {}) if prof else {}
+        tailored = tailor.tailor_application(profile_data, job, lang="en")
+        outreach = {
+            "en": tailored["outreach_en"],
+            "de": tailored["outreach_de"],
+        }
+        db.save_job_outreach(job_id, outreach)
+    return outreach
+
+
+@app.post("/api/jobs/{job_id}/outreach")
+async def save_job_outreach_api(job_id: int, payload: Dict[str, Any] = Body(...)):
+    saved_path = db.save_job_outreach(job_id, payload)
+    return {"status": "success", "saved_path": saved_path, "updated_at": datetime.now().isoformat()}
+
+
+# --- Profiles & Master Templates API ---
+
+@app.get("/api/profiles")
+async def get_profiles_api():
+    return db.get_all_profiles()
+
+
+@app.get("/api/profiles/{profile_id}")
+async def get_profile_details_api(profile_id: str):
+    prof = db.get_profile(profile_id)
+    if not prof:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return prof
+
+
+@app.post("/api/profiles/{profile_id}")
+@app.put("/api/profiles/{profile_id}")
+async def save_profile_api(profile_id: str, payload: Dict[str, Any] = Body(...)):
+    db.save_profile(profile_id, payload)
+    return {"status": "success", "profile_id": profile_id}
+
+
+# --- Export Zip ---
 @app.get("/api/jobs/{job_id}/export-zip")
-async def export_job_zip(job_id: int):
+async def export_job_zip_api(job_id: int):
     job = db.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -499,7 +451,7 @@ async def export_job_zip(job_id: int):
     if not folder_rel:
         raise HTTPException(status_code=404, detail="No folder found for this job")
 
-    job_folder = ROOT_DIR / folder_rel.lstrip("/")
+    job_folder = ROOT_DIR / "jobs" / folder_rel
     if not job_folder.exists():
         raise HTTPException(status_code=404, detail="Job directory does not exist")
 
@@ -516,369 +468,6 @@ async def export_job_zip(job_id: int):
     return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
 
 
-@app.post("/api/jobs/import-zip")
-async def import_job_zip(file: UploadFile = File(...)):
-    content = await file.read()
-    zip_buffer = io.BytesIO(content)
-
-    temp_extract = ROOT_DIR / "jobs" / f"temp_{int(datetime.now().timestamp())}"
-    temp_extract.mkdir(parents=True, exist_ok=True)
-
-    with zipfile.ZipFile(zip_buffer, "r") as zf:
-        zf.extractall(temp_extract)
-
-    # Look for any *_meta_data.json or job_metadata.json
-    meta_files = list(temp_extract.glob("*meta_data.json"))
-    job_data = {}
-    if meta_files:
-        with open(meta_files[0], "r", encoding="utf-8") as f:
-            job_data = json.load(f)
-
-    if not job_data:
-        job_data = {
-            "company": "Imported Company",
-            "role_title": "Imported Position",
-            "location": "Location",
-        }
-
-    job_id = db.add_or_update_job(job_data)
-    job_info = db.get_job(job_id)
-    dest_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
-    dest_folder.mkdir(parents=True, exist_ok=True)
-
-    for item in temp_extract.iterdir():
-        shutil.move(str(item), str(dest_folder / item.name))
-
-    shutil.rmtree(temp_extract, ignore_errors=True)
-    return {"status": "success", "job_id": job_id, "data": job_data}
-
-
-@app.put("/api/jobs/{job_id}/status")
-async def update_job_status(job_id: int, req: JobStatusUpdate):
-    db.update_job_status(job_id, req.status)
-    return {"status": "success"}
-
-
-# --- Analysis & AI Suggestion Endpoints ---
-@app.post("/api/analyze")
-async def analyze_match(req: AnalyzeRequest):
-    prof = db.get_profile(req.candidate_id)
-    if not prof:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    job_data = None
-    if req.job_id:
-        job_data = db.get_job(req.job_id)
-    elif req.raw_text:
-        gemini_key = req.gemini_api_key or os.getenv("GEMINI_API_KEY")
-        job_data = ai_assistant.extract_job_breakdown(req.raw_text, custom_api_key=gemini_key)
-        job_data["source_file"] = "manual_text_input"
-        job_id = db.add_or_update_job(job_data)
-        job_data["id"] = job_id
-
-    if not job_data:
-        raise HTTPException(status_code=400, detail="No job data provided")
-
-    match_result = matcher.compute_match(req.candidate_id, job_data)
-    return {
-        "job": job_data,
-        "match_result": match_result,
-        "candidate": prof["data"]["personal"]["full_name"],
-    }
-
-
-@app.post("/api/ai/test-key")
-async def test_key_endpoint(payload: Dict[str, Any] = Body(default={})):
-    key = payload.get("api_key")
-    return ai_assistant.test_api_key(key)
-
-
-@app.post("/api/ai/tailor")
-async def tailor_endpoint(req: TailorRequest):
-    prof = db.get_profile(req.candidate_id)
-    if not prof:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    gemini_key = req.gemini_api_key or os.getenv("GEMINI_API_KEY")
-    res = ai_assistant.tailor_application(
-        master_profile=prof["data"],
-        job_data=req.job_data,
-        user_notes=req.user_notes or "",
-        lang=req.lang or "en",
-        custom_api_key=gemini_key,
-    )
-
-    # Save updated tailored files into the job folder if job has an id
-    job_id = req.job_data.get("id")
-    if job_id:
-        job_info = db.get_job(job_id)
-        if job_info and job_info.get("folder_path"):
-            job_folder = ROOT_DIR / job_info["folder_path"].lstrip("/")
-            job_folder.mkdir(parents=True, exist_ok=True)
-            prefix = get_job_prefix(req.job_data, job_id)
-
-            tailored_profile = res.get("tailored_profile", prof["data"])
-            paragraphs = res.get("cover_letter_paragraphs", {})
-            outreach = res.get("outreach", {})
-
-            cv_en = render_html_cv(profile=tailored_profile, job_data=req.job_data, lang="en")
-            with open(job_folder / f"{prefix}_cv_en.html", "w", encoding="utf-8") as f:
-                f.write(cv_en)
-
-            cv_de = render_html_cv(profile=tailored_profile, job_data=req.job_data, lang="de")
-            with open(job_folder / f"{prefix}_cv_de.html", "w", encoding="utf-8") as f:
-                f.write(cv_de)
-
-            cl_en = render_html_cover_letter(
-                profile=tailored_profile,
-                job_data=req.job_data,
-                lang="en",
-                custom_paragraphs=paragraphs.get("en"),
-            )
-            with open(job_folder / f"{prefix}_coverletter_en.html", "w", encoding="utf-8") as f:
-                f.write(cl_en)
-
-            cl_de = render_html_cover_letter(
-                profile=tailored_profile,
-                job_data=req.job_data,
-                lang="de",
-                custom_paragraphs=paragraphs.get("de"),
-            )
-            with open(job_folder / f"{prefix}_coverletter_de.html", "w", encoding="utf-8") as f:
-                f.write(cl_de)
-
-            outreach_text = f"""=======================================================
-CAREER SYSTEM — TAILORED OUTREACH PITCHES
-Target: {req.job_data.get('role_title', '')} at {req.job_data.get('company', '')}
-Generated with: {res.get('ai_model_used', 'Gemini AI')}
-=======================================================
-
-1. LINKEDIN CONNECTION NOTE (<300 characters):
--------------------------------------------------------
-{outreach.get('linkedin_connection', '')}
-
-2. LINKEDIN INMAIL PITCH:
--------------------------------------------------------
-{outreach.get('linkedin_inmail', '')}
-
-3. COLD EMAIL:
--------------------------------------------------------
-Subject: {outreach.get('cold_email_subject', '')}
-
-{outreach.get('cold_email_body', '')}
-"""
-            with open(job_folder / f"{prefix}_outreach.txt", "w", encoding="utf-8") as f:
-                f.write(outreach_text)
-
-    return res
-
-
-@app.post("/api/ai/suggest")
-async def ai_suggest(req: SuggestRequest):
-    prof = db.get_profile(req.candidate_id)
-    if not prof:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    if req.gemini_api_key:
-        ai_assistant.api_key = req.gemini_api_key
-
-    result = ai_assistant.analyze_fit_notes(
-        candidate_profile=prof["data"],
-        job_data=req.job_data,
-        user_notes=req.user_notes,
-        lang=req.lang,
-        custom_api_key=req.gemini_api_key,
-    )
-    return result
-
-
-# --- Photo Upload & Management Endpoints (Saves into Job Folder: {jobposition}_{jobID}_{companyname}_photo.ext) ---
-@app.post("/api/jobs/{job_id}/photo")
-async def upload_job_photo(job_id: int, file: UploadFile = File(...)):
-    job = db.get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    ext = Path(file.filename or "photo.jpg").suffix.lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
-        ext = ".jpg"
-
-    prefix = get_job_prefix(job, job_id)
-    filename = f"{prefix}_photo{ext}"
-
-    folder_rel = job.get("folder_path") or f"/jobs/{prefix}"
-    job_folder = ROOT_DIR / folder_rel.lstrip("/")
-    job_folder.mkdir(parents=True, exist_ok=True)
-    target_path = job_folder / filename
-
-    content = await file.read()
-    with open(target_path, "wb") as f:
-        f.write(content)
-
-    mime = "image/png" if ext == ".png" else "image/webp" if ext == ".webp" else "image/jpeg"
-    b64_str = f"data:{mime};base64,{base64.b64encode(content).decode('utf-8')}"
-    web_url = f"/jobs/{job_folder.name}/{filename}"
-
-    # Update metadata
-    db.update_job(job_id, {"photo_path": web_url})
-
-    return {
-        "status": "success",
-        "photo_url": web_url,
-        "photo_base64": b64_str,
-        "filename": filename,
-    }
-
-
-@app.delete("/api/jobs/{job_id}/photo")
-async def delete_job_photo(job_id: int):
-    job = db.get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    prefix = get_job_prefix(job, job_id)
-    folder_rel = job.get("folder_path") or f"/jobs/{prefix}"
-    job_folder = ROOT_DIR / folder_rel.lstrip("/")
-
-    for ext in [".jpg", ".jpeg", ".png", ".webp"]:
-        p = job_folder / f"{prefix}_photo{ext}"
-        if p.exists():
-            try:
-                p.unlink()
-            except Exception:
-                pass
-
-    db.update_job(job_id, {"photo_path": ""})
-    return {"status": "success", "message": "Photo removed"}
-
-
-# --- HTML Document Rendering Endpoints (Saves {jobposition}_{jobID}_{companyname}_{suffix}) ---
-@app.post("/api/render/html-cv")
-async def render_cv_endpoint(req: CompileRequest):
-    prof = db.get_profile(req.candidate_id)
-    if not prof:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    photo_src = req.photo_src or req.photo_base64
-    job_id = req.job_data.get("id")
-
-    # If photo_src was not explicitly passed, inspect job folder for existing photo file
-    if not photo_src and job_id:
-        job = db.get_job(job_id)
-        if job and job.get("folder_path"):
-            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
-            if job_folder.exists():
-                prefix = get_job_prefix(job, job_id)
-                for ext in [".jpg", ".jpeg", ".png", ".webp"]:
-                    p = job_folder / f"{prefix}_photo{ext}"
-                    if p.exists():
-                        try:
-                            with open(p, "rb") as f:
-                                b64 = base64.b64encode(f.read()).decode("utf-8")
-                            mime = "image/png" if ext == ".png" else "image/webp" if ext == ".webp" else "image/jpeg"
-                            photo_src = f"data:{mime};base64,{b64}"
-                        except Exception:
-                            photo_src = f"/jobs/{job_folder.name}/{p.name}"
-                        break
-
-    profile_data = req.custom_profile if req.custom_profile else prof["data"]
-
-    html_content = render_html_cv(
-        profile=profile_data,
-        job_data=req.job_data,
-        lang=req.lang,
-        custom_summary=req.custom_summary,
-        photo_src=photo_src,
-    )
-
-    # Save to job folder: {jobposition}_{jobID}_{companyname}_cv_{lang}.html
-    if job_id:
-        job = db.get_job(job_id)
-        if job and job.get("folder_path"):
-            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
-            if job_folder.exists():
-                prefix = get_job_prefix(job, job_id)
-                filename = f"{prefix}_cv_{req.lang}.html"
-                with open(job_folder / filename, "w", encoding="utf-8") as f:
-                    f.write(html_content)
-
-    return {"status": "success", "html": html_content, "photo_src": photo_src}
-
-
-@app.post("/api/generate-html")
-async def generate_html_studio_endpoint(req: CompileRequest):
-    prof = db.get_profile(req.candidate_id)
-    profile_data = req.custom_profile if req.custom_profile else (prof["data"] if prof else {})
-    if not profile_data or not profile_data.get("personal"):
-        profile_data = {
-            "personal": {"full_name": req.candidate_id.replace("_", " ").title()},
-            "executive_summary": {"en": "", "de": ""},
-            "experience": [],
-            "education": [],
-            "skills": {},
-            "leadership_awards": [],
-        }
-
-    job_id = req.job_data.get("id")
-    photo_src = None
-    if job_id:
-        job = db.get_job(job_id)
-        if job and job.get("folder_path"):
-            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
-            if job_folder.exists():
-                prefix = get_job_prefix(job, job_id)
-                for ext in [".jpg", ".jpeg", ".png", ".webp"]:
-                    p = job_folder / f"{prefix}_photo{ext}"
-                    if p.exists():
-                        try:
-                            with open(p, "rb") as f:
-                                b64 = base64.b64encode(f.read()).decode("utf-8")
-                            mime = "image/png" if ext == ".png" else "image/webp" if ext == ".webp" else "image/jpeg"
-                            photo_src = f"data:{mime};base64,{b64}"
-                        except Exception:
-                            photo_src = f"/jobs/{job_folder.name}/{p.name}"
-                        break
-
-    cv_html = render_html_cv(
-        profile=profile_data,
-        job_data=req.job_data,
-        lang=req.lang,
-        custom_summary=req.custom_summary,
-        photo_src=photo_src,
-    )
-
-    cover_letter_html = render_html_cover_letter(
-        profile=profile_data,
-        job_data=req.job_data,
-        lang=req.lang,
-        custom_paragraphs=req.custom_letter_paragraphs,
-    )
-
-    # Save to job folder if job_id exists
-    if job_id:
-        job = db.get_job(job_id)
-        if job and job.get("folder_path"):
-            job_folder = ROOT_DIR / job["folder_path"].lstrip("/")
-            if job_folder.exists():
-                prefix = get_job_prefix(job, job_id)
-                with open(job_folder / f"{prefix}_cv_{req.lang}.html", "w", encoding="utf-8") as f:
-                    f.write(cv_html)
-                with open(job_folder / f"{prefix}_coverletter_{req.lang}.html", "w", encoding="utf-8") as f:
-                    f.write(cover_letter_html)
-
-    return {
-        "status": "success",
-        "cv_html": cv_html,
-        "cover_letter_html": cover_letter_html,
-        "html": cv_html,
-        "photo_src": photo_src,
-    }
-
-
-@app.post("/api/render/html-letter")
-async def render_letter_endpoint(req: CompileRequest):
-    prof = db.get_profile(req.candidate_id)
-    profile_data = req.custom_profile if req.custom_profile else (prof["data"] if prof else {})
     html_content = render_html_cover_letter(
         profile=profile_data,
         job_data=req.job_data,

@@ -90,23 +90,32 @@ class Database:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS jobs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    priority_order INTEGER DEFAULT 0,
                     company TEXT NOT NULL,
                     role_title TEXT NOT NULL,
                     location TEXT,
-                    employment_type TEXT,
-                    contract_type TEXT,
-                    seniority_level TEXT,
+                    work_mode TEXT DEFAULT 'On-site',
+                    employment_type TEXT DEFAULT 'Full-time',
+                    contract_type TEXT DEFAULT 'Permanent / Unbefristet',
+                    seniority_level TEXT DEFAULT 'Mid-Level',
                     job_id_ref TEXT,
                     salary_range TEXT,
                     industry_sector TEXT,
                     deadline TEXT,
+                    day_posted TEXT,
                     start_date TEXT,
+                    contact_person TEXT,
+                    contact_email TEXT,
+                    contact_phone TEXT,
                     source_file TEXT,
                     source_url TEXT,
                     pdf_path TEXT,
                     folder_path TEXT,
                     status TEXT DEFAULT 'New',
                     extracted_skills_json TEXT,
+                    responsibilities_json TEXT,
+                    requirements_json TEXT,
+                    benefits_json TEXT,
                     metadata_json TEXT,
                     full_text TEXT,
                     created_at TEXT NOT NULL,
@@ -116,14 +125,23 @@ class Database:
             # Schema migration helper
             columns = [c[1] for c in cursor.execute("PRAGMA table_info(jobs)").fetchall()]
             extra_cols = [
+                ("priority_order", "INTEGER DEFAULT 0"),
+                ("work_mode", "TEXT DEFAULT 'On-site'"),
                 ("employment_type", "TEXT"),
                 ("contract_type", "TEXT"),
                 ("seniority_level", "TEXT"),
                 ("job_id_ref", "TEXT"),
                 ("salary_range", "TEXT"),
                 ("industry_sector", "TEXT"),
+                ("day_posted", "TEXT"),
+                ("contact_person", "TEXT"),
+                ("contact_email", "TEXT"),
+                ("contact_phone", "TEXT"),
                 ("pdf_path", "TEXT"),
                 ("folder_path", "TEXT"),
+                ("responsibilities_json", "TEXT"),
+                ("requirements_json", "TEXT"),
+                ("benefits_json", "TEXT"),
                 ("metadata_json", "TEXT"),
             ]
             for col_name, col_type in extra_cols:
@@ -132,19 +150,6 @@ class Database:
                         cursor.execute(f"ALTER TABLE jobs ADD COLUMN {col_name} {col_type}")
                     except Exception:
                         pass
-
-            # Portal Credentials table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS portal_credentials (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    portal_name TEXT NOT NULL,
-                    portal_url TEXT NOT NULL,
-                    username TEXT NOT NULL,
-                    password TEXT NOT NULL,
-                    enabled INTEGER DEFAULT 1,
-                    updated_at TEXT NOT NULL
-                )
-            """)
 
             # Contacts table
             cursor.execute("""
@@ -159,21 +164,6 @@ class Database:
                     status TEXT DEFAULT 'Identified',
                     notes TEXT,
                     last_contact TEXT,
-                    created_at TEXT NOT NULL
-                )
-            """)
-            # Outreach log table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS outreach_log (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    candidate_id TEXT NOT NULL,
-                    company TEXT NOT NULL,
-                    contact_name TEXT NOT NULL,
-                    channel TEXT,
-                    message_type TEXT,
-                    status TEXT,
-                    content TEXT,
-                    next_action_date TEXT,
                     created_at TEXT NOT NULL
                 )
             """)
@@ -222,7 +212,10 @@ class Database:
             row = conn.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
             if row:
                 res = dict(row)
-                res["data"] = json.loads(res["data_json"])
+                try:
+                    res["data"] = json.loads(res["data_json"])
+                except Exception:
+                    res["data"] = {}
                 return res
         return None
 
@@ -248,65 +241,20 @@ class Database:
         with open(prof_dir / "profile.yaml", "w", encoding="utf-8") as f:
             yaml.safe_dump(profile_data, f, sort_keys=False, allow_unicode=True)
 
-    # --- Portal Credentials Operations ---
-    def get_all_portals(self) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            rows = conn.execute("SELECT * FROM portal_credentials ORDER BY id DESC").fetchall()
-            return [dict(r) for r in rows]
-
-    def add_or_update_portal(self, portal_data: Dict[str, Any]) -> int:
-        now = datetime.now().isoformat()
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            portal_id = portal_data.get("id")
-            if portal_id:
-                cursor.execute(
-                    """
-                    UPDATE portal_credentials SET
-                        portal_name = ?, portal_url = ?, username = ?, password = ?, enabled = ?, updated_at = ?
-                    WHERE id = ?
-                    """,
-                    (
-                        portal_data.get("portal_name", "Portal"),
-                        portal_data.get("portal_url", ""),
-                        portal_data.get("username", ""),
-                        portal_data.get("password", ""),
-                        portal_data.get("enabled", 1),
-                        now,
-                        portal_id,
-                    ),
-                )
-                conn.commit()
-                return portal_id
-            else:
-                cursor.execute(
-                    """
-                    INSERT INTO portal_credentials (portal_name, portal_url, username, password, enabled, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        portal_data.get("portal_name", "Portal"),
-                        portal_data.get("portal_url", ""),
-                        portal_data.get("username", ""),
-                        portal_data.get("password", ""),
-                        portal_data.get("enabled", 1),
-                        now,
-                    ),
-                )
-                conn.commit()
-                return cursor.lastrowid
-
-    def delete_portal(self, portal_id: int) -> None:
-        with self.get_connection() as conn:
-            conn.execute("DELETE FROM portal_credentials WHERE id = ?", (portal_id,))
-            conn.commit()
-
-    # --- Job Operations with Systematic Nomenclature ---
+    # --- Job Operations with Priority Order & Local Folder Sync ---
     def add_or_update_job(self, job_data: Dict[str, Any]) -> int:
         now = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            
+            # Determine next priority order (top of list)
+            max_order_row = cursor.execute("SELECT MIN(priority_order) as min_order FROM jobs").fetchone()
+            next_priority = (max_order_row["min_order"] - 1) if (max_order_row and max_order_row["min_order"] is not None) else 0
+
             skills_json = json.dumps(job_data.get("extracted_skills", []))
+            resp_json = json.dumps(job_data.get("key_responsibilities", job_data.get("responsibilities", [])))
+            req_json = json.dumps(job_data.get("required_qualifications", job_data.get("requirements", [])))
+            ben_json = json.dumps(job_data.get("benefits_perks", job_data.get("benefits", [])))
             
             meta = {
                 "key_responsibilities": job_data.get("key_responsibilities", []),
@@ -315,36 +263,49 @@ class Database:
                 "tech_stack_tools": job_data.get("tech_stack_tools", []),
                 "language_requirements": job_data.get("language_requirements", []),
                 "benefits_perks": job_data.get("benefits_perks", []),
-                "hiring_manager_contact": job_data.get("hiring_manager_contact", ""),
+                "hiring_manager_contact": job_data.get("contact_person", job_data.get("hiring_manager_contact", "")),
             }
             metadata_json = json.dumps(meta)
 
             cursor.execute(
                 """
-                INSERT INTO jobs (company, role_title, location, employment_type, contract_type,
-                                  seniority_level, job_id_ref, salary_range, industry_sector,
-                                  deadline, start_date, source_file, source_url, pdf_path, folder_path,
-                                  status, extracted_skills_json, metadata_json, full_text, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO jobs (
+                    priority_order, company, role_title, location, work_mode, employment_type, contract_type,
+                    seniority_level, job_id_ref, salary_range, industry_sector,
+                    deadline, day_posted, start_date, contact_person, contact_email, contact_phone,
+                    source_file, source_url, pdf_path, folder_path,
+                    status, extracted_skills_json, responsibilities_json, requirements_json, benefits_json,
+                    metadata_json, full_text, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
+                    job_data.get("priority_order", next_priority),
                     job_data.get("company", "Target Company"),
                     job_data.get("role_title", "Position"),
                     job_data.get("location", "Location"),
+                    job_data.get("work_mode", "On-site"),
                     job_data.get("employment_type", "Full-time"),
                     job_data.get("contract_type", "Permanent / Unbefristet"),
                     job_data.get("seniority_level", "Mid-Level"),
-                    job_data.get("job_id", job_data.get("job_id_ref", "")),
+                    job_data.get("job_id_ref", job_data.get("job_id", "")),
                     job_data.get("salary_range", "Not disclosed"),
                     job_data.get("industry_sector", "Technology / Engineering"),
-                    job_data.get("application_deadline", job_data.get("deadline", "")),
+                    job_data.get("deadline", job_data.get("application_deadline", "")),
+                    job_data.get("day_posted", ""),
                     job_data.get("start_date", ""),
+                    job_data.get("contact_person", job_data.get("hiring_manager_contact", "")),
+                    job_data.get("contact_email", ""),
+                    job_data.get("contact_phone", ""),
                     job_data.get("source_file", ""),
                     job_data.get("source_url", ""),
                     job_data.get("pdf_path", ""),
                     job_data.get("folder_path", ""),
                     job_data.get("status", "New"),
                     skills_json,
+                    resp_json,
+                    req_json,
+                    ben_json,
                     metadata_json,
                     job_data.get("full_text", ""),
                     now,
@@ -354,7 +315,7 @@ class Database:
             conn.commit()
             job_id = cursor.lastrowid
 
-            # Create dedicated job folder following: {jobposition}_{jobID}_{companyname}
+            # Create dedicated job folder: jobs/{jobposition}_{jobID}_{companyname}
             prefix = get_job_prefix(job_data, job_id)
             folder_name = prefix
             job_folder = self.db_path.parent / "jobs" / folder_name
@@ -362,7 +323,7 @@ class Database:
                 os.makedirs(job_folder, exist_ok=True)
                 meta_filename = f"{prefix}_meta_data.json"
                 with open(job_folder / meta_filename, "w", encoding="utf-8") as f:
-                    json.dump({**job_data, "id": job_id}, f, indent=2, ensure_ascii=False)
+                    json.dump({**job_data, "id": job_id, "prefix": prefix}, f, indent=2, ensure_ascii=False)
             except Exception as err:
                 print(f"[Database] Warning creating job metadata file: {err}")
 
@@ -375,6 +336,9 @@ class Database:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             skills_json = json.dumps(job_data.get("extracted_skills", []))
+            resp_json = json.dumps(job_data.get("key_responsibilities", job_data.get("responsibilities", [])))
+            req_json = json.dumps(job_data.get("required_qualifications", job_data.get("requirements", [])))
+            ben_json = json.dumps(job_data.get("benefits_perks", job_data.get("benefits", [])))
             
             meta = job_data.get("metadata", {})
             if not meta:
@@ -385,16 +349,18 @@ class Database:
                     "tech_stack_tools": job_data.get("tech_stack_tools", []),
                     "language_requirements": job_data.get("language_requirements", []),
                     "benefits_perks": job_data.get("benefits_perks", []),
-                    "hiring_manager_contact": job_data.get("hiring_manager_contact", ""),
+                    "hiring_manager_contact": job_data.get("contact_person", job_data.get("hiring_manager_contact", "")),
                 }
             metadata_json = json.dumps(meta)
 
             cursor.execute(
                 """
                 UPDATE jobs SET
-                    company = ?, role_title = ?, location = ?, employment_type = ?,
+                    company = ?, role_title = ?, location = ?, work_mode = ?, employment_type = ?,
                     contract_type = ?, seniority_level = ?, job_id_ref = ?, salary_range = ?,
-                    industry_sector = ?, deadline = ?, status = ?, extracted_skills_json = ?,
+                    industry_sector = ?, deadline = ?, day_posted = ?, contact_person = ?,
+                    contact_email = ?, contact_phone = ?, status = ?, extracted_skills_json = ?,
+                    responsibilities_json = ?, requirements_json = ?, benefits_json = ?,
                     metadata_json = ?, updated_at = ?
                 WHERE id = ?
                 """,
@@ -402,6 +368,7 @@ class Database:
                     job_data.get("company", "Target Company"),
                     job_data.get("role_title", "Position"),
                     job_data.get("location", "Location"),
+                    job_data.get("work_mode", "On-site"),
                     job_data.get("employment_type", "Full-time"),
                     job_data.get("contract_type", "Permanent / Unbefristet"),
                     job_data.get("seniority_level", "Mid-Level"),
@@ -409,8 +376,15 @@ class Database:
                     job_data.get("salary_range", "Not disclosed"),
                     job_data.get("industry_sector", "Technology / Engineering"),
                     job_data.get("deadline", job_data.get("application_deadline", "")),
+                    job_data.get("day_posted", ""),
+                    job_data.get("contact_person", ""),
+                    job_data.get("contact_email", ""),
+                    job_data.get("contact_phone", ""),
                     job_data.get("status", "New"),
                     skills_json,
+                    resp_json,
+                    req_json,
+                    ben_json,
                     metadata_json,
                     now,
                     job_id,
@@ -418,7 +392,7 @@ class Database:
             )
             conn.commit()
 
-            # Update {jobposition}_{jobID}_{companyname}_meta_data.json in folder if exists
+            # Update meta json in folder
             row = conn.execute("SELECT folder_path FROM jobs WHERE id = ?", (job_id,)).fetchone()
             if row and row["folder_path"]:
                 folder_path = self.db_path.parent / row["folder_path"].lstrip("/")
@@ -426,24 +400,26 @@ class Database:
                     prefix = get_job_prefix(job_data, job_id)
                     meta_filename = f"{prefix}_meta_data.json"
                     with open(folder_path / meta_filename, "w", encoding="utf-8") as f:
-                        json.dump({**job_data, "id": job_id}, f, indent=2, ensure_ascii=False)
+                        json.dump({**job_data, "id": job_id, "prefix": prefix}, f, indent=2, ensure_ascii=False)
 
-    def delete_job(self, job_id: int) -> Optional[Dict[str, Any]]:
-        job = self.get_job(job_id)
-        if not job:
-            return None
+    def reorder_jobs(self, job_ids: List[int]) -> None:
+        """Persist drag-and-drop song-style priority ordering."""
         with self.get_connection() as conn:
-            conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+            for index, j_id in enumerate(job_ids):
+                conn.execute("UPDATE jobs SET priority_order = ? WHERE id = ?", (index, int(j_id)))
             conn.commit()
-        return job
 
     def get_all_jobs(self) -> List[Dict[str, Any]]:
+        """Retrieve all jobs sorted by priority_order then descending ID."""
         with self.get_connection() as conn:
-            rows = conn.execute("SELECT * FROM jobs ORDER BY id DESC").fetchall()
+            rows = conn.execute("SELECT * FROM jobs ORDER BY priority_order ASC, id DESC").fetchall()
             result = []
             for r in rows:
                 d = dict(r)
-                d["extracted_skills"] = json.loads(d["extracted_skills_json"] or "[]")
+                d["extracted_skills"] = json.loads(d.get("extracted_skills_json") or "[]")
+                d["responsibilities"] = json.loads(d.get("responsibilities_json") or "[]")
+                d["requirements"] = json.loads(d.get("requirements_json") or "[]")
+                d["benefits"] = json.loads(d.get("benefits_json") or "[]")
                 try:
                     d["metadata"] = json.loads(d.get("metadata_json") or "{}")
                 except Exception:
@@ -456,7 +432,10 @@ class Database:
             row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
             if row:
                 d = dict(row)
-                d["extracted_skills"] = json.loads(d["extracted_skills_json"] or "[]")
+                d["extracted_skills"] = json.loads(d.get("extracted_skills_json") or "[]")
+                d["responsibilities"] = json.loads(d.get("responsibilities_json") or "[]")
+                d["requirements"] = json.loads(d.get("requirements_json") or "[]")
+                d["benefits"] = json.loads(d.get("benefits_json") or "[]")
                 try:
                     d["metadata"] = json.loads(d.get("metadata_json") or "{}")
                 except Exception:
@@ -464,38 +443,92 @@ class Database:
                 return d
         return None
 
+    def delete_job(self, job_id: int) -> Optional[Dict[str, Any]]:
+        job = self.get_job(job_id)
+        if not job:
+            return None
+        with self.get_connection() as conn:
+            conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+            conn.commit()
+
+        # Delete local folder if exists
+        if job.get("folder_path"):
+            folder = self.db_path.parent / job["folder_path"].lstrip("/")
+            if folder.exists():
+                import shutil
+                try:
+                    shutil.rmtree(folder)
+                except Exception:
+                    pass
+        return job
+
     def update_job_status(self, job_id: int, status: str) -> None:
         with self.get_connection() as conn:
             conn.execute("UPDATE jobs SET status = ?, updated_at = ? WHERE id = ?", (status, datetime.now().isoformat(), job_id))
             conn.commit()
 
-    # --- Contact Operations ---
-    def get_all_contacts(self) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            rows = conn.execute("SELECT * FROM contacts ORDER BY id DESC").fetchall()
-            return [dict(r) for r in rows]
+    # --- Document & Outreach Local Persistence ---
+    def save_job_doc(self, job_id: int, doc_type: str, lang: str, html_content: str) -> str:
+        """Save edited HTML document directly to the dedicated job folder."""
+        job = self.get_job(job_id)
+        if not job:
+            raise ValueError(f"Job {job_id} not found")
+        
+        folder_path = self.db_path.parent / (job.get("folder_path", f"/jobs/job_{job_id}").lstrip("/"))
+        folder_path.mkdir(parents=True, exist_ok=True)
 
-    def add_contact(self, contact_data: Dict[str, Any]) -> int:
-        now = datetime.now().isoformat()
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO contacts (company, contact_name, position, linkedin_url, email, phone, status, notes, last_contact, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    contact_data.get("company", ""),
-                    contact_data.get("contact_name", "Hiring Contact"),
-                    contact_data.get("position", ""),
-                    contact_data.get("linkedin_url", ""),
-                    contact_data.get("email", ""),
-                    contact_data.get("phone", ""),
-                    contact_data.get("status", "Identified"),
-                    contact_data.get("notes", ""),
-                    contact_data.get("last_contact", ""),
-                    now,
-                ),
-            )
-            conn.commit()
-            return cursor.lastrowid
+        prefix = get_job_prefix(job, job_id)
+        doc_filename = f"{prefix}_{doc_type}_{lang.lower()}.html"
+        target_file = folder_path / doc_filename
+
+        with open(target_file, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+        return str(target_file)
+
+    def get_job_doc(self, job_id: int, doc_type: str, lang: str) -> Optional[str]:
+        """Load edited HTML document from the dedicated job folder."""
+        job = self.get_job(job_id)
+        if not job or not job.get("folder_path"):
+            return None
+        
+        folder_path = self.db_path.parent / job["folder_path"].lstrip("/")
+        prefix = get_job_prefix(job, job_id)
+        doc_filename = f"{prefix}_{doc_type}_{lang.lower()}.html"
+        target_file = folder_path / doc_filename
+
+        if target_file.exists():
+            with open(target_file, "r", encoding="utf-8") as f:
+                return f.read()
+        return None
+
+    def save_job_outreach(self, job_id: int, outreach_data: Dict[str, Any]) -> str:
+        """Save customized outreach pitches to the dedicated job folder."""
+        job = self.get_job(job_id)
+        if not job:
+            raise ValueError(f"Job {job_id} not found")
+        
+        folder_path = self.db_path.parent / (job.get("folder_path", f"/jobs/job_{job_id}").lstrip("/"))
+        folder_path.mkdir(parents=True, exist_ok=True)
+
+        prefix = get_job_prefix(job, job_id)
+        json_file = folder_path / f"{prefix}_outreach.json"
+        with open(json_file, "w", encoding="utf-8") as f:
+            json.dump(outreach_data, f, indent=2, ensure_ascii=False)
+
+        return str(json_file)
+
+    def get_job_outreach(self, job_id: int) -> Optional[Dict[str, Any]]:
+        """Load outreach pitches from the dedicated job folder."""
+        job = self.get_job(job_id)
+        if not job or not job.get("folder_path"):
+            return None
+        
+        folder_path = self.db_path.parent / job["folder_path"].lstrip("/")
+        prefix = get_job_prefix(job, job_id)
+        json_file = folder_path / f"{prefix}_outreach.json"
+
+        if json_file.exists():
+            with open(json_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        return None

@@ -5,6 +5,7 @@
 body {
   background-color: #09090b;
   color: #f4f4f5;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
 }
 
 ::-webkit-scrollbar {
@@ -23,4 +24,40 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
+}
+
+/* Drag and Drop styling */
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+tr.dragging {
+  opacity: 0.35;
+  background-color: #1e293b !important;
+}
+
+tr.drag-over {
+  border-top: 2px solid #38bdf8 !important;
+}
+
+/* Print Rules */
+@media print {
+  body {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .cv-page, .letter-page {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
 }

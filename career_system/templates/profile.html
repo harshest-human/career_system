@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Profile & Templates — Career System</title>
+  <link rel="icon" href="/static/icon.png" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background-color: #09090b;
+      color: #f4f4f5;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    }
+    .card-bg {
+      background: #121215;
+      border: 1px solid #27272a;
+    }
+    .input-box {
+      background: #18181b;
+      border: 1px solid #27272a;
+      color: #f4f4f5;
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    .input-box:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: #27272a;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Toolbar -->
+  <header class="bg-[#09090b]/95 backdrop-blur border-b border-zinc-800 sticky top-0 z-50 px-4 sm:px-6 h-16 flex items-center justify-between">
+    <div class="flex items-center space-x-3 sm:space-x-4">
+      <a href="/" class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold rounded-lg border border-zinc-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-left"></i> Dashboard
+      </a>
+      <div>
+        <div class="font-bold text-sm text-white flex items-center gap-2">
+          <span>Master Profile & Templates</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">100% Local</span>
+        </div>
+        <div class="text-xs text-zinc-400">Pre-fill data source for all future CVs, Cover Letters & Pitches</div>
+      </div>
+    </div>
+
+    <!-- Right: Save Button -->
+    <div class="flex items-center space-x-3">
+      <button onclick="saveMasterProfile()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-md transition flex items-center gap-1.5">
+        <i class="fa-solid fa-floppy-disk"></i> Save Master Profile
+      </button>
+    </div>
+  </header>
+
+  <!-- Master Profile Form Container -->
+  <main class="max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 space-y-6">
+
+    <!-- 1. Personal & Contact Details -->
+    <div class="card-bg p-6 rounded-2xl shadow-xl space-y-4">
+      <h2 class="font-bold text-base text-white flex items-center gap-2 border-b border-zinc-800 pb-3">
+        <i class="fa-solid fa-user text-blue-400"></i> Personal & Contact Info
+      </h2>
+
+      {% set p = (active_profile.data.personal if active_profile and active_profile.data else {}) %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 mb-1">Full Name</label>
+          <input type="text" id="full_name" value="{{ p.full_name or '' }}" class="input-box">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 mb-1">Email Address</label>
+          <input type="email" id="email" value="{{ p.email or '' }}" class="input-box">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 mb-1">Phone Number</label>
+          <input type="text" id="phone" value="{{ p.phone or '' }}" class="input-box">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 mb-1">City / Location</label>
+          <input type="text" id="city_en" value="{{ p.city_en or p.city_de or '' }}" class="input-box">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 mb-1">Professional Title (EN)</label>
+          <input type="text" id="title_en" value="{{ p.title_en or '' }}" placeholder="e.g. Agronomist / Data Scientist" class="input-box">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 mb-1">Professional Title (DE)</label>
+          <input type="text" id="title_de" value="{{ p.title_de or '' }}" placeholder="e.g. Agrarwissenschaftler / Datenanalyst" class="input-box">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-semibold text-zinc-400 mb-1">LinkedIn Profile URL</label>
+          <input type="url" id="linkedin" value="{{ p.linkedin or '' }}" class="input-box">
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Master Executive Summaries (EN & DE) -->
+    <div class="card-bg p-6 rounded-2xl shadow-xl space-y-4">
+      <h2 class="font-bold text-base text-white flex items-center gap-2 border-b border-zinc-800 pb-3">
+        <i class="fa-solid fa-align-left text-indigo-400"></i> Master Executive Summary (Template)
+      </h2>
+
+      {% set exec = (active_profile.data.executive_summary if active_profile and active_profile.data else {}) %}
+      <div>
+        <label class="block text-xs font-semibold text-zinc-400 mb-1">English Summary (Master)</label>
+        <textarea id="summary_en" rows="3" class="input-box leading-relaxed">{{ exec.en or '' }}</textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-zinc-400 mb-1">German Summary (Master - Profil)</label>
+        <textarea id="summary_de" rows="3" class="input-box leading-relaxed">{{ exec.de or '' }}</textarea>
+      </div>
+    </div>
+
+    <!-- 3. Master Skills Matrix -->
+    <div class="card-bg p-6 rounded-2xl shadow-xl space-y-4">
+      <h2 class="font-bold text-base text-white flex items-center gap-2 border-b border-zinc-800 pb-3">
+        <i class="fa-solid fa-layer-group text-emerald-400"></i> Master Skills Matrix
+      </h2>
+
+      {% set skills = (active_profile.data.skills if active_profile and active_profile.data else {}) %}
+      <div>
+        <label class="block text-xs font-semibold text-zinc-400 mb-1">Core Domains & Methodologies (Comma Separated)</label>
+        <input type="text" id="skills_domains" value="{{ (skills.domains or []) | join(', ') }}" class="input-box">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-zinc-400 mb-1">Software, Languages & Tools (Comma Separated)</label>
+        <input type="text" id="skills_software" value="{{ (skills.software_tools or []) | join(', ') }}" class="input-box">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-zinc-400 mb-1">Hardware, Instruments & Field Equipment</label>
+        <input type="text" id="skills_hardware" value="{{ (skills.hardware_instruments or []) | join(', ') }}" class="input-box">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-zinc-400 mb-1">Spoken / Written Languages</label>
+        <input type="text" id="skills_languages" value="{{ (skills.languages or []) | join(', ') }}" class="input-box">
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const profileId = '{{ profile_id }}';
+    let profileData = {{ active_profile.data | tojson if active_profile and active_profile.data else '{}' }};
+
+    async function saveMasterProfile() {
+      if (!profileData.personal) profileData.personal = {};
+      if (!profileData.executive_summary) profileData.executive_summary = {};
+      if (!profileData.skills) profileData.skills = {};
+
+      profileData.personal.full_name = document.getElementById('full_name').value;
+      profileData.personal.email = document.getElementById('email').value;
+      profileData.personal.phone = document.getElementById('phone').value;
+      profileData.personal.city_en = document.getElementById('city_en').value;
+      profileData.personal.city_de = document.getElementById('city_en').value;
+      profileData.personal.title_en = document.getElementById('title_en').value;
+      profileData.personal.title_de = document.getElementById('title_de').value;
+      profileData.personal.linkedin = document.getElementById('linkedin').value;
+
+      profileData.executive_summary.en = document.getElementById('summary_en').value;
+      profileData.executive_summary.de = document.getElementById('summary_de').value;
+
+      profileData.skills.domains = document.getElementById('skills_domains').value.split(',').map(s => s.trim()).filter(Boolean);
+      profileData.skills.software_tools = document.getElementById('skills_software').value.split(',').map(s => s.trim()).filter(Boolean);
+      profileData.skills.hardware_instruments = document.getElementById('skills_hardware').value.split(',').map(s => s.trim()).filter(Boolean);
+      profileData.skills.languages = document.getElementById('skills_languages').value.split(',').map(s => s.trim()).filter(Boolean);
+
+      try {
+        const res = await fetch(`/api/profiles/${profileId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profileData)
+        });
+
+        if (res.ok) {
+          alert('Master profile saved successfully!');
+        } else {
+          alert('Failed to save master profile.');
+        }
+      } catch (err) {
+        console.error('Error saving profile:', err);
+        alert('An error occurred while saving.');
+      }
+    }
+  </script>
+</body>
+</html>

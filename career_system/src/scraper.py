@@ -200,8 +200,75 @@ class JobScraper:
 
         doc.build(elements)
 
-    def scrape_url(self, url: str, custom_name: Optional[str] = None) -> Path:
-        """Scrape a URL, write JSON metadata and generate an archived PDF."""
+    def generate_html_snapshot(self, job_data: Dict[str, Any], output_html_path: Path) -> None:
+        """Generate a clean, print-preview styled HTML archive of the job posting."""
+        title = job_data.get("title", "Job Posting")
+        company = job_data.get("company", "Target Company")
+        url = job_data.get("url", "")
+        scraped_at = job_data.get("scraped_at", "")
+        full_text = job_data.get("full_text", "")
+
+        paras_html = ""
+        for block in full_text.split("\n\n"):
+            clean_block = block.strip()
+            if not clean_block:
+                continue
+            safe_block = clean_block.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+            paras_html += f"<p class='mb-3 text-slate-700 leading-relaxed'>{safe_block}</p>\n"
+
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{title} — {company} (Snapshot)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {{
+      body {{ background: #ffffff !important; padding: 0 !important; }}
+      .no-print {{ display: none !important; }}
+      .sheet {{ box-shadow: none !important; border: none !important; }}
+    }}
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen py-8 px-4 font-sans antialiased text-slate-800">
+  <div class="max-w-4xl mx-auto">
+    <!-- Top Action Bar -->
+    <div class="no-print flex items-center justify-between mb-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div class="flex items-center space-x-2 text-sm text-slate-600">
+        <span class="font-bold text-slate-900">Job Description Snapshot</span>
+        <span>&bull;</span>
+        <span>Archived: {scraped_at[:10]}</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="window.print()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow transition">
+          🖨️ Print / Save as PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Snapshot Sheet -->
+    <div class="sheet bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 shadow-lg">
+      <div class="border-b border-slate-200 pb-6 mb-6">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">{title}</h1>
+        <div class="text-lg font-semibold text-blue-600 mb-3">{company}</div>
+        <div class="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+          <span><strong>Source URL:</strong> <a href="{url}" target="_blank" class="text-blue-500 hover:underline">{url}</a></span>
+          <span><strong>Archived At:</strong> {scraped_at}</span>
+        </div>
+      </div>
+
+      <div class="prose max-w-none text-sm text-slate-700">
+        {paras_html}
+      </div>
+    </div>
+  </div>
+</body>
+</html>"""
+        with open(output_html_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+    def scrape_url(self, url: str, custom_name: Optional[str] = None) -> Dict[str, Any]:
+        """Scrape a URL, write JSON metadata, generate HTML and PDF snapshots."""
         print(f"[Scraper] Fetching {url}...")
         html = self.fetch_url(url)
         job_data = self.extract_job_content(html, url)
@@ -212,15 +279,22 @@ class JobScraper:
 
         json_path = self.output_dir / f"{safe_slug}.json"
         pdf_path = self.output_dir / f"{safe_slug}.pdf"
+        html_path = self.output_dir / f"{safe_slug}.html"
 
         # Save JSON snapshot
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(job_data, f, indent=2, ensure_ascii=False)
 
-        # Generate archived PDF
+        # Generate archived PDF and HTML
         self.generate_pdf(job_data, pdf_path)
-        print(f"[Scraper] Successfully archived:\n  - PDF:  {pdf_path}\n  - JSON: {json_path}")
-        return pdf_path
+        self.generate_html_snapshot(job_data, html_path)
+
+        job_data["pdf_path"] = str(pdf_path)
+        job_data["html_path"] = str(html_path)
+        job_data["json_path"] = str(json_path)
+
+        print(f"[Scraper] Successfully archived:\n  - PDF:  {pdf_path}\n  - HTML: {html_path}\n  - JSON: {json_path}")
+        return job_data
 
 
 def main() -> int:

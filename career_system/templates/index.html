@@ -3,1128 +3,301 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Career System — Autonomous AI Career Studio</title>
-  <!-- Favicon -->
+  <title>Career System — 100% Local Autonomous Career Studio</title>
   <link rel="icon" href="/static/icon.png" type="image/png">
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Application Script -->
-  <script src="/static/app.js"></script>
-  <!-- Alpine.js -->
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/style.css">
   <style>
     :root {
-      --baby-blue: #89CFF0;
-      --azure: #F0FFFF;
-      --blue-gray: #7393B3;
-      --bg-dark: #09090b;
-      --card-bg: #121215;
-      --card-border: #27272a;
+      --primary: #2563eb;
+      --accent: #38bdf8;
+      --bg: #09090b;
+      --card: #121215;
+      --border: #27272a;
     }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #09090b; }
-    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
-    body { background-color: #09090b; color: #f4f4f5; }
-    [x-cloak] { display: none !important; }
+    body {
+      background-color: var(--bg);
+      color: #f4f4f5;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    }
+    .card-bg {
+      background-color: var(--card);
+      border: 1px solid var(--border);
+    }
+    .drag-handle {
+      cursor: grab;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+    tr.dragging {
+      opacity: 0.35;
+      background-color: #1e293b !important;
+    }
+    tr.drag-over {
+      border-top: 2px solid #38bdf8 !important;
+    }
   </style>
 </head>
-<body class="bg-[#09090b] text-zinc-100 min-h-screen font-sans selection:bg-[#89CFF0]/20 selection:text-white" x-data="careerApp()">
+<body class="min-h-screen flex flex-col selection:bg-blue-600/30 selection:text-white">
 
   <!-- Top Navigation Header -->
-  <header class="bg-[#09090b]/95 backdrop-blur border-b border-zinc-800/80 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+  <header class="bg-[#09090b]/95 backdrop-blur border-b border-zinc-800 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 py-3 flex items-center justify-between">
       
-      <!-- Brand Logo, Title, Author & Bazuka Tag -->
+      <!-- Brand Logo & Slogan -->
       <div class="flex items-center space-x-3.5">
-        <div class="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center p-2 shadow-md">
-          <img src="/static/icon.png" alt="Career System Logo" class="w-full h-full object-contain invert">
+        <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center p-2 shadow-md">
+          <i class="fa-solid fa-briefcase text-blue-400 text-lg"></i>
         </div>
-        <div class="space-y-0.5">
+        <div>
           <div class="flex items-center gap-2">
-            <span class="font-black text-2xl text-white tracking-tight">Career<span class="text-[#89CFF0]">System</span></span>
+            <span class="font-black text-xl text-white tracking-tight">Career<span class="text-blue-400">System</span></span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 font-semibold border border-blue-500/20">100% Offline Local</span>
           </div>
-          <div class="flex items-center gap-2 text-xs text-zinc-400 flex-wrap">
-            <span>Developed by <strong class="text-zinc-200 font-semibold">Harsh Sahu</strong></span>
-            <span class="text-zinc-600 hidden sm:inline">&bull;</span>
-            <div class="relative group inline-block cursor-help">
-              <span class="text-zinc-300 hover:text-[#89CFF0] font-medium flex items-center gap-1.5 transition">
-                <i class="fa-solid fa-rocket text-[#89CFF0]"></i> Bazuka to hit jobs!
-              </span>
-              <div class="absolute left-0 top-7 hidden group-hover:block w-80 p-3 bg-zinc-950 text-xs text-zinc-300 rounded-xl border border-zinc-800 shadow-2xl z-50 pointer-events-none leading-relaxed">
-                <div class="font-bold text-white mb-1.5 flex items-center gap-1.5">
-                  <i class="fa-solid fa-circle-info text-[#89CFF0]"></i> How CareerSystem Works:
-                </div>
-                <ol class="space-y-1 text-[11px] list-decimal list-inside text-zinc-400">
-                  <li><b class="text-zinc-200">Step 1:</b> Create your comprehensive <b>Master CV</b>.</li>
-                  <li><b class="text-zinc-200">Step 2:</b> Ingest job URL/PDF — Gemini auto-tailors your application.</li>
-                  <li><b class="text-zinc-200">Step 3:</b> Live edit tailored bilingual A4 CV & Letter; print to PDF.</li>
-                  <li><b class="text-zinc-200">Step 4:</b> Copy tailored LinkedIn notes & cold emails.</li>
-                </ol>
-              </div>
-            </div>
-          </div>
+          <p class="text-xs text-zinc-400">Autonomous Job Ingestion, In-Document A4 Builders & Tailored Outreach</p>
         </div>
       </div>
 
-      <!-- Account Switcher, Gemini Status & Server Status -->
+      <!-- Right Controls -->
       <div class="flex items-center space-x-3">
-        
-        <!-- Gemini AI Model Status Badge -->
-        <div class="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border"
-             :class="geminiConnected ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60' : 'bg-zinc-900 text-zinc-400 border-zinc-800'">
-          <img src="/static/gemini_logo.png" alt="Gemini" class="w-3.5 h-3.5 object-contain">
-          <span x-text="geminiStatusText"></span>
-        </div>
-
-        <!-- Server Connection Status -->
-        <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border"
-             :class="serverConnected ? 'bg-zinc-900/90 text-zinc-300 border-zinc-800' : 'bg-rose-950/40 text-rose-300 border-rose-900/60'">
-          <span class="w-1.5 h-1.5 rounded-full" :class="serverConnected ? 'bg-[#89CFF0]' : 'bg-rose-500'"></span>
-          <span x-text="serverConnected ? 'Server Online' : 'Offline'"></span>
-        </div>
-
-        <!-- Profile Selector -->
-        <div class="flex items-center space-x-2 bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800 text-xs">
-          <span class="text-zinc-400 font-medium">Profile:</span>
-          <select x-model="activeProfileId" @change="loadActiveProfile()" class="bg-transparent font-semibold text-white focus:outline-none cursor-pointer">
-            <template x-for="p in profiles" :key="p.id">
-              <option :value="p.id" x-text="p.name" class="bg-zinc-950 text-white"></option>
-            </template>
-          </select>
-          <button @click="showNewAccountModal = true" class="text-zinc-400 hover:text-white ml-1 transition" title="Add New Candidate Profile">
-            <i class="fa-solid fa-plus text-xs"></i>
-          </button>
-        </div>
-
-        <!-- Settings Button -->
-        <button @click="showSettingsModal = true" class="p-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 transition" title="API Keys & Settings">
-          <i class="fa-solid fa-gear text-xs"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- 4-Step Stepper Navigation -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 border-t border-zinc-900">
-      <div class="grid grid-cols-4 gap-2 text-center text-xs font-semibold">
-        
-        <button @click="currentStep = 1" :class="currentStep === 1 ? 'bg-zinc-900 text-white border-[#89CFF0]/60 shadow-sm' : 'bg-zinc-950/60 text-zinc-400 border-zinc-900 hover:text-white hover:bg-zinc-900/40'" class="p-2 rounded-lg border transition flex items-center justify-center gap-2">
-          <span class="w-4 h-4 rounded-full bg-[#89CFF0] text-zinc-950 flex items-center justify-center text-[10px] font-black">1</span>
-          <span>Account & Master CV</span>
-        </button>
-
-        <button @click="currentStep = 2" :class="currentStep === 2 ? 'bg-zinc-900 text-white border-[#89CFF0]/60 shadow-sm' : 'bg-zinc-950/60 text-zinc-400 border-zinc-900 hover:text-white hover:bg-zinc-900/40'" class="p-2 rounded-lg border transition flex items-center justify-center gap-2">
-          <span class="w-4 h-4 rounded-full bg-[#89CFF0] text-zinc-950 flex items-center justify-center text-[10px] font-black">2</span>
-          <span>Job Ingestion & Tailoring</span>
-        </button>
-
-        <button @click="currentStep = 3" :class="currentStep === 3 ? 'bg-zinc-900 text-white border-[#89CFF0]/60 shadow-sm' : 'bg-zinc-950/60 text-zinc-400 border-zinc-900 hover:text-white hover:bg-zinc-900/40'" class="p-2 rounded-lg border transition flex items-center justify-center gap-2">
-          <span class="w-4 h-4 rounded-full bg-[#89CFF0] text-zinc-950 flex items-center justify-center text-[10px] font-black">3</span>
-          <span>Bilingual CV & Letter Studio</span>
-        </button>
-
-        <button @click="currentStep = 4" :class="currentStep === 4 ? 'bg-zinc-900 text-white border-[#89CFF0]/60 shadow-sm' : 'bg-zinc-950/60 text-zinc-400 border-zinc-900 hover:text-white hover:bg-zinc-900/40'" class="p-2 rounded-lg border transition flex items-center justify-center gap-2">
-          <span class="w-4 h-4 rounded-full bg-[#89CFF0] text-zinc-950 flex items-center justify-center text-[10px] font-black">4</span>
-          <span>Outreach & Pitches</span>
-        </button>
-
+        <a href="/profile" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold rounded-lg border border-zinc-700 transition flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-user-gear text-blue-400"></i> Master Profile & Templates
+        </a>
       </div>
     </div>
   </header>
 
-  <!-- Main Content Area -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
 
-    <!-- ========================================================================= -->
-    <!-- STEP 1: ACCOUNT & MASTER CV STUDIO -->
-    <!-- ========================================================================= -->
-    <div x-show="currentStep === 1" x-cloak class="space-y-6">
-      
-      <!-- Top Action Bar -->
-      <div class="flex justify-between items-center bg-[#121215] p-4 rounded-xl border border-zinc-800 shadow-md">
+    <!-- 1. Job Ingestion Hub (URL Ingestion Bar & Manual Upload) -->
+    <div class="card-bg p-5 rounded-2xl shadow-xl space-y-4">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
         <div>
-          <h2 class="text-base font-bold text-white flex items-center gap-2">
-            <span>Candidate Master Profile: </span>
-            <span class="text-[#89CFF0]" x-text="profileData.personal?.full_name || 'Establish Profile'"></span>
+          <h2 class="font-bold text-base text-white flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-amber-400"></i> Job Ingestion & Offline Analysis
           </h2>
-          <p class="text-xs text-zinc-400 mt-0.5">Build your comprehensive Master CV here once. When you ingest jobs, Gemini will tailor directly upon this baseline.</p>
+          <p class="text-xs text-zinc-400">Enter a job URL to automatically scrape, save print-preview snapshot, and extract metadata offline.</p>
         </div>
-        <div class="flex gap-2">
-          <button @click="saveProfile()" class="px-4 py-2 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center gap-1.5">
-            <i class="fa-solid fa-floppy-disk"></i> Save Master CV
-          </button>
-          <button @click="currentStep = 2" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-medium rounded-lg text-xs border border-zinc-700 transition">
-            Next: Ingest Job &rarr;
-          </button>
-        </div>
-      </div>
-
-      <!-- Google Gemini AI Engine & Cloud Sync Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         
-        <!-- Google Gemini API Key Card with Live Connection Tester -->
-        <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-3 shadow-md">
-          <div class="flex justify-between items-center">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <img src="/static/gemini_logo.png" alt="Gemini" class="w-4 h-4 object-contain">
-              Google Gemini AI Engine
-            </h3>
-            <span class="text-[11px] font-semibold" :class="geminiConnected ? 'text-emerald-400' : 'text-zinc-400'" x-text="geminiConnected ? '✓ Active' : 'Offline Mode'"></span>
-          </div>
-          <p class="text-xs text-zinc-400">Used to automatically breakdown job descriptions, tailor Master CV bullets, and write personalized cover letters.</p>
-          <div class="flex gap-2">
-            <input type="password" x-model="geminiApiKey" placeholder="Paste Gemini API Key (AIzaSy...)" class="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:border-zinc-500 focus:outline-none font-mono">
-            <button @click="testAndSaveGeminiKey()" :disabled="isTestingGemini" class="px-3.5 py-2 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center gap-1.5">
-              <i class="fa-solid" :class="isTestingGemini ? 'fa-spinner fa-spin' : 'fa-plug'"></i>
-              <span x-text="isTestingGemini ? 'Testing...' : 'Test & Save'"></span>
-            </button>
-          </div>
-          <div x-show="geminiTestMessage" class="text-xs p-2 rounded-lg border font-medium"
-               :class="geminiConnected ? 'bg-emerald-950/30 text-emerald-300 border-emerald-900/60' : 'bg-rose-950/30 text-rose-300 border-rose-900/60'"
-               x-text="geminiTestMessage"></div>
-        </div>
-
-        <!-- Google Drive Cloud Sync Card -->
-        <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-3 shadow-md">
-          <div class="flex justify-between items-center">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <i class="fa-brands fa-google-drive text-[#89CFF0]"></i>
-              Google Drive 1-Click Folder Sync
-            </h3>
-            <button @click="showGoogleScriptModal = true" class="text-xs text-[#89CFF0] hover:underline">
-              Setup Guide
-            </button>
-          </div>
-          <p class="text-xs text-zinc-400">Paste your Google Apps Script Webhook URL to upload uncompressed job folders directly to your Google Drive.</p>
-          <div class="flex gap-2">
-            <input type="text" x-model="googleWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
-            <button @click="testGoogleSync()" class="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold rounded-lg text-xs border border-zinc-700 transition">
-              Test Sync
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Master CV Section 1: Contact Information & Profile Picture -->
-      <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-4 shadow-md">
-        <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800/80 pb-2 flex items-center gap-2">
-          <i class="fa-solid fa-address-card text-[#89CFF0]"></i> Master Contact Information & Profile Photo
-        </h3>
-
-        <!-- Photo Upload Box -->
-        <div class="flex items-center gap-4 p-3.5 bg-zinc-950/80 rounded-xl border border-zinc-800/80">
-          <div class="relative w-14 h-14 rounded-xl border border-zinc-700 overflow-hidden bg-zinc-900 flex items-center justify-center shrink-0">
-            <template x-if="profileData.personal?.photo_base64 || profileData.personal?.photo_src">
-              <img :src="profileData.personal.photo_base64 || profileData.personal.photo_src" alt="Profile" class="w-full h-full object-cover">
-            </template>
-            <template x-if="!(profileData.personal?.photo_base64 || profileData.personal?.photo_src)">
-              <i class="fa-solid fa-user text-zinc-600 text-lg"></i>
-            </template>
-          </div>
-          <div class="flex-1 space-y-1">
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-semibold text-white">Profile Picture (Bewerbungsfoto)</label>
-              <template x-if="profileData.personal?.photo_base64 || profileData.personal?.photo_src">
-                <button @click="removeProfilePhoto()" class="text-[11px] text-rose-400 hover:text-rose-300 font-medium transition">
-                  <i class="fa-solid fa-trash-can mr-1"></i> Remove Photo
-                </button>
-              </template>
-            </div>
-            <p class="text-[11px] text-zinc-400">Optional. When no photo is uploaded, your CV will seamlessly span full width without any empty frame or blank box.</p>
-            <div class="pt-0.5">
-              <input type="file" @change="handleProfilePhotoUpload($event)" accept="image/png, image/jpeg, image/jpg, image/webp" class="text-xs text-zinc-400 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 cursor-pointer">
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1">Full Name</label>
-            <input type="text" x-model="profileData.personal.full_name" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1">Professional Title (English)</label>
-            <input type="text" x-model="profileData.personal.title_en" placeholder="e.g. Senior Software Engineer" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1">Berufsbezeichnung (Deutsch)</label>
-            <input type="text" x-model="profileData.personal.title_de" placeholder="z.B. Senior Softwareentwickler" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1">Email</label>
-            <input type="email" x-model="profileData.personal.email" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1">Phone</label>
-            <input type="text" x-model="profileData.personal.phone" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1">Location / City (e.g. Hamburg, Germany)</label>
-            <input type="text" x-model="profileData.personal.city_en" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1">LinkedIn Profile URL</label>
-            <input type="text" x-model="profileData.personal.linkedin_url" placeholder="https://linkedin.com/in/..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1">GitHub / Portfolio URL</label>
-            <input type="text" x-model="profileData.personal.github_url" placeholder="https://github.com/..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1">Work Authorization / Visa Status</label>
-            <input type="text" x-model="profileData.personal.residence_status" placeholder="e.g. Full Work Authorization in Germany / EU" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-        </div>
-      </div>
-
-      <!-- Master CV Section 2: Executive Summaries -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-2 shadow-md">
-          <h3 class="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-            <span>🇬🇧 Master Executive Profile (English UK)</span>
-          </h3>
-          <textarea rows="5" x-model="profileData.executive_summary.en" placeholder="Comprehensive baseline summary of your professional background, strengths, and career highlights..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-white focus:border-zinc-500 focus:outline-none leading-relaxed"></textarea>
-        </div>
-        <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-2 shadow-md">
-          <h3 class="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-            <span>🇩🇪 Master Profil & Zusammenfassung (Deutsch)</span>
-          </h3>
-          <textarea rows="5" x-model="profileData.executive_summary.de" placeholder="Ausführliche Zusammenfassung Ihres Werdegangs, Ihrer Kernkompetenzen und Erfolge..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-white focus:border-zinc-500 focus:outline-none leading-relaxed"></textarea>
-        </div>
-      </div>
-
-      <!-- Master CV Section 3: Professional Experience History -->
-      <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-4 shadow-md">
-        <div class="flex justify-between items-center border-b border-zinc-800/80 pb-2">
-          <div>
-            <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-              <i class="fa-solid fa-briefcase text-[#89CFF0]"></i> Master Work Experience History
-            </h3>
-            <p class="text-[11px] text-zinc-500 mt-0.5">List your full history of positions. Gemini will choose and sharpen the most relevant bullet points for each job you apply for.</p>
-          </div>
-          <button @click="addMasterExperience()" class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-[#89CFF0] text-xs font-bold rounded-lg border border-zinc-700 transition">
-            + Add Position
+        <!-- Toggle Manual / Upload Modal -->
+        <div class="flex items-center space-x-2">
+          <button onclick="openManualJobModal()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg border border-zinc-700 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-plus text-blue-400"></i> Manual Entry / Upload
           </button>
         </div>
-
-        <div class="space-y-4">
-          <template x-for="(exp, expIdx) in profileData.experience" :key="expIdx">
-            <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/90 space-y-3">
-              <div class="flex justify-between items-start gap-3">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-1">
-                  <input type="text" x-model="exp.role_en" placeholder="Position Title (EN)" class="bg-zinc-900 border border-zinc-700 rounded px-3 py-1.5 text-xs font-bold text-white focus:outline-none">
-                  <input type="text" x-model="exp.role_de" placeholder="Positionsbezeichnung (DE)" class="bg-zinc-900 border border-zinc-700 rounded px-3 py-1.5 text-xs font-bold text-white focus:outline-none">
-                </div>
-                <button @click="removeMasterExperience(expIdx)" class="text-zinc-500 hover:text-rose-400 p-1.5 transition" title="Delete Position">
-                  <i class="fa-solid fa-trash text-xs"></i>
-                </button>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <input type="text" x-model="exp.institution_en" placeholder="Company / Institution" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-xs text-zinc-200 focus:outline-none">
-                <input type="text" x-model="exp.period_en" placeholder="Period (e.g. 2022 - Present)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-xs text-zinc-200 focus:outline-none">
-                <input type="text" x-model="exp.affiliation" placeholder="Location / Department (optional)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-xs text-zinc-400 focus:outline-none">
-              </div>
-
-              <!-- Bullets List -->
-              <div class="space-y-2 pt-1 border-t border-zinc-900">
-                <div class="flex justify-between items-center">
-                  <label class="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Achievement Bullets</label>
-                  <button @click="addMasterExperienceBullet(expIdx)" class="text-[11px] text-[#89CFF0] hover:underline font-semibold">+ Add Bullet</button>
-                </div>
-                <template x-for="(b, bIdx) in exp.bullets" :key="bIdx">
-                  <div class="flex items-center gap-2">
-                    <span class="text-zinc-600 font-bold">•</span>
-                    <input type="text" x-model="exp.bullets[bIdx]" class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:border-zinc-500 focus:outline-none">
-                    <button @click="removeMasterExperienceBullet(expIdx, bIdx)" class="text-zinc-600 hover:text-rose-400 text-xs px-1">&times;</button>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </template>
-          <div x-show="!profileData.experience || profileData.experience.length === 0" class="p-4 text-center text-xs text-zinc-500 italic bg-zinc-950 rounded-lg border border-dashed border-zinc-800">
-            No work experience added yet. Click "+ Add Position" to populate your master career history.
-          </div>
-        </div>
       </div>
 
-      <!-- Master CV Section 4: Education & Qualifications -->
-      <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-4 shadow-md">
-        <div class="flex justify-between items-center border-b border-zinc-800/80 pb-2">
-          <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-            <i class="fa-solid fa-graduation-cap text-[#89CFF0]"></i> Master Education & Academic Background
-          </h3>
-          <button @click="addMasterEducation()" class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-[#89CFF0] text-xs font-bold rounded-lg border border-zinc-700 transition">
-            + Add Degree
-          </button>
-        </div>
-
-        <div class="space-y-3">
-          <template x-for="(edu, eduIdx) in profileData.education" :key="eduIdx">
-            <div class="bg-zinc-950 p-3.5 rounded-lg border border-zinc-800 space-y-2">
-              <div class="flex justify-between items-center gap-2">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-1">
-                  <input type="text" x-model="edu.degree_en" placeholder="Degree / Certificate (EN)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-xs font-bold text-white focus:outline-none">
-                  <input type="text" x-model="edu.degree_de" placeholder="Abschluss / Zertifikat (DE)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-xs font-bold text-white focus:outline-none">
-                </div>
-                <button @click="removeMasterEducation(eduIdx)" class="text-zinc-500 hover:text-rose-400 p-1" title="Delete Degree"><i class="fa-solid fa-trash text-xs"></i></button>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <input type="text" x-model="edu.institution" placeholder="University / Academic Institute" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-xs text-zinc-300 focus:outline-none">
-                <input type="text" x-model="edu.period_en" placeholder="Years (e.g. 2018 - 2022)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-xs text-zinc-300 focus:outline-none">
-              </div>
-              <input type="text" x-model="edu.notes_en" placeholder="Grade, Honors, or Key Coursework (optional)" class="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1 text-xs text-zinc-400 focus:outline-none">
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- Master CV Section 5: Skills Matrix & Credentials -->
-      <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-4 shadow-md">
-        <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800/80 pb-2 flex items-center gap-2">
-          <i class="fa-solid fa-screwdriver-wrench text-[#89CFF0]"></i> Master Skills Matrix & Credentials
-        </h3>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div>
-            <label class="block font-semibold text-zinc-300 mb-1">Core Domains (comma separated)</label>
-            <input type="text" x-model="cvSkillsString.domains" @input="syncSkillsToMasterProfile()" placeholder="e.g. Machine Learning, Cloud Architecture, Renewable Energy" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
+      <!-- Primary URL Ingestion Form -->
+      <form id="url-ingest-form" onsubmit="handleUrlScrape(event)" class="flex flex-col sm:flex-row items-center gap-2.5">
+        <div class="relative flex-1 w-full">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+            <i class="fa-solid fa-link text-xs"></i>
           </div>
-          <div>
-            <label class="block font-semibold text-zinc-300 mb-1">Software & Programming Tools (comma separated)</label>
-            <input type="text" x-model="cvSkillsString.software" @input="syncSkillsToMasterProfile()" placeholder="e.g. Python, FastAPI, Docker, Git, SQL, React, AWS" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block font-semibold text-zinc-300 mb-1">Technical Instrumentation / Hardware (optional)</label>
-            <input type="text" x-model="cvSkillsString.hardware" @input="syncSkillsToMasterProfile()" placeholder="e.g. Sensor Instrumentation, HPLC, Microcontrollers" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block font-semibold text-zinc-300 mb-1">Languages & Proficiency (comma separated)</label>
-            <input type="text" x-model="cvSkillsString.languages" @input="syncSkillsToMasterProfile()" placeholder="e.g. English (Fluent / C1), German (Professional / B2)" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none">
-          </div>
+          <input type="url" id="scrape-url-input" required placeholder="Paste Job URL (e.g., https://company.com/careers/job-12345)..." class="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition">
         </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-zinc-300 mb-1">Key Credentials, Awards & Certifications (one per line)</label>
-          <textarea rows="3" x-model="cvCredentialsString" @input="syncSkillsToMasterProfile()" placeholder="e.g. Certified AWS Solutions Architect&#10;Excellence in Engineering Award 2023" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none"></textarea>
-        </div>
-      </div>
-
-      <!-- Bottom Save Action Bar -->
-      <div class="flex justify-end gap-3 pt-2">
-        <button @click="saveProfile()" class="px-6 py-2.5 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow-lg transition flex items-center gap-2">
-          <i class="fa-solid fa-floppy-disk"></i> Save Master CV
+        <button type="submit" id="scrape-submit-btn" class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Ingest & Auto-Tailor
         </button>
-      </div>
-
+      </form>
+      <div id="scrape-status" class="hidden text-xs text-blue-400 font-medium flex items-center gap-2"></div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- STEP 2: JOB INGESTION, BREAKDOWN & AUTOMATIC TAILORING -->
-    <!-- ========================================================================= -->
-    <div x-show="currentStep === 2" x-cloak class="space-y-6">
+    <!-- 2. Live Database Table with Draggable Song-Style Priority Ordering -->
+    <div class="card-bg rounded-2xl shadow-xl overflow-hidden space-y-0">
       
-      <!-- Top Ingestion Card -->
-      <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-4 shadow-md">
-        <div class="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-          <div class="flex space-x-2">
-            <button @click="ingestMode = 'url'" :class="ingestMode === 'url' ? 'bg-white text-zinc-950 font-bold' : 'bg-zinc-900 text-zinc-400 hover:text-white'" class="px-3.5 py-1.5 rounded-lg text-xs transition">
-              Paste URL
-            </button>
-            <button @click="ingestMode = 'pdf'" :class="ingestMode === 'pdf' ? 'bg-white text-zinc-950 font-bold' : 'bg-zinc-900 text-zinc-400 hover:text-white'" class="px-3.5 py-1.5 rounded-lg text-xs transition">
-              Upload PDF
-            </button>
-            <button @click="ingestMode = 'text'" :class="ingestMode === 'text' ? 'bg-white text-zinc-950 font-bold' : 'bg-zinc-900 text-zinc-400 hover:text-white'" class="px-3.5 py-1.5 rounded-lg text-xs transition">
-              Paste Text
-            </button>
-          </div>
-          
-          <!-- AI Tailoring Notice Badge -->
-          <div class="flex items-center gap-1.5 bg-emerald-950/40 text-emerald-300 border border-emerald-900/60 px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm">
-            <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i>
-            <span>Automatic Gemini Tailoring</span>
-          </div>
+      <!-- Table Header & Search Filter -->
+      <div class="p-4 sm:p-5 border-b border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-zinc-900/40">
+        <div class="flex items-center space-x-3">
+          <h2 class="font-bold text-base text-white flex items-center gap-2">
+            <i class="fa-solid fa-list-ol text-blue-400"></i> Prioritized Job Applications
+          </h2>
+          <span id="job-count-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 font-bold border border-zinc-700">{{ jobs | length }} Jobs</span>
         </div>
 
-        <!-- Mode 1: URL -->
-        <div x-show="ingestMode === 'url'" class="space-y-2">
-          <p class="text-xs text-zinc-400">Enter job URL (LinkedIn, Stepstone, Indeed, Greenhouse, Lever, Workday, Company Career Page):</p>
-          <div class="flex gap-2">
-            <input type="text" x-model="scrapeUrlInput" placeholder="https://www.linkedin.com/jobs/view/..." class="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3.5 py-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
-            <button @click="scrapeJobUrl()" :disabled="isLoadingBreakdown" class="px-5 py-2 bg-white hover:bg-zinc-200 disabled:opacity-50 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center gap-1.5">
-              <span x-show="!isLoadingBreakdown"><i class="fa-solid fa-bolt mr-1"></i> Ingest & Tailor</span>
-              <span x-show="isLoadingBreakdown"><i class="fa-solid fa-spinner fa-spin"></i> Tailoring with Gemini...</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Mode 2: PDF Upload -->
-        <div x-show="ingestMode === 'pdf'" class="space-y-2">
-          <p class="text-xs text-zinc-400">Select or drop a job advertisement PDF:</p>
-          <input type="file" @change="uploadJobPdf($event)" accept=".pdf" class="block w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-900 file:text-white hover:file:bg-zinc-800 cursor-pointer">
-        </div>
-
-        <!-- Mode 3: Raw Text Paste -->
-        <div x-show="ingestMode === 'text'" class="space-y-2">
-          <p class="text-xs text-zinc-400">Paste job description text below:</p>
-          <textarea rows="4" x-model="rawJobTextInput" placeholder="Paste full job description text here..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-white focus:border-zinc-500 focus:outline-none"></textarea>
-          <div class="flex justify-end">
-            <button @click="parseRawJobText()" :disabled="isLoadingBreakdown" class="px-5 py-2 bg-white hover:bg-zinc-200 disabled:opacity-50 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center gap-1.5">
-              <span x-show="!isLoadingBreakdown"><i class="fa-solid fa-bolt mr-1"></i> Ingest & Tailor</span>
-              <span x-show="isLoadingBreakdown"><i class="fa-solid fa-spinner fa-spin"></i> Tailoring with Gemini...</span>
-            </button>
+        <div class="flex items-center space-x-3 w-full sm:w-auto">
+          <!-- Search Bar -->
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="table-search" oninput="filterJobsTable()" placeholder="Search company, title, skills..." class="w-full bg-zinc-950/80 border border-zinc-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition">
+            <i class="fa-solid fa-magnifying-glass text-zinc-500 text-xs absolute left-2.5 top-2.5"></i>
           </div>
         </div>
       </div>
 
-      <!-- Stored Opportunities Database -->
-      <div class="bg-[#121215] rounded-xl border border-zinc-800 overflow-hidden shadow-md">
-        <div class="p-4 border-b border-zinc-800/80 flex justify-between items-center">
-          <h3 class="font-bold text-white text-xs flex items-center gap-2">
-            <i class="fa-solid fa-folder-open text-[#89CFF0]"></i> Stored Opportunities Database
-          </h3>
-          <span class="text-xs text-zinc-500" x-text="jobsList.length + ' stored opportunities'"></span>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-zinc-300">
-            <thead class="bg-zinc-900 text-zinc-400 uppercase text-[10px] tracking-wider">
-              <tr>
-                <th class="p-3">Company & Role</th>
-                <th class="p-3">Type & Level</th>
-                <th class="p-3">Location</th>
-                <th class="p-3">Status</th>
-                <th class="p-3">PDF Archive</th>
-                <th class="p-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y border-zinc-800/80">
-              <template x-for="j in jobsList" :key="j.id">
-                <tr class="hover:bg-zinc-900/40 transition">
-                  <td class="p-3 cursor-pointer" @click="selectJobForAnalysis(j)">
-                    <div class="font-semibold text-white hover:text-[#89CFF0] transition" x-text="j.company"></div>
-                    <div class="text-zinc-400 text-[11px]" x-text="j.role_title"></div>
-                  </td>
-                  <td class="p-3">
-                    <div class="text-zinc-200" x-text="j.employment_type || 'Full-time'"></div>
-                    <div class="text-zinc-500 text-[11px]" x-text="j.seniority_level || 'Mid-Level'"></div>
-                  </td>
-                  <td class="p-3 text-zinc-400" x-text="j.location"></td>
-                  <td class="p-3">
-                    <select x-model="j.status" @change="updateJobStatus(j.id, j.status)" class="bg-zinc-950 text-xs rounded border border-zinc-700 px-2 py-1 text-zinc-200 focus:outline-none">
-                      <option value="New">New</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Applied">Applied</option>
-                      <option value="Interview">Interview</option>
-                      <option value="Offer">Offer</option>
-                      <option value="Rejected">Rejected</option>
-                    </select>
-                  </td>
-                  <td class="p-3">
-                    <template x-if="j.pdf_path">
-                      <button @click="openPdfViewer(j.pdf_path, j.role_title)" class="px-2.5 py-1 bg-zinc-900 text-zinc-200 border border-zinc-700 rounded hover:bg-zinc-800 text-[11px] font-semibold">
-                        Read PDF
-                      </button>
-                    </template>
-                    <template x-if="!j.pdf_path">
-                      <span class="text-zinc-600 text-[11px]">-</span>
-                    </template>
-                  </td>
-                  <td class="p-3 text-right space-x-1.5">
-                    <button @click="selectJobForStudio(j); currentStep = 3;" class="px-3 py-1 bg-white hover:bg-zinc-200 text-zinc-950 rounded text-xs font-bold shadow-sm" title="Open in Live CV Studio">
-                      Open Studio &rarr;
-                    </button>
-                    <button @click="deleteJob(j.id)" class="p-1.5 text-zinc-500 hover:text-rose-400 transition" title="Delete job">
+      <!-- Priority Reorderable Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-zinc-300 divide-y divide-zinc-800/80">
+          <thead class="bg-zinc-950 text-zinc-400 uppercase font-bold text-[10px] tracking-wider">
+            <tr>
+              <th scope="col" class="py-3 px-3 w-10 text-center" title="Drag to reorder priority">
+                <i class="fa-solid fa-grip-vertical"></i>
+              </th>
+              <th scope="col" class="py-3 px-2 w-12 text-center">#</th>
+              <th scope="col" class="py-3 px-4 min-w-[200px]">Position & Company</th>
+              <th scope="col" class="py-3 px-3 min-w-[130px]">Location & Mode</th>
+              <th scope="col" class="py-3 px-3 min-w-[120px]">Deadline / Posted</th>
+              <th scope="col" class="py-3 px-4 min-w-[260px] text-center">Application Milestones</th>
+              <th scope="col" class="py-3 px-3 w-20 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-table-body" class="divide-y divide-zinc-800/60 bg-zinc-900/20">
+            {% if jobs and (jobs | length > 0) %}
+              {% for job in jobs %}
+              <tr class="hover:bg-zinc-800/40 transition group cursor-default" draggable="true" data-job-id="{{ job.id }}">
+                
+                <!-- 1. Drag Handle -->
+                <td class="py-3.5 px-3 text-center drag-handle text-zinc-500 hover:text-blue-400 transition" title="Drag up/down to reorder priority">
+                  <i class="fa-solid fa-grip-lines text-sm"></i>
+                </td>
+
+                <!-- 2. Priority Rank Number -->
+                <td class="py-3.5 px-2 text-center font-mono font-bold text-zinc-400 row-priority-num">
+                  {{ loop.index }}
+                </td>
+
+                <!-- 3. Position Title, Company & Job ID Ref -->
+                <td class="py-3.5 px-4">
+                  <div class="font-bold text-white text-sm group-hover:text-blue-400 transition">
+                    <a href="/job/{{ job.id }}" class="hover:underline">{{ job.role_title }}</a>
+                  </div>
+                  <div class="flex items-center gap-2 mt-0.5 text-xs text-zinc-400">
+                    <span class="font-medium text-zinc-300">{{ job.company }}</span>
+                    {% if job.job_id_ref %}
+                    <span class="px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 text-[10px] font-mono border border-zinc-700">Ref: {{ job.job_id_ref }}</span>
+                    {% endif %}
+                  </div>
+                </td>
+
+                <!-- 4. Location & Work Mode -->
+                <td class="py-3.5 px-3 text-zinc-300">
+                  <div>{{ job.location or 'Germany' }}</div>
+                  <div class="text-[11px] text-zinc-500 font-medium">{{ job.work_mode or 'On-site' }}</div>
+                </td>
+
+                <!-- 5. Deadline & Posted -->
+                <td class="py-3.5 px-3">
+                  {% if job.deadline %}
+                  <div class="text-amber-400 font-semibold flex items-center gap-1">
+                    <i class="fa-regular fa-clock text-[10px]"></i> {{ job.deadline }}
+                  </div>
+                  {% else %}
+                  <div class="text-zinc-500">Open / Ongoing</div>
+                  {% endif %}
+                  {% if job.day_posted %}
+                  <div class="text-[10px] text-zinc-500 mt-0.5">Posted: {{ job.day_posted }}</div>
+                  {% endif %}
+                </td>
+
+                <!-- 6. Milestone Progress Badges -->
+                <td class="py-3.5 px-4 text-center">
+                  <div class="inline-flex items-center p-1 bg-zinc-950 rounded-xl border border-zinc-800 space-x-1 shadow-inner">
+                    
+                    <!-- Details Rectification Link -->
+                    <a href="/job/{{ job.id }}" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg font-medium text-[11px] border border-zinc-800 transition flex items-center gap-1" title="Inspect / rectify extracted data">
+                      <i class="fa-solid fa-file-lines text-slate-400"></i> Details
+                    </a>
+
+                    <!-- CV Builder Link -->
+                    <a href="/job/{{ job.id }}/cv?lang=en" class="px-2 py-1 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg font-bold text-[11px] border border-blue-500/30 transition flex items-center gap-1" title="Direct A4 in-document CV editor">
+                      <i class="fa-solid fa-id-card"></i> CV
+                    </a>
+
+                    <!-- Cover Letter Link -->
+                    <a href="/job/{{ job.id }}/coverletter?lang=en" class="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg font-bold text-[11px] border border-indigo-500/30 transition flex items-center gap-1" title="Tailored Cover Letter builder">
+                      <i class="fa-solid fa-envelope"></i> Letter
+                    </a>
+
+                    <!-- Outreach Link -->
+                    <a href="/job/{{ job.id }}/outreach?lang=en" class="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg font-bold text-[11px] border border-emerald-500/30 transition flex items-center gap-1" title="LinkedIn pitches & Cold emails">
+                      <i class="fa-solid fa-paper-plane"></i> Outreach
+                    </a>
+
+                    <!-- Snapshot PDF Link -->
+                    {% if job.pdf_path %}
+                    <a href="{{ job.pdf_path }}" target="_blank" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-amber-300 rounded-lg font-medium text-[11px] border border-zinc-800 transition flex items-center gap-1" title="View original Job Ad PDF">
+                      <i class="fa-solid fa-camera"></i> Ad
+                    </a>
+                    {% endif %}
+                  </div>
+                </td>
+
+                <!-- 7. Actions Dropdown / Delete -->
+                <td class="py-3.5 px-3 text-center">
+                  <div class="flex items-center justify-center space-x-1.5">
+                    <a href="/job/{{ job.id }}" class="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center transition" title="Open Job Workspace">
+                      <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </a>
+                    <button onclick="deleteJobEntry({{ job.id }}, this)" class="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-rose-900/50 text-zinc-400 hover:text-rose-300 flex items-center justify-center transition" title="Delete job workspace">
                       <i class="fa-solid fa-trash text-xs"></i>
                     </button>
-                  </td>
-                </tr>
-              </template>
-              <tr x-show="jobsList.length === 0">
-                <td colspan="6" class="p-4 text-center text-zinc-600 italic">No job descriptions stored yet. Ingest a job from URL, PDF, or text above!</td>
+                  </div>
+                </td>
               </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Pointwise Breakdown & Dedicated Job Assets Drawer -->
-      <template x-if="analysisResult">
-        <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-6 shadow-xl">
-          
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-800/80 pb-4">
-            <div class="flex-1 space-y-1">
-              <div class="flex items-center gap-2">
-                <span class="text-[11px] font-bold text-[#89CFF0] uppercase tracking-wider flex items-center gap-1.5">
-                  <img src="/static/gemini_logo.png" alt="Gemini Logo" class="w-3.5 h-3.5 object-contain">
-                  Pointwise Gemini Breakdown & Local Job Folder
-                </span>
-                <span x-show="analysisResult.job.job_id_ref || analysisResult.job.job_id" class="bg-zinc-900 text-zinc-300 text-[10px] px-2 py-0.5 rounded border border-zinc-800" x-text="'Ref: ' + (analysisResult.job.job_id_ref || analysisResult.job.job_id)"></span>
-              </div>
-              <div class="flex flex-col sm:flex-row gap-2 mt-1">
-                <input type="text" x-model="analysisResult.job.company" placeholder="Company Name" class="font-bold text-lg text-white bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1 focus:border-zinc-500 focus:outline-none">
-                <input type="text" x-model="analysisResult.job.role_title" placeholder="Position Title" class="font-bold text-lg text-white bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1 flex-1 focus:border-zinc-500 focus:outline-none">
-              </div>
-              <input type="text" x-model="analysisResult.job.location" placeholder="Location / Hybrid" class="text-xs text-zinc-400 bg-zinc-950 border border-zinc-800 rounded px-2 py-0.5 mt-1 focus:outline-none">
-            </div>
-
-            <!-- Quick Action Buttons -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <button @click="saveJobChanges()" class="px-3.5 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center gap-1.5">
-                <i class="fa-solid fa-floppy-disk"></i> Save Details
-              </button>
-              <button @click="openJobLocalFolder(analysisResult.job.id)" class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-medium rounded-lg text-xs border border-zinc-700 flex items-center gap-1.5 transition" title="Open this job's dedicated folder in Windows File Explorer">
-                <i class="fa-solid fa-folder-open text-[#89CFF0]"></i> Open Folder
-              </button>
-              <button @click="selectJobForStudio(analysisResult.job); currentStep = 3;" class="px-4 py-1.5 bg-[#89CFF0] hover:bg-[#7393B3] text-zinc-950 font-black rounded-lg text-xs shadow transition">
-                Open in Studio &rarr;
-              </button>
-            </div>
-          </div>
-
-          <!-- Structured Metadata Editable Grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-xs">
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
-              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Employment</label>
-              <select x-model="analysisResult.job.employment_type" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
-                <option value="Full-time">Full-time</option>
-                <option value="Part-time">Part-time</option>
-                <option value="Ausbildung / Duales Studium">Ausbildung / Dual</option>
-                <option value="Internship / Praktikum">Internship / Praktikum</option>
-                <option value="Working Student / Werkstudent">Werkstudent</option>
-                <option value="Freelance / Contract">Freelance / Contract</option>
-              </select>
-            </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
-              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Contract</label>
-              <select x-model="analysisResult.job.contract_type" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
-                <option value="Permanent / Unbefristet">Permanent / Unbefristet</option>
-                <option value="Temporary / Befristet">Temporary / Befristet</option>
-                <option value="Project-based">Project-based</option>
-              </select>
-            </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
-              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Seniority</label>
-              <select x-model="analysisResult.job.seniority_level" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
-                <option value="Entry-Level / Junior">Junior / Entry</option>
-                <option value="Mid-Level">Mid-Level</option>
-                <option value="Senior">Senior</option>
-                <option value="Lead / Principal">Lead / Principal</option>
-                <option value="Postdoc / Researcher">Postdoc / Researcher</option>
-                <option value="Executive">Executive</option>
-              </select>
-            </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
-              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Salary / Comp</label>
-              <input type="text" x-model="analysisResult.job.salary_range" placeholder="Not disclosed" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
-            </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
-              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Deadline / Start</label>
-              <input type="text" x-model="analysisResult.job.deadline" placeholder="Open / Date" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
-            </div>
-            <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
-              <label class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Industry Sector</label>
-              <input type="text" x-model="analysisResult.job.industry_sector" placeholder="Sector" class="w-full bg-zinc-900 text-xs font-semibold text-white rounded p-1 border border-zinc-700 focus:outline-none">
-            </div>
-          </div>
-
-          <!-- Dedicated Job File Drawer -->
-          <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80 space-y-3">
-            <div class="flex justify-between items-center border-b border-zinc-900 pb-2">
-              <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <i class="fa-solid fa-folder-tree text-[#89CFF0]"></i> Job Folder Assets & Saved Files
-              </h4>
-              <button @click="openJobLocalFolder(analysisResult.job.id)" class="text-zinc-400 hover:text-white font-mono text-[11px]">
-                <i class="fa-solid fa-folder-open text-[#89CFF0] mr-1"></i> Open in Windows Explorer
-              </button>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
-              <template x-for="file in jobFilesList" :key="file.name">
-                <div class="bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 flex flex-col justify-between hover:border-zinc-700 transition">
-                  <div class="flex items-start justify-between">
-                    <div class="flex items-center gap-2 truncate">
-                      <i class="fa-solid text-sm" :class="file.name.endsWith('.pdf') ? 'fa-file-pdf text-rose-400' : (file.name.endsWith('.html') ? 'fa-file-code text-[#89CFF0]' : 'fa-file-lines text-zinc-400')"></i>
-                      <span class="font-medium text-xs text-white truncate" x-text="file.name"></span>
-                    </div>
-                  </div>
-                  <div class="flex justify-between items-center pt-2 mt-2 border-t border-zinc-800 text-[11px]">
-                    <span class="text-zinc-500" x-text="file.size_kb + ' KB'"></span>
-                    <div class="space-x-2">
-                      <button @click="openFileViewer(file.path, file.name)" class="text-[#89CFF0] hover:underline font-semibold">View</button>
-                      <a :href="file.path" :download="file.name" class="text-zinc-400 hover:text-white" title="Download direct file"><i class="fa-solid fa-download"></i></a>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- Responsibilities & Requirements Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div class="space-y-4">
-              <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80 space-y-2">
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Key Responsibilities & Deliverables</h4>
-                <ul class="space-y-1.5 text-xs text-zinc-300">
-                  <template x-for="r in (analysisResult.job.metadata?.key_responsibilities || analysisResult.job.key_responsibilities || [])" :key="r">
-                    <li class="flex items-start gap-2">
-                      <span class="text-zinc-500 font-bold mt-0.5">•</span>
-                      <span x-text="r"></span>
-                    </li>
-                  </template>
-                </ul>
-              </div>
-              <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80 space-y-2">
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Tech Stack & Tools</h4>
-                <div class="flex flex-wrap gap-1.5">
-                  <template x-for="t in (analysisResult.job.metadata?.tech_stack_tools || analysisResult.job.tech_stack_tools || analysisResult.job.extracted_skills || [])" :key="t">
-                    <span class="px-2 py-0.5 bg-zinc-900 border border-zinc-700 text-zinc-200 rounded text-xs font-mono" x-text="t"></span>
-                  </template>
-                </div>
-              </div>
-            </div>
-
-            <div class="space-y-4">
-              <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80 space-y-2">
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Must-Have Qualifications</h4>
-                <ul class="space-y-1.5 text-xs text-zinc-300">
-                  <template x-for="q in (analysisResult.job.metadata?.required_qualifications || analysisResult.job.required_qualifications || [])" :key="q">
-                    <li class="flex items-start gap-2">
-                      <span class="text-zinc-500 font-bold mt-0.5">•</span>
-                      <span x-text="q"></span>
-                    </li>
-                  </template>
-                </ul>
-              </div>
-              <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80 space-y-2">
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Language & Perks</h4>
-                <div class="flex flex-wrap gap-1.5">
-                  <template x-for="l in (analysisResult.job.metadata?.language_requirements || analysisResult.job.language_requirements || ['English (Fluent/C1)', 'German (B2)'])" :key="l">
-                    <span class="px-2 py-0.5 bg-zinc-900 border border-zinc-700 text-zinc-200 rounded text-xs" x-text="l"></span>
-                  </template>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-end pt-3 border-t border-zinc-800/80">
-            <button @click="selectJobForStudio(analysisResult.job); currentStep = 3;" class="px-6 py-2.5 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow-lg transition flex items-center gap-2">
-              Proceed to Step 3: CV Builder &rarr;
-            </button>
-          </div>
-
-        </div>
-      </template>
-
-    </div>
-
-    <!-- ========================================================================= -->
-    <!-- STEP 3: BILINGUAL CV & COVER LETTER STUDIO (HTML + LIVE A4 PREVIEW) -->
-    <!-- ========================================================================= -->
-    <div x-show="currentStep === 3" x-cloak class="space-y-6">
-      
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left Column: Controls & Live Multi-Box Tailoring Editor -->
-        <div class="lg:col-span-6 space-y-4">
-          
-          <!-- Target Role & Bilingual Controls -->
-          <div class="bg-[#121215] p-4 rounded-xl border border-zinc-800 flex justify-between items-center shadow-md">
-            <div>
-              <span class="text-xs text-zinc-400">Target Role:</span>
-              <h3 class="font-bold text-white text-sm" x-text="studioJob.company + ' — ' + studioJob.role_title"></h3>
-            </div>
-            <div class="flex items-center gap-2">
-              <!-- Quick Photo Toggle in Studio -->
-              <div class="flex items-center gap-1.5 bg-zinc-950 px-2 py-1.5 rounded-lg border border-zinc-700 text-xs">
-                <template x-if="studioProfile?.personal?.photo_base64 || studioProfile?.personal?.photo_src || profileData.personal?.photo_base64">
-                  <div class="flex items-center gap-1.5">
-                    <img :src="studioProfile?.personal?.photo_base64 || studioProfile?.personal?.photo_src || profileData.personal?.photo_base64" class="w-4 h-4 rounded object-cover border border-zinc-600">
-                    <button @click="removeProfilePhoto()" class="text-rose-400 hover:text-rose-300 text-[10px]" title="Remove Photo from CV">
-                      <i class="fa-solid fa-xmark"></i>
-                    </button>
-                  </div>
-                </template>
-                <label class="cursor-pointer text-zinc-300 hover:text-white flex items-center gap-1 text-[11px] font-medium" title="Upload or Change Photo">
-                  <i class="fa-solid fa-camera text-[#89CFF0]"></i>
-                  <span x-text="(studioProfile?.personal?.photo_base64 || studioProfile?.personal?.photo_src || profileData.personal?.photo_base64) ? 'Photo' : '+ Photo'"></span>
-                  <input type="file" @change="handleProfilePhotoUpload($event)" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden">
-                </label>
-              </div>
-
-              <select x-model="studioDocType" @change="renderHtmlPreview()" class="bg-zinc-950 text-xs rounded-lg border border-zinc-700 px-3 py-1.5 text-white font-semibold focus:outline-none">
-                <option value="cv">CV / Resume</option>
-                <option value="letter">Cover Letter</option>
-              </select>
-              <select x-model="studioLang" @change="onLanguageChange()" class="bg-zinc-900 text-[#89CFF0] text-xs rounded-lg border border-zinc-700 px-3 py-1.5 font-bold focus:outline-none">
-                <option value="en" class="bg-zinc-950 text-white">🇬🇧 English (UK)</option>
-                <option value="de" class="bg-zinc-950 text-white">🇩🇪 Deutsch</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- "Why I Fit / Re-Tailor with Gemini" Box -->
-          <div class="bg-[#121215] p-4 rounded-xl border border-zinc-800 space-y-3 shadow-md">
-            <div class="flex justify-between items-center">
-              <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
-                <i class="fa-solid fa-wand-magic-sparkles text-[#89CFF0]"></i>
-                "Why I Fit" Notes & Gemini Refinement
-              </h4>
-              <div class="flex gap-2">
-                <button @click="resetToMasterCv()" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs rounded border border-zinc-700 transition" title="Restore baseline Master CV">
-                  ↺ Reset to Master
-                </button>
-                <button @click="tailorWithGemini()" :disabled="isTailoring" class="px-3 py-1 bg-white hover:bg-zinc-200 disabled:opacity-50 text-zinc-950 text-xs font-bold rounded-lg shadow transition flex items-center gap-1.5">
-                  <i class="fa-solid" :class="isTailoring ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'"></i>
-                  <span x-text="isTailoring ? 'Tailoring...' : 'Re-Tailor with Gemini'"></span>
-                </button>
-              </div>
-            </div>
-            <textarea rows="3" x-model="userFitNotes" placeholder="Write specific projects, motivation, or guidance (e.g. 'Emphasize cloud architecture and Python for this role'). Gemini will tailor your bullets, summary, and cover letter accordingly..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none"></textarea>
-          </div>
-
-          <!-- Multi-Box Live Editor Container -->
-          <div class="bg-[#121215] p-4 rounded-xl border border-zinc-800 space-y-3.5 shadow-md">
-            
-            <div class="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
-              <div>
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider">
-                  <span x-text="studioDocType === 'cv' ? 'Live Tailored CV Editor' : 'Live Cover Letter Editor'"></span>
-                </h4>
-                <span class="text-[11px] text-zinc-500">Every edit instantly updates the pixel-perfect A4 preview on the right.</span>
-              </div>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono" x-text="studioLang === 'en' ? 'EN (UK)' : 'DE'"></span>
-            </div>
-
-            <!-- CV Mode Editor -->
-            <div x-show="studioDocType === 'cv'" class="space-y-3">
-              
-              <!-- Sub-Tabs -->
-              <div class="grid grid-cols-5 gap-1 text-[11px] font-semibold bg-zinc-950 p-1 rounded-lg border border-zinc-800">
-                <button @click="cvEditorTab = 'summary'" :class="cvEditorTab === 'summary' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
-                  Summary
-                </button>
-                <button @click="cvEditorTab = 'experience'" :class="cvEditorTab === 'experience' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
-                  Experience
-                </button>
-                <button @click="cvEditorTab = 'education'" :class="cvEditorTab === 'education' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
-                  Education
-                </button>
-                <button @click="cvEditorTab = 'skills'" :class="cvEditorTab === 'skills' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
-                  Skills
-                </button>
-                <button @click="cvEditorTab = 'header'" :class="cvEditorTab === 'header' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'" class="py-1 rounded text-center transition">
-                  Contact
-                </button>
-              </div>
-
-              <!-- 1. Tailored Summary -->
-              <div x-show="cvEditorTab === 'summary'" class="space-y-2 pt-1">
-                <label class="block text-xs font-semibold text-zinc-300">Executive Profile / Zusammenfassung</label>
-                <textarea rows="5" x-model="studioSummary" @input="renderHtmlPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none leading-relaxed"></textarea>
-              </div>
-
-              <!-- 2. Tailored Experience -->
-              <div x-show="cvEditorTab === 'experience'" class="space-y-3 pt-1">
-                <div class="flex justify-between items-center">
-                  <span class="text-xs font-semibold text-zinc-300">Tailored Experience Roles</span>
-                  <button @click="addStudioExperience()" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-[#89CFF0] text-[11px] font-bold rounded border border-zinc-700 transition">
-                    + Add Role
-                  </button>
-                </div>
-                <div class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-                  <template x-for="(exp, expIdx) in studioProfile.experience" :key="expIdx">
-                    <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-800 space-y-2.5">
-                      <div class="flex justify-between items-center gap-2">
-                        <input type="text" x-model="exp[studioLang === 'en' ? 'role_en' : 'role_de']" @input="renderHtmlPreview()" placeholder="Job Title" class="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs font-bold text-white focus:outline-none">
-                        <button @click="removeStudioExperience(expIdx)" class="text-zinc-500 hover:text-rose-400 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
-                      </div>
-                      <div class="grid grid-cols-2 gap-2">
-                        <input type="text" x-model="exp[studioLang === 'en' ? 'institution_en' : 'institution_de']" @input="renderHtmlPreview()" placeholder="Company" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 focus:outline-none">
-                        <input type="text" x-model="exp[studioLang === 'en' ? 'period_en' : 'period_de']" @input="renderHtmlPreview()" placeholder="Dates" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 focus:outline-none">
-                      </div>
-                      <div class="space-y-1.5 pt-1">
-                        <div class="flex justify-between items-center">
-                          <label class="text-[10px] uppercase font-bold text-zinc-500">Bullets</label>
-                          <button @click="addStudioExperienceBullet(expIdx)" class="text-[10px] text-[#89CFF0] hover:underline">+ Add Bullet</button>
-                        </div>
-                        <template x-for="(b, bIdx) in exp.bullets" :key="bIdx">
-                          <div class="flex items-center gap-1.5">
-                            <span class="text-zinc-600 text-xs">•</span>
-                            <input type="text" x-model="exp.bullets[bIdx]" @input="renderHtmlPreview()" class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 focus:border-zinc-500 focus:outline-none">
-                            <button @click="removeStudioExperienceBullet(expIdx, bIdx)" class="text-zinc-600 hover:text-rose-400 text-xs px-1">&times;</button>
-                          </div>
-                        </template>
-                      </div>
-                    </div>
-                  </template>
-                </div>
-              </div>
-
-              <!-- 3. Tailored Education -->
-              <div x-show="cvEditorTab === 'education'" class="space-y-3 pt-1">
-                <div class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-                  <template x-for="(edu, eduIdx) in studioProfile.education" :key="eduIdx">
-                    <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-800 space-y-2">
-                      <input type="text" x-model="edu[studioLang === 'en' ? 'degree_en' : 'degree_de']" @input="renderHtmlPreview()" placeholder="Degree" class="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs font-bold text-white focus:outline-none">
-                      <div class="grid grid-cols-2 gap-2">
-                        <input type="text" x-model="edu.institution" @input="renderHtmlPreview()" placeholder="University" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 focus:outline-none">
-                        <input type="text" x-model="edu[studioLang === 'en' ? 'period_en' : 'period_de']" @input="renderHtmlPreview()" placeholder="Years" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] text-zinc-300 focus:outline-none">
-                      </div>
-                      <input type="text" x-model="edu[studioLang === 'en' ? 'notes_en' : 'notes_de']" @input="renderHtmlPreview()" placeholder="Notes" class="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-[11px] text-zinc-400 focus:outline-none">
-                    </div>
-                  </template>
-                </div>
-              </div>
-
-              <!-- 4. Tailored Skills -->
-              <div x-show="cvEditorTab === 'skills'" class="space-y-3 pt-1 max-h-[380px] overflow-y-auto pr-1">
-                <div>
-                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Core Domains</label>
-                  <input type="text" x-model="cvSkillsString.domains" @input="syncSkillsToStudioProfile()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Software & Tools</label>
-                  <input type="text" x-model="cvSkillsString.software" @input="syncSkillsToStudioProfile()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Technical Instrumentation</label>
-                  <input type="text" x-model="cvSkillsString.hardware" @input="syncSkillsToStudioProfile()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-zinc-300 mb-1">Languages</label>
-                  <input type="text" x-model="cvSkillsString.languages" @input="syncSkillsToStudioProfile()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-zinc-500 focus:outline-none">
-                </div>
-              </div>
-
-              <!-- 5. Header Contact -->
-              <div x-show="cvEditorTab === 'header'" class="space-y-2.5 pt-1">
-                <div class="grid grid-cols-2 gap-2">
-                  <input type="text" x-model="studioProfile.personal.full_name" @input="renderHtmlPreview()" placeholder="Full Name" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white">
-                  <input type="text" x-model="studioProfile.personal[studioLang === 'en' ? 'title_en' : 'title_de']" @input="renderHtmlPreview()" placeholder="Title" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                  <input type="text" x-model="studioProfile.personal.email" @input="renderHtmlPreview()" placeholder="Email" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300">
-                  <input type="text" x-model="studioProfile.personal.phone" @input="renderHtmlPreview()" placeholder="Phone" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300">
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Cover Letter Mode Editor -->
-            <div x-show="studioDocType === 'letter'" class="space-y-3">
-              <template x-for="(p, pIdx) in studioLetterParagraphs" :key="pIdx">
-                <div class="space-y-1">
-                  <label class="text-[10px] uppercase font-bold text-zinc-500" x-text="'Paragraph ' + (pIdx + 1)"></label>
-                  <textarea rows="4" x-model="studioLetterParagraphs[pIdx]" @input="renderHtmlPreview()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:border-zinc-500 focus:outline-none leading-relaxed"></textarea>
-                </div>
-              </template>
-            </div>
-
-          </div>
-
-        </div>
-
-        <!-- Right Column: Instant Live Pixel-Perfect A4 Preview Viewport -->
-        <div class="lg:col-span-6 space-y-4">
-          
-          <!-- Studio Action Header -->
-          <div class="flex justify-between items-center bg-[#121215] p-4 rounded-xl border border-zinc-800 shadow-md">
-            <span class="text-xs font-bold text-white flex items-center gap-2">
-              <i class="fa-solid fa-file-invoice text-[#89CFF0]"></i>
-              <span x-text="(studioDocType === 'cv' ? 'A4 CV' : 'A4 Cover Letter') + ' (' + (studioLang === 'en' ? 'English UK' : 'Deutsch') + ')'"></span>
-            </span>
-            
-            <div class="flex items-center gap-2">
-              <!-- Print / Save as PDF Button -->
-              <button @click="printHtmlDocument()" class="px-3.5 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center gap-1.5" title="Print or Save as PDF">
-                <i class="fa-solid fa-print"></i> Save / Print PDF
-              </button>
-              
-              <!-- Open Local Folder -->
-              <button @click="openJobLocalFolder(studioJob.id)" class="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg border border-zinc-700 transition" title="Open Job Folder in Windows Explorer">
-                <i class="fa-solid fa-folder-open text-[#89CFF0]"></i>
-              </button>
-
-              <!-- Upload to Drive -->
-              <button @click="uploadJobToGoogleDrive(studioJob.id)" class="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg border border-zinc-700 transition" title="Upload to Google Drive">
-                <i class="fa-brands fa-google-drive text-[#89CFF0]"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- A4 Document Frame Container -->
-          <div class="bg-zinc-950 rounded-xl border border-zinc-800 p-2 shadow-2xl flex justify-center overflow-x-auto min-h-[750px]">
-            <iframe id="previewIframe" :srcdoc="currentHtmlContent" class="w-full bg-white rounded shadow" style="min-height: 850px; border: none;"></iframe>
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-    <!-- ========================================================================= -->
-    <!-- STEP 4: TAILORED OUTREACH PITCHES -->
-    <!-- ========================================================================= -->
-    <div x-show="currentStep === 4" x-cloak class="space-y-6">
-      
-      <div class="bg-[#121215] p-5 rounded-xl border border-zinc-800 space-y-4 shadow-md">
-        <div class="flex justify-between items-center border-b border-zinc-800/80 pb-3">
-          <div>
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <i class="fa-brands fa-linkedin text-[#89CFF0]"></i>
-              Tailored Outreach Studio
-            </h3>
-            <p class="text-xs text-zinc-400 mt-0.5">High-converting personalized pitches for LinkedIn connection notes, InMails, and cold emails.</p>
-          </div>
-          <span class="text-xs text-zinc-500 font-mono" x-text="studioJob.company + ' — ' + studioJob.role_title"></span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          
-          <!-- Pitch 1: LinkedIn Connection Note -->
-          <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 space-y-2 flex flex-col justify-between">
-            <div class="space-y-2">
-              <div class="flex justify-between items-center">
-                <h4 class="text-xs font-bold text-white">LinkedIn Connection Note</h4>
-                <span class="text-[10px] text-zinc-500 font-mono">&lt;300 chars</span>
-              </div>
-              <textarea rows="6" x-model="outreachPitches.linkedin_connection" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-xs text-white focus:outline-none"></textarea>
-            </div>
-            <button @click="copyToClipboard(outreachPitches.linkedin_connection)" class="w-full py-2 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-copy"></i> Copy Note
-            </button>
-          </div>
-
-          <!-- Pitch 2: LinkedIn InMail -->
-          <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 space-y-2 flex flex-col justify-between">
-            <div class="space-y-2">
-              <div class="flex justify-between items-center">
-                <h4 class="text-xs font-bold text-white">LinkedIn InMail Pitch</h4>
-                <span class="text-[10px] text-zinc-500 font-mono">150-200 words</span>
-              </div>
-              <textarea rows="6" x-model="outreachPitches.linkedin_inmail" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-xs text-white focus:outline-none"></textarea>
-            </div>
-            <button @click="copyToClipboard(outreachPitches.linkedin_inmail)" class="w-full py-2 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-copy"></i> Copy InMail
-            </button>
-          </div>
-
-          <!-- Pitch 3: Cold Email -->
-          <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 space-y-2 flex flex-col justify-between">
-            <div class="space-y-2">
-              <div class="flex justify-between items-center">
-                <h4 class="text-xs font-bold text-white">Cold Email</h4>
-                <span class="text-[10px] text-zinc-500 font-mono">Direct Pitch</span>
-              </div>
-              <input type="text" x-model="outreachPitches.cold_email_subject" placeholder="Subject" class="w-full bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-xs text-zinc-200 font-semibold mb-1">
-              <textarea rows="4" x-model="outreachPitches.cold_email_body" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-xs text-white focus:outline-none"></textarea>
-            </div>
-            <button @click="copyToClipboard(outreachPitches.cold_email_subject + '\n\n' + outreachPitches.cold_email_body)" class="w-full py-2 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs shadow transition flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-copy"></i> Copy Email
-            </button>
-          </div>
-
-        </div>
+              {% endfor %}
+            {% else %}
+              <tr id="empty-state-row">
+                <td colspan="7" class="py-12 text-center text-zinc-500 text-xs">
+                  <i class="fa-solid fa-inbox text-2xl mb-2 text-zinc-600 block"></i>
+                  No job applications added yet. Paste a job URL above to get started!
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
       </div>
 
     </div>
 
   </main>
 
-  <!-- Modals (Settings, Account Creation, PDF Viewer, Google Guide) -->
-  <!-- 1. Google Apps Script Guide Modal -->
-  <div x-show="showGoogleScriptModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-    <div class="bg-[#121215] border border-zinc-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <i class="fa-brands fa-google-drive text-[#89CFF0]"></i> Google Drive 1-Click Sync Setup Guide
+  <!-- Manual Entry / PDF Upload Modal -->
+  <div id="manual-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="card-bg max-w-lg w-full rounded-2xl p-6 space-y-4 shadow-2xl border border-zinc-700">
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <h3 class="font-bold text-base text-white flex items-center gap-2">
+          <i class="fa-solid fa-plus-circle text-blue-400"></i> Add Job Posting Manually
         </h3>
-        <button @click="showGoogleScriptModal = false" class="text-zinc-400 hover:text-white">&times;</button>
-      </div>
-      <p class="text-xs text-zinc-300">Follow these 4 quick steps to create a private Google Drive folder upload webhook:</p>
-      <ol class="text-xs text-zinc-400 space-y-2 list-decimal list-inside">
-        <li>Go to <a href="https://script.google.com" target="_blank" class="text-[#89CFF0] underline">script.google.com</a> and click <b>New Project</b>.</li>
-        <li>Copy and paste the Apps Script template below, replacing all text in Code.gs.</li>
-        <li>Click <b>Deploy &rarr; New Deployment &rarr; Select type: Web App</b>.
-          <ul class="pl-5 pt-1 space-y-1 text-zinc-300">
-            <li>Execute as: <b>Me</b></li>
-            <li>Who has access: <b>Anyone</b> (needed so local requests can post files).</li>
-          </ul>
-        </li>
-        <li>Copy your Web App URL (ends in <code>/exec</code>) and paste it into Step 1.</li>
-      </ol>
-      <div class="space-y-1.5">
-        <div class="flex justify-between items-center">
-          <label class="text-[10px] uppercase font-bold text-zinc-500">Google Apps Script Code</label>
-          <button @click="copyToClipboard(googleScriptCode)" class="text-xs text-[#89CFF0] hover:underline font-semibold">Copy Script</button>
-        </div>
-        <textarea rows="8" readonly x-model="googleScriptCode" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-[11px] text-zinc-300 font-mono"></textarea>
-      </div>
-      <div class="flex justify-end pt-2">
-        <button @click="showGoogleScriptModal = false" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold border border-zinc-700">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 2. Account Creation Modal -->
-  <div x-show="showNewAccountModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-    <div class="bg-[#121215] border border-zinc-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-      <h3 class="text-sm font-bold text-white">Create New Candidate Profile</h3>
-      <input type="text" x-model="newAccountName" placeholder="Full Name (e.g. Jane Doe)" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:outline-none">
-      <div class="flex justify-end gap-2">
-        <button @click="showNewAccountModal = false" class="px-4 py-2 bg-zinc-900 text-zinc-300 rounded-lg text-xs">Cancel</button>
-        <button @click="createNewProfile()" class="px-4 py-2 bg-white text-zinc-950 font-bold rounded-lg text-xs">Create Profile</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 3. Document / PDF Viewer Modal -->
-  <div x-show="showPdfViewerModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-    <div class="bg-[#121215] border border-zinc-800 rounded-2xl max-w-5xl w-full h-[90vh] flex flex-col p-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
-        <h3 class="text-sm font-bold text-white" x-text="activePdfViewerTitle"></h3>
-        <button @click="showPdfViewerModal = false" class="text-zinc-400 hover:text-white text-lg">&times;</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 4. Settings & API Keys Modal -->
-  <div x-show="showSettingsModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-    <div class="bg-[#121215] border border-zinc-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-gear text-[#89CFF0]"></i> System Settings & API Keys
-        </h3>
-        <button @click="showSettingsModal = false" class="text-zinc-400 hover:text-white">&times;</button>
+        <button onclick="closeManualJobModal()" class="text-zinc-400 hover:text-white text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
-      <div class="space-y-4 text-xs">
+      <form onsubmit="handleManualJobSubmit(event)" class="space-y-3.5 text-xs">
         <div>
-          <label class="block font-semibold text-zinc-300 mb-1">Google Gemini API Key</label>
-          <div class="flex gap-2">
-            <input type="password" x-model="geminiApiKey" placeholder="AIzaSy..." class="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none font-mono">
-            <button @click="testAndSaveGeminiKey()" class="px-3 py-2 bg-white hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs">Test</button>
+          <label class="block font-semibold text-zinc-400 mb-1">Company Name *</label>
+          <input type="text" id="manual-company" required placeholder="e.g. Bayer AG" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block font-semibold text-zinc-400 mb-1">Position / Role Title *</label>
+          <input type="text" id="manual-role" required placeholder="e.g. Senior Data Scientist" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-zinc-400 mb-1">Location</label>
+            <input type="text" id="manual-location" placeholder="e.g. Hamburg, Germany" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
           </div>
-          <p class="text-[11px] text-zinc-500 mt-1" x-text="geminiTestMessage || 'Enables AI Job Breakdown & automatic CV tailoring.'"></p>
+          <div>
+            <label class="block font-semibold text-zinc-400 mb-1">Job ID / Ref Nr.</label>
+            <input type="text" id="manual-job-id-ref" placeholder="e.g. REQ-9941" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+          </div>
         </div>
-
         <div>
-          <label class="block font-semibold text-zinc-300 mb-1">Google Apps Script Webhook URL</label>
-          <input type="text" x-model="googleWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none">
-          <p class="text-[11px] text-zinc-500 mt-1">For 1-click folder syncing to Google Drive.</p>
+          <label class="block font-semibold text-zinc-400 mb-1">Job Description Text / Responsibilities</label>
+          <textarea id="manual-raw-text" rows="4" placeholder="Paste requirements, duties, or full job text here..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 leading-relaxed"></textarea>
         </div>
-      </div>
 
-      <div class="flex justify-end gap-2 pt-2 border-t border-zinc-800">
-        <button @click="showSettingsModal = false" class="px-4 py-2 bg-white text-zinc-950 font-bold rounded-lg text-xs">Done</button>
-      </div>
+        <div class="flex items-center justify-end space-x-2 pt-2">
+          <button type="button" onclick="closeManualJobModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold rounded-lg">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-md">Create Application</button>
+        </div>
+      </form>
     </div>
   </div>
 
+  <script src="/static/app.js"></script>
 </body>
 </html>

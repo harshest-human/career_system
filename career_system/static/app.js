@@ -1,762 +1,233 @@
-function getApiBase() {
-  if (window.location.protocol === 'file:') {
-    return 'http://localhost:8000';
-  }
-  return '';
+/**
+ * Career System — 100% Offline Local Studio Client Logic
+ * Handles HTML5 Drag & Drop Priority Reordering, Offline URL Ingestion,
+ * Live Table Filtering, and Application Actions.
+ */
+
+// Initialize Drag & Drop Table Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  initTableDragAndDrop();
+});
+
+let draggedRow = null;
+
+function initTableDragAndDrop() {
+  const tableBody = document.getElementById('jobs-table-body');
+  if (!tableBody) return;
+
+  const rows = tableBody.querySelectorAll('tr[draggable="true"]');
+
+  rows.forEach((row) => {
+    row.addEventListener('dragstart', (e) => {
+      draggedRow = row;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', row.innerHTML);
+    });
+
+    row.addEventListener('dragend', () => {
+      if (draggedRow) {
+        draggedRow.classList.remove('dragging');
+      }
+      rows.forEach((r) => r.classList.remove('drag-over'));
+      draggedRow = null;
+      updatePriorityNumbersAndPersist();
+    });
+
+    row.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const targetRow = e.currentTarget;
+      if (targetRow && targetRow !== draggedRow) {
+        targetRow.classList.add('drag-over');
+      }
+    });
+
+    row.addEventListener('dragleave', (e) => {
+      e.currentTarget.classList.remove('drag-over');
+    });
+
+    row.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const targetRow = e.currentTarget;
+      targetRow.classList.remove('drag-over');
+
+      if (draggedRow && targetRow && draggedRow !== targetRow) {
+        const allRows = Array.from(tableBody.querySelectorAll('tr[draggable="true"]'));
+        const draggedIndex = allRows.indexOf(draggedRow);
+        const targetIndex = allRows.indexOf(targetRow);
+
+        if (draggedIndex < targetIndex) {
+          targetRow.parentNode.insertBefore(draggedRow, targetRow.nextSibling);
+        } else {
+          targetRow.parentNode.insertBefore(draggedRow, targetRow);
+        }
+      }
+    });
+  });
 }
 
-const API_BASE = getApiBase();
-
-function careerApp() {
-  return {
-    currentStep: 1,
-    serverConnected: false,
-    profiles: [],
-    activeProfileId: 'default',
-    profileData: {
-      personal: {
-        full_name: '',
-        title_en: '',
-        title_de: '',
-        email: '',
-        phone: '',
-        city_en: '',
-        linkedin_url: '',
-        github_url: '',
-        residence_status: 'Full Work Authorization in Germany / EU'
-      },
-      executive_summary: { en: '', de: '' },
-      experience: [],
-      education: [],
-      skills: { domains: [], software_tools: [], hardware_instruments: [], languages: [] },
-      leadership_awards: []
-    },
-    jobsList: [],
-
-    // Account Creation Modal
-    showNewAccountModal: false,
-    newAccountName: '',
-
-    // Google Sync
-    googleWebhookUrl: localStorage.getItem('google_webhook_url') || '',
-    showGoogleScriptModal: false,
-    googleScriptCode: '',
-
-    // Gemini API Connection
-    geminiApiKey: localStorage.getItem('gemini_api_key') || '',
-    geminiConnected: false,
-    geminiStatusText: 'Offline Mode',
-    isTestingGemini: false,
-    geminiTestMessage: '',
-
-    // Ingestion state
-    ingestMode: 'url',
-    scrapeUrlInput: '',
-    rawJobTextInput: '',
-    isLoadingBreakdown: false,
-    analysisResult: null,
-    jobFilesList: [],
-
-    // PDF / File Viewer Modal
-    showPdfViewerModal: false,
-    activePdfViewerUrl: '',
-    activePdfViewerTitle: 'Document Viewer',
-
-    // Studio state
-    studioJob: {
-      id: null,
-      company: 'Target Company',
-      role_title: 'Position',
-      location: 'Hamburg, Germany',
-      extracted_skills: []
-    },
-    studioDocType: 'cv',
-    studioLang: 'en',
-    userFitNotes: '',
-    studioSummary: '',
-    studioLetterParagraphs: [
-      'I am writing to express my enthusiastic application for this role...',
-      'My technical background directly aligns with your core requirements...',
-      'I look forward to discussing how my experience will support your goals.'
-    ],
-    studioProfile: null,
-    currentHtmlContent: '',
-    isTailoring: false,
-    cvEditorTab: 'summary',
-    cvSkillsString: { domains: '', software: '', hardware: '', languages: '' },
-    cvCredentialsString: '',
-
-    // Outreach state
-    outreachPitches: {
-      linkedin_connection: '',
-      linkedin_inmail: '',
-      cold_email_subject: '',
-      cold_email_body: ''
-    },
-
-    // Settings
-    showSettingsModal: false,
-
-    async init() {
-      await this.checkServer();
-      await this.loadProfiles();
-      await this.loadJobs();
-      await this.loadGoogleScriptTemplate();
-      await this.testGeminiConnection(false);
-
-      this.$watch('geminiApiKey', (val) => {
-        localStorage.setItem('gemini_api_key', val);
-      });
-      this.$watch('googleWebhookUrl', (val) => {
-        localStorage.setItem('google_webhook_url', val);
-      });
-
-      setInterval(() => this.checkServer(), 8000);
-    },
-
-    async checkServer() {
-      try {
-        const res = await fetch(`${API_BASE}/api/health`);
-        this.serverConnected = res.ok;
-      } catch (err) {
-        this.serverConnected = false;
-      }
-    },
-
-    async testGeminiConnection(showNotice = true) {
-      const key = this.geminiApiKey ? this.geminiApiKey.trim() : '';
-      if (!key) {
-        this.geminiConnected = false;
-        this.geminiStatusText = 'Offline Mode';
-        if (showNotice) {
-          this.geminiTestMessage = 'No Gemini API key provided. System is operating in offline mode.';
-        }
-        return;
-      }
-
-      this.isTestingGemini = true;
-      try {
-        const res = await fetch(`${API_BASE}/api/ai/test-key`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ api_key: key })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          this.geminiConnected = data.connected;
-          if (data.connected) {
-            this.geminiStatusText = `Gemini Active (${data.model})`;
-            this.geminiTestMessage = `✓ ${data.message}`;
-          } else {
-            this.geminiStatusText = 'Key Error';
-            this.geminiTestMessage = data.message;
-          }
-        }
-      } catch (err) {
-        this.geminiConnected = false;
-        this.geminiStatusText = 'Offline Mode';
-        this.geminiTestMessage = `Could not reach server: ${err.message}`;
-      } finally {
-        this.isTestingGemini = false;
-      }
-    },
-
-    async testAndSaveGeminiKey() {
-      await this.testGeminiConnection(true);
-      if (this.geminiConnected) {
-        localStorage.setItem('gemini_api_key', this.geminiApiKey);
-      }
-    },
-
-    async loadGoogleScriptTemplate() {
-      try {
-        const res = await fetch(`${API_BASE}/api/google/script-template`);
-        if (res.ok) {
-          const data = await res.json();
-          this.googleScriptCode = data.script || '';
-        }
-      } catch (err) {
-        console.warn('Could not load script template:', err);
-      }
-    },
-
-    async testGoogleSync() {
-      if (!this.googleWebhookUrl) {
-        alert('Please enter your Google Apps Script Webhook URL first.');
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE}/api/google/test-sync`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ webhook_url: this.googleWebhookUrl })
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-          alert('✓ Google Drive sync successful! Test file created in Drive.');
-        } else {
-          alert(`Sync error: ${data.message || 'Check Apps Script deployment.'}`);
-        }
-      } catch (err) {
-        alert(`Failed to test Google Sync: ${err.message}`);
-      }
-    },
-
-    async loadProfiles() {
-      try {
-        const res = await fetch(`${API_BASE}/api/profiles`);
-        if (res.ok) {
-          this.profiles = await res.json();
-          if (this.profiles.length > 0) {
-            const hasActive = this.profiles.some((p) => p.id === this.activeProfileId);
-            if (!hasActive) {
-              this.activeProfileId = this.profiles[0].id;
-            }
-            await this.loadActiveProfile();
-          }
-        }
-      } catch (err) {
-        console.error('Error loading profiles:', err);
-      }
-    },
-
-    async loadActiveProfile() {
-      try {
-        const res = await fetch(`${API_BASE}/api/profiles/${this.activeProfileId}`);
-        if (res.ok) {
-          const data = await res.json();
-          this.profileData = data.data || this.profileData;
-          if (!this.profileData.personal) this.profileData.personal = {};
-          if (!this.profileData.executive_summary) this.profileData.executive_summary = { en: '', de: '' };
-          if (!this.profileData.experience) this.profileData.experience = [];
-          if (!this.profileData.education) this.profileData.education = [];
-          if (!this.profileData.skills) this.profileData.skills = { domains: [], software_tools: [], hardware_instruments: [], languages: [] };
-          if (!this.profileData.leadership_awards) this.profileData.leadership_awards = [];
-
-          this.syncMasterProfileToStrings();
-          this.studioProfile = JSON.parse(JSON.stringify(this.profileData));
-          this.onLanguageChange();
-          await this.renderHtmlPreview();
-        }
-      } catch (err) {
-        console.error('Error loading active profile:', err);
-      }
-    },
-
-    handleProfilePhotoUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const b64 = e.target.result;
-        if (!this.profileData.personal) this.profileData.personal = {};
-        this.profileData.personal.photo_base64 = b64;
-        this.profileData.personal.photo_src = b64;
-        if (this.studioProfile) {
-          if (!this.studioProfile.personal) this.studioProfile.personal = {};
-          this.studioProfile.personal.photo_base64 = b64;
-          this.studioProfile.personal.photo_src = b64;
-        }
-        this.renderHtmlPreview();
-      };
-      reader.readAsDataURL(file);
-    },
-
-    removeProfilePhoto() {
-      if (this.profileData.personal) {
-        this.profileData.personal.photo_base64 = '';
-        this.profileData.personal.photo_src = '';
-      }
-      if (this.studioProfile && this.studioProfile.personal) {
-        this.studioProfile.personal.photo_base64 = '';
-        this.studioProfile.personal.photo_src = '';
-      }
-      this.renderHtmlPreview();
-    },
-
-    syncMasterProfileToStrings() {
-      const skills = this.profileData.skills || {};
-      this.cvSkillsString = {
-        domains: (skills.domains || []).join(', '),
-        software: (skills.software_tools || []).join(', '),
-        hardware: (skills.hardware_instruments || []).join(', '),
-        languages: (skills.languages || []).join(', ')
-      };
-      this.cvCredentialsString = (this.profileData.leadership_awards || []).join('\n');
-    },
-
-    syncSkillsToMasterProfile() {
-      if (!this.profileData.skills) this.profileData.skills = {};
-      this.profileData.skills.domains = this.cvSkillsString.domains.split(',').map((s) => s.trim()).filter(Boolean);
-      this.profileData.skills.software_tools = this.cvSkillsString.software.split(',').map((s) => s.trim()).filter(Boolean);
-      this.profileData.skills.hardware_instruments = this.cvSkillsString.hardware.split(',').map((s) => s.trim()).filter(Boolean);
-      this.profileData.skills.languages = this.cvSkillsString.languages.split(',').map((s) => s.trim()).filter(Boolean);
-      this.profileData.leadership_awards = this.cvCredentialsString.split('\n').map((s) => s.trim()).filter(Boolean);
-    },
-
-    syncSkillsToStudioProfile() {
-      if (!this.studioProfile) return;
-      if (!this.studioProfile.skills) this.studioProfile.skills = {};
-      this.studioProfile.skills.domains = this.cvSkillsString.domains.split(',').map((s) => s.trim()).filter(Boolean);
-      this.studioProfile.skills.software_tools = this.cvSkillsString.software.split(',').map((s) => s.trim()).filter(Boolean);
-      this.studioProfile.skills.hardware_instruments = this.cvSkillsString.hardware.split(',').map((s) => s.trim()).filter(Boolean);
-      this.studioProfile.skills.languages = this.cvSkillsString.languages.split(',').map((s) => s.trim()).filter(Boolean);
-      this.renderHtmlPreview();
-    },
-
-    async saveProfile() {
-      this.syncSkillsToMasterProfile();
-      try {
-        const res = await fetch(`${API_BASE}/api/profiles/${this.activeProfileId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.profileData)
-        });
-        if (res.ok) {
-          alert('✓ Master CV saved successfully!');
-        } else {
-          alert('Failed to save Master CV.');
-        }
-      } catch (err) {
-        alert(`Error saving profile: ${err.message}`);
-      }
-    },
-
-    async createNewProfile() {
-      if (!this.newAccountName.trim()) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/profiles`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: this.newAccountName.trim() })
-        });
-        if (res.ok) {
-          const created = await res.json();
-          this.showNewAccountModal = false;
-          this.newAccountName = '';
-          await this.loadProfiles();
-          this.activeProfileId = created.id;
-          await this.loadActiveProfile();
-        }
-      } catch (err) {
-        alert(`Error creating profile: ${err.message}`);
-      }
-    },
-
-    addMasterExperience() {
-      if (!this.profileData.experience) this.profileData.experience = [];
-      this.profileData.experience.unshift({
-        role_en: 'Position Title',
-        role_de: 'Positionsbezeichnung',
-        institution_en: 'Company Name',
-        institution_de: 'Company Name',
-        period_en: '2023 - Present',
-        period_de: '2023 - Heute',
-        affiliation: 'Location',
-        bullets: ['Accomplished key project deliverable with measurable outcome.']
-      });
-    },
-
-    removeMasterExperience(idx) {
-      if (confirm('Delete this position from your Master CV?')) {
-        this.profileData.experience.splice(idx, 1);
-      }
-    },
-
-    addMasterExperienceBullet(expIdx) {
-      if (!this.profileData.experience[expIdx].bullets) {
-        this.profileData.experience[expIdx].bullets = [];
-      }
-      this.profileData.experience[expIdx].bullets.push('New accomplishment or methodology bullet.');
-    },
-
-    removeMasterExperienceBullet(expIdx, bIdx) {
-      this.profileData.experience[expIdx].bullets.splice(bIdx, 1);
-    },
-
-    addMasterEducation() {
-      if (!this.profileData.education) this.profileData.education = [];
-      this.profileData.education.push({
-        degree_en: 'Master of Science (M.Sc.)',
-        degree_de: 'Master of Science (M.Sc.)',
-        institution: 'University Name',
-        period_en: '2020 - 2022',
-        period_de: '2020 - 2022',
-        notes_en: 'Graduated with Distinction'
-      });
-    },
-
-    removeMasterEducation(idx) {
-      this.profileData.education.splice(idx, 1);
-    },
-
-    async loadJobs() {
-      try {
-        const res = await fetch(`${API_BASE}/api/jobs`);
-        if (res.ok) {
-          this.jobsList = await res.json();
-          if (this.jobsList.length > 0 && !this.studioJob.id) {
-            await this.selectJobForStudio(this.jobsList[0]);
-          }
-        }
-      } catch (err) {
-        console.error('Error loading jobs:', err);
-      }
-    },
-
-    async updateJobStatus(jobId, newStatus) {
-      try {
-        await fetch(`${API_BASE}/api/jobs/${jobId}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus })
-        });
-      } catch (err) {
-        console.error('Error updating status:', err);
-      }
-    },
-
-    async deleteJob(jobId) {
-      if (!confirm('Are you sure you want to delete this job and its files?')) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/jobs/${jobId}`, { method: 'DELETE' });
-        if (res.ok) {
-          if (this.analysisResult && this.analysisResult.job.id === jobId) {
-            this.analysisResult = null;
-          }
-          await this.loadJobs();
-        }
-      } catch (err) {
-        alert(`Error deleting job: ${err.message}`);
-      }
-    },
-
-    async scrapeJobUrl() {
-      if (!this.scrapeUrlInput.trim()) return;
-      this.isLoadingBreakdown = true;
-      try {
-        const res = await fetch(`${API_BASE}/api/jobs/scrape`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: this.scrapeUrlInput.trim(),
-            candidate_id: this.activeProfileId,
-            gemini_api_key: this.geminiApiKey
-          })
-        });
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(errText);
-        }
-        const data = await res.json();
-        await this.loadJobs();
-        this.scrapeUrlInput = '';
-        this.handleIngestionSuccess(data);
-      } catch (err) {
-        alert(`Error scraping job: ${err.message}`);
-      } finally {
-        this.isLoadingBreakdown = false;
-      }
-    },
-
-    async uploadJobPdf(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      this.isLoadingBreakdown = true;
-      const formData = new FormData();
-      formData.append('file', file);
-      if (this.geminiApiKey) {
-        formData.append('gemini_api_key', this.geminiApiKey);
-      }
-      formData.append('candidate_id', this.activeProfileId);
-
-      try {
-        const res = await fetch(`${API_BASE}/api/jobs/upload`, {
-          method: 'POST',
-          body: formData
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        await this.loadJobs();
-        this.handleIngestionSuccess(data);
-      } catch (err) {
-        alert(`Error uploading PDF: ${err.message}`);
-      } finally {
-        this.isLoadingBreakdown = false;
-      }
-    },
-
-    async parseRawJobText() {
-      if (!this.rawJobTextInput.trim()) return;
-      this.isLoadingBreakdown = true;
-      try {
-        const res = await fetch(`${API_BASE}/api/jobs/parse-text`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            raw_text: this.rawJobTextInput.trim(),
-            candidate_id: this.activeProfileId,
-            gemini_api_key: this.geminiApiKey
-          })
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        await this.loadJobs();
-        this.rawJobTextInput = '';
-        this.handleIngestionSuccess(data);
-      } catch (err) {
-        alert(`Error parsing job text: ${err.message}`);
-      } finally {
-        this.isLoadingBreakdown = false;
-      }
-    },
-
-    handleIngestionSuccess(res) {
-      const jobData = res.data;
-      jobData.id = res.job_id;
-      this.analysisResult = { job: jobData };
-      this.selectJobForStudio(jobData);
-
-      if (res.tailored) {
-        if (res.tailored.tailored_profile) {
-          this.studioProfile = JSON.parse(JSON.stringify(res.tailored.tailored_profile));
-        }
-        if (res.tailored.cover_letter_paragraphs) {
-          this.studioLetterParagraphs = res.tailored.cover_letter_paragraphs[this.studioLang] || res.tailored.cover_letter_paragraphs.en;
-        }
-        if (res.tailored.outreach) {
-          this.outreachPitches = res.tailored.outreach;
-        }
-      }
-
-      this.loadJobFiles(res.job_id);
-    },
-
-    async selectJobForAnalysis(job) {
-      this.analysisResult = { job: job };
-      await this.loadJobFiles(job.id);
-    },
-
-    async selectJobForStudio(job) {
-      this.studioJob = JSON.parse(JSON.stringify(job));
-      if (!this.studioProfile) {
-        this.studioProfile = JSON.parse(JSON.stringify(this.profileData));
-      }
-      this.onLanguageChange();
-      await this.loadJobFiles(job.id);
-      await this.renderHtmlPreview();
-    },
-
-    async loadJobFiles(jobId) {
-      if (!jobId) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/jobs/${jobId}/files`);
-        if (res.ok) {
-          this.jobFilesList = await res.json();
-        }
-      } catch (err) {
-        console.error('Error loading job files:', err);
-      }
-    },
-
-    onLanguageChange() {
-      if (!this.studioProfile) {
-        this.studioProfile = JSON.parse(JSON.stringify(this.profileData));
-      }
-      const summaryObj = this.studioProfile.executive_summary || {};
-      this.studioSummary = summaryObj[this.studioLang] || summaryObj.en || '';
-      this.renderHtmlPreview();
-    },
-
-    resetToMasterCv() {
-      if (confirm('Reset this job studio back to your baseline Master CV?')) {
-        this.studioProfile = JSON.parse(JSON.stringify(this.profileData));
-        this.onLanguageChange();
-      }
-    },
-
-    async tailorWithGemini() {
-      this.isTailoring = true;
-      try {
-        const res = await fetch(`${API_BASE}/api/ai/tailor`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            candidate_id: this.activeProfileId,
-            job_data: this.studioJob,
-            user_notes: this.userFitNotes,
-            lang: this.studioLang,
-            gemini_api_key: this.geminiApiKey
-          })
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-
-        if (data.tailored_profile) {
-          this.studioProfile = data.tailored_profile;
-          this.onLanguageChange();
-        }
-        if (data.cover_letter_paragraphs) {
-          this.studioLetterParagraphs = data.cover_letter_paragraphs[this.studioLang] || data.cover_letter_paragraphs.en || this.studioLetterParagraphs;
-        }
-        if (data.outreach) {
-          this.outreachPitches = data.outreach;
-        }
-
-        await this.renderHtmlPreview();
-        if (this.studioJob.id) {
-          await this.loadJobFiles(this.studioJob.id);
-        }
-        alert('✓ Gemini successfully tailored your application documents & pitches!');
-      } catch (err) {
-        alert(`Tailoring error: ${err.message}`);
-      } finally {
-        this.isTailoring = false;
-      }
-    },
-
-    addStudioExperience() {
-      if (!this.studioProfile.experience) this.studioProfile.experience = [];
-      this.studioProfile.experience.unshift({
-        role_en: 'Tailored Position Title',
-        role_de: 'Positionsbezeichnung',
-        institution_en: 'Company Name',
-        institution_de: 'Company Name',
-        period_en: '2023 - Present',
-        period_de: '2023 - Heute',
-        affiliation: 'Location',
-        bullets: ['Tailored accomplishment bullet aligning directly with job requirements.']
-      });
-      this.renderHtmlPreview();
-    },
-
-    removeStudioExperience(idx) {
-      this.studioProfile.experience.splice(idx, 1);
-      this.renderHtmlPreview();
-    },
-
-    addStudioExperienceBullet(expIdx) {
-      if (!this.studioProfile.experience[expIdx].bullets) {
-        this.studioProfile.experience[expIdx].bullets = [];
-      }
-      this.studioProfile.experience[expIdx].bullets.push('Tailored bullet matching job description.');
-      this.renderHtmlPreview();
-    },
-
-    removeStudioExperienceBullet(expIdx, bIdx) {
-      this.studioProfile.experience[expIdx].bullets.splice(bIdx, 1);
-      this.renderHtmlPreview();
-    },
-
-    async renderHtmlPreview() {
-      if (!this.studioProfile) return;
-      if (!this.studioProfile.executive_summary) this.studioProfile.executive_summary = {};
-      this.studioProfile.executive_summary[this.studioLang] = this.studioSummary;
-
-      try {
-        const res = await fetch(`${API_BASE}/api/generate-html`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            candidate_id: this.activeProfileId,
-            job_data: this.studioJob,
-            lang: this.studioLang,
-            custom_summary: this.studioSummary,
-            custom_letter_paragraphs: this.studioLetterParagraphs,
-            custom_profile: this.studioProfile
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          this.currentHtmlContent = this.studioDocType === 'cv' ? data.cv_html : data.cover_letter_html;
-        }
-      } catch (err) {
-        console.error('Error rendering HTML preview:', err);
-      }
-    },
-
-    printHtmlDocument() {
-      const iframe = document.getElementById('previewIframe');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-      } else {
-        window.print();
-      }
-    },
-
-    async openJobLocalFolder(jobId) {
-      if (!jobId) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/jobs/${jobId}/open-folder`, { method: 'POST' });
-        const data = await res.json();
-        if (data.status !== 'success') {
-          alert('Could not open folder automatically. Please navigate to the job folder in Windows Explorer.');
-        }
-      } catch (err) {
-        alert(`Failed to open folder: ${err.message}`);
-      }
-    },
-
-    async uploadJobToGoogleDrive(jobId) {
-      if (!jobId) return;
-      if (!this.googleWebhookUrl) {
-        alert('Please configure your Google Apps Script Webhook URL in Step 1 first.');
-        this.currentStep = 1;
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE}/api/jobs/${jobId}/sync-drive`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ webhook_url: this.googleWebhookUrl })
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-          alert(`✓ Folder successfully synced to Google Drive!\nURL: ${data.folder_url || 'Google Drive'}`);
-        } else {
-          alert(`Sync error: ${data.message || 'Check Apps Script deployment.'}`);
-        }
-      } catch (err) {
-        alert(`Failed to upload to Google Drive: ${err.message}`);
-      }
-    },
-
-    openPdfViewer(path, title) {
-      this.activePdfViewerUrl = path;
-      this.activePdfViewerTitle = title || 'Job Description PDF';
-      this.showPdfViewerModal = true;
-    },
-
-    openFileViewer(path, name) {
-      this.activePdfViewerUrl = path;
-      this.activePdfViewerTitle = name;
-      this.showPdfViewerModal = true;
-    },
-
-    async saveJobChanges() {
-      if (!this.analysisResult || !this.analysisResult.job.id) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/jobs/${this.analysisResult.job.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.analysisResult.job)
-        });
-        if (res.ok) {
-          alert('✓ Job details saved.');
-          await this.loadJobs();
-        }
-      } catch (err) {
-        alert(`Error saving job: ${err.message}`);
-      }
-    },
-
-    copyToClipboard(text) {
-      if (!text) return;
-      navigator.clipboard.writeText(text).then(
-        () => alert('✓ Copied to clipboard!'),
-        () => alert('Could not copy to clipboard.')
-      );
+// Update table priority index numbers and persist new order to backend
+async function updatePriorityNumbersAndPersist() {
+  const tableBody = document.getElementById('jobs-table-body');
+  if (!tableBody) return;
+
+  const rows = Array.from(tableBody.querySelectorAll('tr[draggable="true"]'));
+  const jobIds = [];
+
+  rows.forEach((row, index) => {
+    const numCell = row.querySelector('.row-priority-num');
+    if (numCell) {
+      numCell.textContent = index + 1;
     }
-  };
+    const jobId = row.getAttribute('data-job-id');
+    if (jobId) {
+      jobIds.push(parseInt(jobId, 10));
+    }
+  });
+
+  if (jobIds.length > 0) {
+    try {
+      await fetch('/api/jobs/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_ids: jobIds })
+      });
+    } catch (err) {
+      console.error('Failed to save priority order:', err);
+    }
+  }
+}
+
+// Handle URL Scrape & Offline Parsing
+async function handleUrlScrape(e) {
+  e.preventDefault();
+  const urlInput = document.getElementById('scrape-url-input');
+  const submitBtn = document.getElementById('scrape-submit-btn');
+  const statusEl = document.getElementById('scrape-status');
+
+  const url = urlInput.value.trim();
+  if (!url) return;
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...';
+  statusEl.classList.remove('hidden');
+  statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-blue-400"></i> Fetching snapshot, extracting details & generating tailored documents...';
+
+  try {
+    const res = await fetch('/api/jobs/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url, candidate_id: 'default' })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.status === 'success') {
+      statusEl.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-400"></i> Job ingested successfully! Redirecting to workspace...';
+      setTimeout(() => {
+        window.location.href = `/job/${data.job_id}`;
+      }, 600);
+    } else {
+      statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Error: ${data.detail || 'Failed to ingest URL'}`;
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Ingest & Auto-Tailor';
+    }
+  } catch (err) {
+    console.error('Scrape error:', err);
+    statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Ingestion error: ${err.message}`;
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Ingest & Auto-Tailor';
+  }
+}
+
+// Handle Manual Job Creation
+async function handleManualJobSubmit(e) {
+  e.preventDefault();
+  const company = document.getElementById('manual-company').value.trim();
+  const role_title = document.getElementById('manual-role').value.trim();
+  const location = document.getElementById('manual-location').value.trim();
+  const job_id_ref = document.getElementById('manual-job-id-ref').value.trim();
+  const raw_text = document.getElementById('manual-raw-text').value.trim();
+
+  try {
+    const res = await fetch('/api/jobs/manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        company: company,
+        role_title: role_title,
+        location: location,
+        job_id_ref: job_id_ref,
+        raw_text: raw_text,
+        candidate_id: 'default'
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.status === 'success') {
+      window.location.href = `/job/${data.job_id}`;
+    } else {
+      alert('Failed to add job: ' + (data.detail || 'Unknown error'));
+    }
+  } catch (err) {
+    console.error('Manual job create error:', err);
+    alert('An error occurred while creating job.');
+  }
+}
+
+// Delete Job Entry
+async function deleteJobEntry(jobId, btn) {
+  if (!confirm('Are you sure you want to delete this job application workspace?')) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/jobs/${jobId}`, {
+      method: 'DELETE'
+    });
+
+    if (res.ok) {
+      const row = btn.closest('tr');
+      if (row) {
+        row.remove();
+        updatePriorityNumbersAndPersist();
+      }
+      const countEl = document.getElementById('job-count-badge');
+      if (countEl) {
+        const remaining = document.querySelectorAll('#jobs-table-body tr[draggable="true"]').length;
+        countEl.textContent = `${remaining} Jobs`;
+      }
+    } else {
+      alert('Failed to delete job entry.');
+    }
+  } catch (err) {
+    console.error('Delete error:', err);
+    alert('An error occurred during deletion.');
+  }
+}
+
+// Filter jobs table live
+function filterJobsTable() {
+  const query = document.getElementById('table-search').value.toLowerCase().trim();
+  const rows = document.querySelectorAll('#jobs-table-body tr[draggable="true"]');
+
+  rows.forEach((row) => {
+    const text = row.innerText.toLowerCase();
+    if (!query || text.includes(query)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+// Modal Helpers
+function openManualJobModal() {
+  const modal = document.getElementById('manual-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeManualJobModal() {
+  const modal = document.getElementById('manual-modal');
+  if (modal) modal.classList.add('hidden');
 }

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CV Editor — {{ job.role_title }} at {{ job.company }}</title>
+  <link rel="icon" href="/static/icon.png" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1e3a8a;
+    }
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #0f172a;
+      color: #334155;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    }
+    /* Toolbar styling */
+    .top-toolbar {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #334155;
+    }
+    /* A4 Document Canvas */
+    .a4-container {
+      display: flex;
+      justify-content: center;
+      padding: 24px 16px 48px;
+    }
+    .cv-page {
+      width: 210mm;
+      min-height: 297mm;
+      max-height: 297mm;
+      padding: 10mm 13mm;
+      background: #ffffff;
+      color: #1e293b;
+      font-size: 8.5pt;
+      line-height: 1.32;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      border-radius: 4px;
+      outline: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    /* ContentEditable visual cues */
+    .cv-page:focus-within {
+      box-shadow: 0 0 0 2px #3b82f6, 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+    [contenteditable="true"] {
+      outline: none;
+      cursor: text;
+    }
+    [contenteditable="true"]:hover {
+      background-color: rgba(59, 130, 246, 0.03);
+      border-radius: 2px;
+    }
+    [contenteditable="true"]:focus {
+      background-color: rgba(59, 130, 246, 0.06);
+      border-radius: 2px;
+    }
+    /* Print rules strictly matching ISO A4 */
+    @media print {
+      body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .a4-container {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .cv-page {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 10mm 13mm !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        max-height: 297mm !important;
+        overflow: hidden !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+        background-color: transparent !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Action & Navigation Toolbar -->
+  <header class="no-print top-toolbar sticky top-0 z-50 px-4 sm:px-6 h-16 flex items-center justify-between text-white">
+    <!-- Left: Navigation and Job Info -->
+    <div class="flex items-center space-x-3 sm:space-x-4">
+      <a href="/" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-left"></i> Dashboard
+      </a>
+      <div class="hidden md:block">
+        <div class="font-bold text-sm text-white flex items-center gap-2">
+          <span>CV Builder</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">Job #{{ job_id }}</span>
+        </div>
+        <div class="text-xs text-slate-400 truncate max-w-sm">{{ job.role_title }} &bull; {{ job.company }}</div>
+      </div>
+    </div>
+
+    <!-- Center: Milestone Progress Links -->
+    <div class="hidden lg:flex items-center space-x-1 bg-slate-900/80 px-2 py-1 rounded-xl border border-slate-700/80 text-xs">
+      <a href="/job/{{ job_id }}" class="px-2.5 py-1 text-slate-400 hover:text-slate-200 rounded-lg transition font-medium">
+        <i class="fa-solid fa-file-lines text-slate-400 mr-1"></i> Details
+      </a>
+      <a href="/job/{{ job_id }}/cv?lang={{ lang }}" class="px-2.5 py-1 bg-blue-600 text-white rounded-lg font-bold shadow-sm">
+        <i class="fa-solid fa-id-card mr-1"></i> CV
+      </a>
+      <a href="/job/{{ job_id }}/coverletter?lang={{ lang }}" class="px-2.5 py-1 text-slate-400 hover:text-slate-200 rounded-lg transition font-medium">
+        <i class="fa-solid fa-envelope mr-1"></i> Cover Letter
+      </a>
+      <a href="/job/{{ job_id }}/outreach?lang={{ lang }}" class="px-2.5 py-1 text-slate-400 hover:text-slate-200 rounded-lg transition font-medium">
+        <i class="fa-solid fa-paper-plane mr-1"></i> Outreach
+      </a>
+    </div>
+
+    <!-- Right: Language toggle, Save & Download -->
+    <div class="flex items-center space-x-2 sm:space-x-3">
+      <!-- Language Switch -->
+      <div class="flex items-center bg-slate-900 rounded-lg border border-slate-700 p-0.5 text-xs font-semibold">
+        <a href="/job/{{ job_id }}/cv?lang=en" class="px-2.5 py-1 rounded-md transition {% if lang == 'en' %}bg-blue-600 text-white{% else %}text-slate-400 hover:text-white{% endif %}">
+          🇬🇧 EN
+        </a>
+        <a href="/job/{{ job_id }}/cv?lang=de" class="px-2.5 py-1 rounded-md transition {% if lang == 'de' %}bg-blue-600 text-white{% else %}text-slate-400 hover:text-white{% endif %}">
+          🇩🇪 DE
+        </a>
+      </div>
+
+      <!-- Auto-Save Status Badge -->
+      <div id="save-status" class="hidden sm:flex items-center text-[11px] text-emerald-400 font-medium">
+        <i class="fa-solid fa-check-circle mr-1 text-xs"></i> Saved
+      </div>
+
+      <!-- Explicit Save Button -->
+      <button onclick="saveDocumentNow()" id="save-btn" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-floppy-disk text-blue-400"></i> Save
+      </button>
+
+      <!-- Print / Download PDF -->
+      <button onclick="window.print()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-md transition flex items-center gap-1.5">
+        <i class="fa-solid fa-file-pdf"></i> Download PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- Document Editing Canvas -->
+  <main class="flex-1 a4-container">
+    <div id="document-canvas" class="cv-page" contenteditable="true" spellcheck="false">
+      <!-- The rendered HTML CV is injected directly here for in-place editing -->
+      {{ doc_html | safe }}
+    </div>
+  </main>
+
+  <script>
+    const jobId = {{ job_id }};
+    const docLang = '{{ lang }}';
+    let saveTimeout = null;
+    const canvas = document.getElementById('document-canvas');
+    const statusEl = document.getElementById('save-status');
+
+    // Remove any outer html/body tags that may have been in the template if nested
+    function sanitizeCanvas() {
+      const nestedPage = canvas.querySelector('.cv-page');
+      if (nestedPage && nestedPage !== canvas) {
+        canvas.innerHTML = nestedPage.innerHTML;
+      }
+    }
+    sanitizeCanvas();
+
+    // Auto-save debounce on input
+    canvas.addEventListener('input', () => {
+      statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1 text-xs text-amber-400"></i> Saving...';
+      statusEl.className = 'hidden sm:flex items-center text-[11px] text-amber-400 font-medium';
+      
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        saveDocumentNow();
+      }, 1200);
+    });
+
+    // Save directly to local folder and database via API
+    async function saveDocumentNow() {
+      try {
+        const content = canvas.innerHTML;
+        const fullHtml = `<!DOCTYPE html>
+<html lang="${docLang}">
+<head>
+  <meta charset="UTF-8">
+  <title>Curriculum Vitae</title>
+  <style>
+    @page { size: A4 portrait; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 210mm; height: 297mm; max-height: 297mm; margin: 0 auto; background: #ffffff; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 8.5pt; line-height: 1.32; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; overflow: hidden; }
+    .cv-page { width: 210mm; height: 297mm; max-height: 297mm; box-sizing: border-box; padding: 10mm 13mm; margin: 0 auto; background: #ffffff; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2563eb; padding-bottom: 7px; margin-bottom: 8px; }
+    .header-left-wrap { display: flex; align-items: center; gap: 10px; }
+    .photo-box { width: 54px; height: 54px; min-width: 54px; max-width: 54px; aspect-ratio: 1/1; border-radius: 6px; border: 1.5px solid #2563eb; overflow: hidden; background: #f1f5f9; }
+    .photo-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .header-left .name { font-size: 17pt; font-weight: 800; color: #1e3a8a; letter-spacing: -0.4px; line-height: 1.1; }
+    .header-left .headline { font-size: 9pt; font-weight: 600; color: #334155; margin-top: 2px; }
+    .header-right { text-align: right; font-size: 7.8pt; color: #475569; line-height: 1.35; }
+    .header-right a { color: #2563eb; text-decoration: none; font-weight: 500; }
+    .section { margin-bottom: 6px; }
+    .section-title { font-size: 8.5pt; font-weight: 700; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid #cbd5e1; padding-bottom: 1.5px; margin-bottom: 4px; }
+    .summary-text { font-size: 8.2pt; color: #334155; text-align: justify; line-height: 1.3; }
+    .entry { margin-bottom: 4px; }
+    .entry-header { display: flex; justify-content: space-between; align-items: baseline; }
+    .entry-title { font-weight: 700; font-size: 8.5pt; color: #0f172a; }
+    .entry-date { font-size: 7.8pt; font-weight: 600; color: #475569; }
+    .entry-sub { font-size: 7.8pt; font-style: italic; color: #475569; display: flex; justify-content: space-between; margin-bottom: 1.5px; }
+    .cv-bullets { margin-left: 12px; padding-left: 0; font-size: 7.8pt; color: #334155; line-height: 1.26; }
+    .cv-bullets li { margin-bottom: 1px; }
+    .skill-line { font-size: 7.8pt; color: #334155; margin-bottom: 2px; line-height: 1.25; }
+    .skill-line strong { color: #0f172a; }
+  </style>
+</head>
+<body>
+  <div class="cv-page">
+    ${content}
+  </div>
+</body>
+</html>`;
+
+        const res = await fetch(`/api/jobs/${jobId}/doc/cv/${docLang}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ html_content: fullHtml })
+        });
+
+        if (res.ok) {
+          statusEl.innerHTML = '<i class="fa-solid fa-check-circle mr-1 text-xs"></i> Saved to folder';
+          statusEl.className = 'hidden sm:flex items-center text-[11px] text-emerald-400 font-medium';
+        }
+      } catch (err) {
+        console.error('Save error:', err);
+        statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1 text-xs"></i> Save error';
+        statusEl.className = 'hidden sm:flex items-center text-[11px] text-rose-400 font-medium';
+      }
+    }
+  </script>
+</body>
+</html>
