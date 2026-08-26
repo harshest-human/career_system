@@ -8,10 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    :root {
-      --primary: #2563eb;
-      --primary-dark: #1e3a8a;
-    }
+    /* --- Base Page & Print Settings --- */
     @page {
       size: A4 portrait;
       margin: 0;
@@ -38,6 +35,8 @@
       justify-content: center;
       padding: 24px 16px 48px;
     }
+    
+    /* --- A4 CV Canvas Paper --- */
     .cv-page {
       width: 210mm;
       min-height: 297mm;
@@ -50,6 +49,9 @@
       border-radius: 4px;
       outline: none;
       overflow: hidden;
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .cv-page:focus-within {
       box-shadow: 0 0 0 2px #3b82f6, 0 12px 36px rgba(0, 0, 0, 0.55);
@@ -85,6 +87,440 @@
     .fmt-btn:active {
       transform: translateY(1px);
     }
+
+    /* --- STRICT PHOTO CONSTRAINTS (Never blow up canvas) --- */
+    .photo-box {
+      width: 52px !important;
+      height: 52px !important;
+      min-width: 52px !important;
+      max-width: 52px !important;
+      min-height: 52px !important;
+      max-height: 52px !important;
+      aspect-ratio: 1/1 !important;
+      border-radius: 6px !important;
+      border: 1.5px solid #2563eb !important;
+      overflow: hidden !important;
+      background: #f1f5f9 !important;
+      flex-shrink: 0 !important;
+      display: inline-block !important;
+    }
+    .photo-box img {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: cover !important;
+      display: block !important;
+    }
+
+    .berlin-photo {
+      width: 50px !important;
+      height: 50px !important;
+      min-width: 50px !important;
+      max-width: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      aspect-ratio: 1/1 !important;
+      border-radius: 50% !important;
+      overflow: hidden !important;
+      border: 2px solid #0f172a !important;
+      margin: 0 auto 4px auto !important;
+      flex-shrink: 0 !important;
+      display: block !important;
+    }
+    .berlin-photo img {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: cover !important;
+      display: block !important;
+    }
+
+    .stockholm-photo {
+      width: 54px !important;
+      height: 54px !important;
+      min-width: 54px !important;
+      max-width: 54px !important;
+      min-height: 54px !important;
+      max-height: 54px !important;
+      aspect-ratio: 1/1 !important;
+      border-radius: 8px !important;
+      overflow: hidden !important;
+      border: 1.5px solid #0f172a !important;
+      flex-shrink: 0 !important;
+      display: inline-block !important;
+    }
+    .stockholm-photo img {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: cover !important;
+      display: block !important;
+    }
+
+    /* --- DESIGN 1: ZURICH MINIMALIST CSS --- */
+    .cv-design-zurich {
+      padding: 10mm 13mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      font-size: 8.5pt;
+      line-height: 1.32;
+    }
+    .cv-design-zurich .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 7px;
+      margin-bottom: 8px;
+    }
+    .cv-design-zurich .header-left-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cv-design-zurich .header-left .name {
+      font-size: 17pt;
+      font-weight: 800;
+      color: #1e3a8a;
+      letter-spacing: -0.4px;
+      line-height: 1.1;
+    }
+    .cv-design-zurich .header-left .headline {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 2px;
+    }
+    .cv-design-zurich .header-right {
+      text-align: right;
+      font-size: 7.8pt;
+      color: #475569;
+      line-height: 1.35;
+    }
+    .cv-design-zurich .header-right a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .cv-design-zurich .section {
+      margin-bottom: 6px;
+    }
+    .cv-design-zurich .section-title {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #1e3a8a;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 1.5px;
+      margin-bottom: 4px;
+    }
+    .cv-design-zurich .summary-text {
+      font-size: 8.2pt;
+      color: #334155;
+      text-align: justify;
+      line-height: 1.3;
+    }
+    .cv-design-zurich .entry {
+      margin-bottom: 4px;
+    }
+    .cv-design-zurich .entry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .cv-design-zurich .entry-title {
+      font-weight: 700;
+      font-size: 8.5pt;
+      color: #0f172a;
+    }
+    .cv-design-zurich .entry-date {
+      font-size: 7.8pt;
+      font-weight: 600;
+      color: #475569;
+    }
+    .cv-design-zurich .entry-sub {
+      font-size: 7.8pt;
+      font-style: italic;
+      color: #475569;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1.5px;
+    }
+    .cv-design-zurich .cv-bullets {
+      margin-left: 12px;
+      padding-left: 0;
+      font-size: 7.8pt;
+      color: #334155;
+      line-height: 1.26;
+    }
+    .cv-design-zurich .cv-bullets li {
+      margin-bottom: 1px;
+    }
+    .cv-design-zurich .skill-line {
+      font-size: 7.8pt;
+      color: #334155;
+      margin-bottom: 2px;
+      line-height: 1.25;
+    }
+    .cv-design-zurich .skill-line strong {
+      color: #0f172a;
+    }
+
+    /* --- DESIGN 2: BERLIN EXECUTIVE CSS --- */
+    .cv-design-berlin {
+      display: flex !important;
+      flex-direction: row !important;
+      padding: 0 !important;
+      font-size: 8.4pt;
+      line-height: 1.3;
+    }
+    .cv-design-berlin .berlin-sidebar {
+      width: 68mm;
+      min-width: 68mm;
+      max-width: 68mm;
+      background: #f8fafc;
+      border-right: 1.5px solid #e2e8f0;
+      padding: 10mm 7mm;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      box-sizing: border-box;
+    }
+    .cv-design-berlin .berlin-side-sec {
+      margin-bottom: 5px;
+    }
+    .cv-design-berlin .berlin-side-title {
+      font-size: 8pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #0f172a;
+      border-bottom: 1.5px solid #cbd5e1;
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+    .cv-design-berlin .berlin-contact-item {
+      font-size: 7.5pt;
+      color: #475569;
+      margin-bottom: 3px;
+      word-break: break-word;
+    }
+    .cv-design-berlin .berlin-contact-item a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    .cv-design-berlin .berlin-main {
+      flex: 1;
+      padding: 10mm 10mm 10mm 9mm;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .cv-design-berlin .berlin-header {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 6px;
+      margin-bottom: 4px;
+    }
+    .cv-design-berlin .berlin-name {
+      font-size: 18pt;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .cv-design-berlin .berlin-title {
+      font-size: 9.5pt;
+      font-weight: 600;
+      color: #2563eb;
+      margin-top: 2px;
+    }
+    .cv-design-berlin .berlin-sec-title {
+      font-size: 8.6pt;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+    }
+    .cv-design-berlin .berlin-summary {
+      font-size: 8pt;
+      color: #334155;
+      line-height: 1.32;
+      text-align: justify;
+      margin-bottom: 4px;
+    }
+    .cv-design-berlin .berlin-exp-item {
+      margin-bottom: 4px;
+    }
+    .cv-design-berlin .berlin-exp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .cv-design-berlin .berlin-exp-role {
+      font-weight: 700;
+      font-size: 8.5pt;
+      color: #0f172a;
+    }
+    .cv-design-berlin .berlin-exp-date {
+      font-size: 7.6pt;
+      font-weight: 600;
+      color: #64748b;
+    }
+    .cv-design-berlin .berlin-exp-inst {
+      font-size: 7.8pt;
+      font-style: italic;
+      color: #475569;
+      margin-bottom: 1.5px;
+    }
+    .cv-design-berlin .berlin-bullets {
+      margin-left: 11px;
+      font-size: 7.8pt;
+      color: #334155;
+      line-height: 1.25;
+    }
+    .cv-design-berlin .berlin-bullets li {
+      margin-bottom: 1px;
+    }
+    .cv-design-berlin .berlin-edu-item {
+      margin-bottom: 3px;
+    }
+
+    /* --- DESIGN 3: STOCKHOLM TECH CSS --- */
+    .cv-design-stockholm {
+      padding: 11mm 13mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      font-size: 8.5pt;
+      line-height: 1.34;
+      color: #0f172a;
+    }
+    .cv-design-stockholm .stockholm-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1.5px solid #0f172a;
+    }
+    .cv-design-stockholm .stockholm-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .cv-design-stockholm .stockholm-name {
+      font-size: 19pt;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+    .cv-design-stockholm .stockholm-sub {
+      font-size: 9.5pt;
+      font-weight: 600;
+      color: #0284c7;
+      margin-top: 1px;
+    }
+    .cv-design-stockholm .stockholm-contact {
+      text-align: right;
+      font-size: 7.8pt;
+      color: #475569;
+      line-height: 1.35;
+    }
+    .cv-design-stockholm .stockholm-contact a {
+      color: #0284c7;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .cv-design-stockholm .stockholm-sec {
+      margin-bottom: 6px;
+    }
+    .cv-design-stockholm .stockholm-sec-title {
+      font-size: 8.8pt;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .cv-design-stockholm .stockholm-sec-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+    .cv-design-stockholm .stockholm-summary {
+      font-size: 8.2pt;
+      color: #334155;
+      line-height: 1.32;
+      text-align: justify;
+      margin-bottom: 4px;
+    }
+    .cv-design-stockholm .stockholm-item {
+      margin-bottom: 4px;
+    }
+    .cv-design-stockholm .stockholm-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .cv-design-stockholm .stockholm-role {
+      font-weight: 800;
+      font-size: 8.5pt;
+      color: #0f172a;
+    }
+    .cv-design-stockholm .stockholm-inst {
+      font-size: 8pt;
+      font-weight: 500;
+      color: #475569;
+    }
+    .cv-design-stockholm .stockholm-date {
+      font-size: 7.8pt;
+      font-weight: 700;
+      color: #0284c7;
+    }
+    .cv-design-stockholm .stockholm-bullets {
+      margin-left: 12px;
+      font-size: 7.8pt;
+      color: #334155;
+      line-height: 1.26;
+    }
+    .cv-design-stockholm .stockholm-bullets li {
+      margin-bottom: 1px;
+    }
+    .cv-design-stockholm .nordic-pill {
+      display: inline-block;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 7.4pt;
+      font-weight: 600;
+      color: #0f172a;
+      margin: 1px 2px;
+    }
+    .cv-design-stockholm .stockholm-skills-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      font-size: 7.8pt;
+    }
+
+    /* --- Print Media Query --- */
     @media print {
       body {
         background: #ffffff !important;
@@ -126,7 +562,7 @@
       </a>
       <div class="hidden md:block">
         <div class="font-bold text-sm text-white flex items-center gap-2">
-          <span>CV Builder</span>
+          <span>CV Studio</span>
           <span class="text-[11px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-300 font-semibold border border-blue-500/20">Tool by Harsh</span>
           <span class="text-[11px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">Job #{{ job_id }}</span>
         </div>
@@ -241,8 +677,8 @@
 
   <!-- Document Editing Canvas -->
   <main class="flex-1 a4-container">
-    <div id="document-canvas" class="cv-page" contenteditable="true" spellcheck="false">
-      <!-- The rendered HTML CV is injected directly here for in-place editing -->
+    <div id="document-canvas" class="cv-page cv-design-{{ design }}" contenteditable="true" spellcheck="false">
+      <!-- Injected Document -->
       {{ doc_html | safe }}
     </div>
   </main>
@@ -256,14 +692,30 @@
     const canvas = document.getElementById('document-canvas');
     const statusEl = document.getElementById('save-status');
 
-    // Remove any outer html/body tags that may have been in the template if nested
-    function sanitizeCanvas() {
-      const nestedPage = canvas.querySelector('.cv-page');
-      if (nestedPage && nestedPage !== canvas) {
-        canvas.innerHTML = nestedPage.innerHTML;
+    // Parse the inner CV content from the full HTML template safely
+    function loadAndSanitizeCanvas() {
+      const parser = new DOMParser();
+      const rawHtml = canvas.innerHTML;
+      const doc = parser.parseFromString(rawHtml, 'text/html');
+      const pageDiv = doc.querySelector('.cv-page') || canvas.querySelector('.cv-page');
+      
+      if (pageDiv) {
+        // Set proper design class on canvas
+        const classNames = pageDiv.className.split(' ').filter(c => c.startsWith('cv-design-') || c === 'cv-page');
+        if (classNames.length > 0) {
+          canvas.className = classNames.join(' ');
+        } else {
+          canvas.className = 'cv-page cv-design-' + currentDesign;
+        }
+        canvas.innerHTML = pageDiv.innerHTML;
+      }
+      
+      // Ensure canvas has the required design class
+      if (!canvas.className.includes('cv-design-')) {
+        canvas.classList.add('cv-design-' + currentDesign);
       }
     }
-    sanitizeCanvas();
+    loadAndSanitizeCanvas();
 
     // Word-like formatting command executor
     function formatDoc(cmd, value = null) {
@@ -308,7 +760,6 @@
         });
         const data = await res.json();
         if (res.ok && data.html) {
-          // Parse returned page inner HTML
           const parser = new DOMParser();
           const doc = parser.parseFromString(data.html, 'text/html');
           const pageDiv = doc.querySelector('.cv-page');
@@ -316,6 +767,7 @@
             canvas.className = pageDiv.className;
             canvas.innerHTML = pageDiv.innerHTML;
           } else {
+            canvas.className = 'cv-page cv-design-' + designName;
             canvas.innerHTML = data.html;
           }
           statusEl.innerHTML = '<i class="fa-solid fa-check-circle mr-1 text-xs"></i> Switched to ' + designName;
@@ -379,6 +831,7 @@
     async function saveDocumentNow() {
       try {
         const content = canvas.innerHTML;
+        const currentClass = canvas.className;
         const fullHtml = `<!DOCTYPE html>
 <html lang="${docLang}">
 <head>
@@ -386,7 +839,7 @@
   <title>Curriculum Vitae</title>
 </head>
 <body>
-  <div class="${canvas.className}">
+  <div class="${currentClass}">
     ${content}
   </div>
 </body>

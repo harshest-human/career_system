@@ -146,18 +146,19 @@ async def page_cv_editor(request: Request, job_id: int, lang: str = "en", design
         return RedirectResponse("/")
     
     saved_html = db.get_job_doc(job_id, "cv", lang)
-    if not saved_html:
+    requested_design = design.lower()
+    if not saved_html or (f"cv-design-{requested_design}" not in saved_html and "design" in request.query_params):
         prof = db.get_profile("default")
         profile_data = prof.get("data", {}) if prof else {}
         tailored_sum = tailor.tailor_summary(profile_data, job, lang)
-        saved_html = render_html_cv(profile=profile_data, job_data=job, lang=lang, design=design, custom_summary=tailored_sum)
+        saved_html = render_html_cv(profile=profile_data, job_data=job, lang=lang, design=requested_design, custom_summary=tailored_sum)
         db.save_job_doc(job_id, "cv", lang, saved_html)
 
     return templates.TemplateResponse(request=request, name="cv_editor.html", context={
         "job": job,
         "job_id": job_id,
         "lang": lang.lower(),
-        "design": design.lower(),
+        "design": requested_design,
         "doc_html": saved_html,
     })
 
@@ -170,18 +171,19 @@ async def page_coverletter_editor(request: Request, job_id: int, lang: str = "en
         return RedirectResponse("/")
     
     saved_html = db.get_job_doc(job_id, "coverletter", lang)
-    if not saved_html:
+    requested_design = design.lower()
+    if not saved_html or (f"letter-design-{requested_design}" not in saved_html and "design" in request.query_params):
         prof = db.get_profile("default")
         profile_data = prof.get("data", {}) if prof else {}
         paras = tailor.tailor_cover_letter_paragraphs(profile_data, job, lang)
-        saved_html = render_html_cover_letter(profile=profile_data, job_data=job, lang=lang, design=design, custom_paragraphs=paras)
+        saved_html = render_html_cover_letter(profile=profile_data, job_data=job, lang=lang, design=requested_design, custom_paragraphs=paras)
         db.save_job_doc(job_id, "coverletter", lang, saved_html)
 
     return templates.TemplateResponse(request=request, name="coverletter_editor.html", context={
         "job": job,
         "job_id": job_id,
         "lang": lang.lower(),
-        "design": design.lower(),
+        "design": requested_design,
         "doc_html": saved_html,
     })
 

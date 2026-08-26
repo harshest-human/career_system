@@ -46,6 +46,9 @@
       border-radius: 4px;
       outline: none;
       overflow: hidden;
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .letter-page:focus-within {
       box-shadow: 0 0 0 2px #3b82f6, 0 12px 36px rgba(0, 0, 0, 0.55);
@@ -81,6 +84,248 @@
     .fmt-btn:active {
       transform: translateY(1px);
     }
+
+    /* --- DESIGN 1: ZURICH COVER LETTER CSS --- */
+    .letter-design-zurich {
+      padding: 13mm 18mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .letter-design-zurich .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 7px;
+      margin-bottom: 11px;
+    }
+    .letter-design-zurich .name {
+      font-size: 16pt;
+      font-weight: 800;
+      color: #1e3a8a;
+      letter-spacing: -0.4px;
+      line-height: 1.1;
+    }
+    .letter-design-zurich .contact-info {
+      text-align: right;
+      font-size: 8pt;
+      color: #475569;
+      line-height: 1.35;
+    }
+    .letter-design-zurich .contact-info a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    .letter-design-zurich .recipient {
+      margin-bottom: 9px;
+      font-size: 8.8pt;
+      color: #334155;
+      line-height: 1.35;
+    }
+    .letter-design-zurich .date-line {
+      margin-bottom: 9px;
+      font-size: 8.5pt;
+      color: #64748b;
+    }
+    .letter-design-zurich .subject-line {
+      font-size: 10.2pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 9px;
+    }
+    .letter-design-zurich .salutation {
+      margin-bottom: 8px;
+      font-size: 8.8pt;
+      font-weight: 600;
+    }
+    .letter-design-zurich .letter-para {
+      margin-bottom: 7.5px;
+      text-align: justify;
+      color: #334155;
+      font-size: 8.8pt;
+      line-height: 1.36;
+    }
+    .letter-design-zurich .closing {
+      margin-top: 10px;
+      margin-bottom: 4px;
+      font-size: 8.8pt;
+      color: #334155;
+    }
+    .letter-design-zurich .signature-name {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 9pt;
+    }
+
+    /* --- DESIGN 2: BERLIN COVER LETTER CSS --- */
+    .letter-design-berlin {
+      display: flex !important;
+      flex-direction: row !important;
+      padding: 0 !important;
+    }
+    .letter-design-berlin .berlin-side {
+      width: 60mm;
+      min-width: 60mm;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 14mm 8mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
+    }
+    .letter-design-berlin .berlin-side-name {
+      font-size: 15pt;
+      font-weight: 900;
+      letter-spacing: -0.3px;
+      line-height: 1.1;
+    }
+    .letter-design-berlin .berlin-side-sub {
+      font-size: 8.5pt;
+      color: #94a3b8;
+      margin-top: 3px;
+      font-weight: 500;
+    }
+    .letter-design-berlin .berlin-side-contact {
+      font-size: 7.8pt;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+    .letter-design-berlin .berlin-side-contact a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+    .letter-design-berlin .berlin-body {
+      flex: 1;
+      padding: 14mm 14mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .letter-design-berlin .recipient {
+      margin-bottom: 10px;
+      font-size: 8.8pt;
+      color: #334155;
+      line-height: 1.35;
+    }
+    .letter-design-berlin .date-line {
+      margin-bottom: 10px;
+      font-size: 8.5pt;
+      color: #64748b;
+      text-align: right;
+    }
+    .letter-design-berlin .subject-line {
+      font-size: 10.5pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 10px;
+      border-bottom: 1.5px solid #0f172a;
+      padding-bottom: 3px;
+    }
+    .letter-design-berlin .salutation {
+      margin-bottom: 8px;
+      font-size: 8.8pt;
+      font-weight: 600;
+    }
+    .letter-design-berlin .letter-para {
+      margin-bottom: 8px;
+      text-align: justify;
+      color: #334155;
+      font-size: 8.8pt;
+      line-height: 1.38;
+    }
+    .letter-design-berlin .closing {
+      margin-top: 10px;
+      margin-bottom: 4px;
+      font-size: 8.8pt;
+      color: #334155;
+    }
+    .letter-design-berlin .signature-name {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 9pt;
+    }
+
+    /* --- DESIGN 3: STOCKHOLM COVER LETTER CSS --- */
+    .letter-design-stockholm {
+      padding: 13mm 18mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .letter-design-stockholm .stockholm-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1.5px solid #0f172a;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .letter-design-stockholm .stockholm-name {
+      font-size: 17pt;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.4px;
+      line-height: 1.1;
+    }
+    .letter-design-stockholm .stockholm-contact {
+      text-align: right;
+      font-size: 7.8pt;
+      color: #475569;
+      line-height: 1.35;
+    }
+    .letter-design-stockholm .stockholm-contact a {
+      color: #0284c7;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .letter-design-stockholm .recipient {
+      margin-bottom: 10px;
+      font-size: 8.8pt;
+      color: #334155;
+      line-height: 1.35;
+    }
+    .letter-design-stockholm .date-line {
+      margin-bottom: 10px;
+      font-size: 8.5pt;
+      color: #64748b;
+    }
+    .letter-design-stockholm .subject-box {
+      background: #f1f5f9;
+      border-left: 3px solid #0284c7;
+      padding: 6px 10px;
+      margin-bottom: 11px;
+      font-size: 10pt;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .letter-design-stockholm .salutation {
+      margin-bottom: 8px;
+      font-size: 8.8pt;
+      font-weight: 600;
+    }
+    .letter-design-stockholm .letter-para {
+      margin-bottom: 8px;
+      text-align: justify;
+      color: #334155;
+      font-size: 8.8pt;
+      line-height: 1.38;
+    }
+    .letter-design-stockholm .closing {
+      margin-top: 10px;
+      margin-bottom: 4px;
+      font-size: 8.8pt;
+      color: #334155;
+    }
+    .letter-design-stockholm .signature-name {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 9pt;
+    }
+
     @media print {
       body {
         background: #ffffff !important;
@@ -122,7 +367,7 @@
       </a>
       <div class="hidden md:block">
         <div class="font-bold text-sm text-white flex items-center gap-2">
-          <span>Cover Letter Builder</span>
+          <span>Cover Letter Studio</span>
           <span class="text-[11px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 font-semibold border border-indigo-500/20">Tool by Harsh</span>
           <span class="text-[11px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">Job #{{ job_id }}</span>
         </div>
@@ -216,8 +461,8 @@
 
   <!-- Document Editing Canvas -->
   <main class="flex-1 a4-container">
-    <div id="document-canvas" class="letter-page" contenteditable="true" spellcheck="false">
-      <!-- The rendered HTML Cover Letter is injected directly here for in-place editing -->
+    <div id="document-canvas" class="letter-page letter-design-{{ design }}" contenteditable="true" spellcheck="false">
+      <!-- Injected Document -->
       {{ doc_html | safe }}
     </div>
   </main>
@@ -230,13 +475,27 @@
     const canvas = document.getElementById('document-canvas');
     const statusEl = document.getElementById('save-status');
 
-    function sanitizeCanvas() {
-      const nestedPage = canvas.querySelector('.letter-page');
-      if (nestedPage && nestedPage !== canvas) {
-        canvas.innerHTML = nestedPage.innerHTML;
+    function loadAndSanitizeCanvas() {
+      const parser = new DOMParser();
+      const rawHtml = canvas.innerHTML;
+      const doc = parser.parseFromString(rawHtml, 'text/html');
+      const pageDiv = doc.querySelector('.letter-page') || canvas.querySelector('.letter-page');
+      
+      if (pageDiv) {
+        const classNames = pageDiv.className.split(' ').filter(c => c.startsWith('letter-design-') || c === 'letter-page');
+        if (classNames.length > 0) {
+          canvas.className = classNames.join(' ');
+        } else {
+          canvas.className = 'letter-page letter-design-' + currentDesign;
+        }
+        canvas.innerHTML = pageDiv.innerHTML;
+      }
+
+      if (!canvas.className.includes('letter-design-')) {
+        canvas.classList.add('letter-design-' + currentDesign);
       }
     }
-    sanitizeCanvas();
+    loadAndSanitizeCanvas();
 
     function formatDoc(cmd, value = null) {
       document.execCommand(cmd, false, value);
@@ -283,6 +542,7 @@
             canvas.className = pageDiv.className;
             canvas.innerHTML = pageDiv.innerHTML;
           } else {
+            canvas.className = 'letter-page letter-design-' + designName;
             canvas.innerHTML = data.html;
           }
           statusEl.innerHTML = '<i class="fa-solid fa-check-circle mr-1 text-xs"></i> Switched to ' + designName;
@@ -310,6 +570,7 @@
     async function saveDocumentNow() {
       try {
         const content = canvas.innerHTML;
+        const currentClass = canvas.className;
         const fullHtml = `<!DOCTYPE html>
 <html lang="${docLang}">
 <head>
@@ -317,7 +578,7 @@
   <title>Cover Letter</title>
 </head>
 <body>
-  <div class="${canvas.className}">
+  <div class="${currentClass}">
     ${content}
   </div>
 </body>
