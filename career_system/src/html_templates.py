@@ -32,10 +32,11 @@ def get_labels(lang: str) -> Dict[str, str]:
 
 
 def resolve_photo_src(profile: Dict[str, Any], job_data: Dict[str, Any], photo_src: Optional[str] = None) -> str:
+    if photo_src is not None:
+        return str(photo_src).strip()
     personal = profile.get("personal", {})
     return str(
-        photo_src
-        or job_data.get("photo_src")
+        job_data.get("photo_src")
         or job_data.get("photo_base64")
         or job_data.get("photo_url")
         or personal.get("photo_src")

@@ -51,17 +51,14 @@
       print-color-adjust: exact;
     }
     .letter-page:focus-within {
-      box-shadow: 0 0 0 2px #3b82f6, 0 12px 36px rgba(0, 0, 0, 0.55);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
     }
     [contenteditable="true"] {
       outline: none;
       cursor: text;
     }
-    [contenteditable="true"]:hover {
-      background-color: rgba(59, 130, 246, 0.02);
-    }
-    [contenteditable="true"]:focus {
-      background-color: rgba(59, 130, 246, 0.04);
+    [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+      background-color: transparent !important;
     }
     .fmt-btn {
       padding: 4px 8px;

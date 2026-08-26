@@ -54,17 +54,14 @@
       print-color-adjust: exact;
     }
     .cv-page:focus-within {
-      box-shadow: 0 0 0 2px #3b82f6, 0 12px 36px rgba(0, 0, 0, 0.55);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
     }
     [contenteditable="true"] {
       outline: none;
       cursor: text;
     }
-    [contenteditable="true"]:hover {
-      background-color: rgba(59, 130, 246, 0.02);
-    }
-    [contenteditable="true"]:focus {
-      background-color: rgba(59, 130, 246, 0.04);
+    [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+      background-color: transparent !important;
     }
     .fmt-btn {
       padding: 4px 8px;
@@ -90,12 +87,12 @@
 
     /* --- STRICT PHOTO CONSTRAINTS (Never blow up canvas) --- */
     .photo-box {
-      width: 52px !important;
-      height: 52px !important;
-      min-width: 52px !important;
-      max-width: 52px !important;
-      min-height: 52px !important;
-      max-height: 52px !important;
+      width: 72px !important;
+      height: 72px !important;
+      min-width: 72px !important;
+      max-width: 72px !important;
+      min-height: 72px !important;
+      max-height: 72px !important;
       aspect-ratio: 1/1 !important;
       border-radius: 6px !important;
       border: 1.5px solid #2563eb !important;
@@ -114,12 +111,12 @@
     }
 
     .berlin-photo {
-      width: 50px !important;
-      height: 50px !important;
-      min-width: 50px !important;
-      max-width: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      width: 80px !important;
+      height: 80px !important;
+      min-width: 80px !important;
+      max-width: 80px !important;
+      min-height: 80px !important;
+      max-height: 80px !important;
       aspect-ratio: 1/1 !important;
       border-radius: 50% !important;
       overflow: hidden !important;
@@ -138,12 +135,12 @@
     }
 
     .stockholm-photo {
-      width: 54px !important;
-      height: 54px !important;
-      min-width: 54px !important;
-      max-width: 54px !important;
-      min-height: 54px !important;
-      max-height: 54px !important;
+      width: 76px !important;
+      height: 76px !important;
+      min-width: 76px !important;
+      max-width: 76px !important;
+      min-height: 76px !important;
+      max-height: 76px !important;
       aspect-ratio: 1/1 !important;
       border-radius: 8px !important;
       overflow: hidden !important;
@@ -636,15 +633,18 @@
 
     <!-- 2. Profile Photo Controls & Formatting Tools (Word/Canva Style) -->
     <div class="flex flex-wrap items-center gap-1.5">
-      <!-- Photo Space Manager -->
+      <!-- Photo Space Manager (Upload, Toggle, Remove) -->
       <div class="relative inline-block">
         <input type="file" id="photo-file-input" accept="image/*" class="hidden" onchange="handlePhotoUpload(event)">
         <button onclick="document.getElementById('photo-file-input').click()" class="fmt-btn bg-zinc-800 hover:bg-zinc-700 text-zinc-200" title="Upload / change profile picture">
-          <i class="fa-solid fa-camera text-blue-400"></i> Photo
+          <i class="fa-solid fa-camera text-blue-400"></i> Upload Photo
         </button>
       </div>
-      <button onclick="togglePhotoVisibility()" class="fmt-btn" title="Toggle photo box visibility">
-        <i class="fa-solid fa-eye-slash text-zinc-400"></i> Toggle Photo
+      <button onclick="togglePhotoVisibility()" class="fmt-btn" title="Toggle photo visibility">
+        <i class="fa-solid fa-eye-slash text-zinc-400"></i> Toggle
+      </button>
+      <button onclick="removeProfilePhoto()" class="fmt-btn bg-zinc-800 hover:bg-rose-950/60 text-zinc-300 hover:text-rose-200 border border-zinc-700 hover:border-rose-500/40" title="Remove profile picture from CV">
+        <i class="fa-solid fa-trash-can text-rose-400"></i> Remove Photo
       </button>
 
       <span class="w-[1px] h-5 bg-zinc-700 mx-1"></span>
@@ -812,7 +812,22 @@
         });
         saveDocumentNow();
       } else {
-        alert('No photo attached yet. Click the Photo button to upload your headshot.');
+        alert('No photo attached yet. Click "Upload Photo" to upload your headshot.');
+      }
+    }
+
+    // Remove Profile Photo Completely
+    function removeProfilePhoto() {
+      currentPhotoSrc = '';
+      const photoBoxes = canvas.querySelectorAll('.photo-box, .berlin-photo, .stockholm-photo');
+      if (photoBoxes.length > 0) {
+        photoBoxes.forEach(p => p.remove());
+        saveDocumentNow();
+        statusEl.innerHTML = '<i class="fa-solid fa-check-circle mr-1 text-xs"></i> Photo removed';
+        statusEl.className = 'hidden sm:flex items-center text-[11px] text-emerald-400 font-medium';
+      } else {
+        // Re-render template without photo
+        switchDesign(currentDesign);
       }
     }
 
