@@ -36,32 +36,50 @@
       padding: 24px 16px 48px;
     }
     
-    /* --- A4 CV Canvas Paper --- */
+    /* --- A4 CV Canvas Paper (Pure White, Zero Hover Tinting, Zero Outlines) --- */
+    .cv-page,
+    .cv-page * {
+      outline: none !important;
+      -webkit-tap-highlight-color: transparent !important;
+    }
     .cv-page {
       width: 210mm;
       min-height: 297mm;
       max-height: 297mm;
-      background: #ffffff;
+      background: #ffffff !important;
+      background-color: #ffffff !important;
       color: #1e293b;
       font-size: 8.5pt;
       line-height: 1.32;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
       border-radius: 4px;
-      outline: none;
+      outline: none !important;
       overflow: hidden;
       box-sizing: border-box;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .cv-page:focus-within {
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+    .cv-page:focus,
+    .cv-page:focus-within,
+    .cv-page:hover {
+      background: #ffffff !important;
+      background-color: #ffffff !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+      outline: none !important;
     }
     [contenteditable="true"] {
-      outline: none;
+      outline: none !important;
       cursor: text;
     }
-    [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+    [contenteditable="true"]:hover,
+    [contenteditable="true"]:focus,
+    [contenteditable="true"] *:hover,
+    [contenteditable="true"] *:focus,
+    .cv-page *:hover,
+    .cv-page *:focus {
       background-color: transparent !important;
+      outline: none !important;
+      box-shadow: none !important;
     }
     .fmt-btn {
       padding: 4px 8px;
